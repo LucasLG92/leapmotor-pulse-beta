@@ -59,7 +59,7 @@ def test_quote_calculates_hour_overlap_and_server_persists_its_own_snapshot(tmp_
         assert client.put("/api/settings", json={"tariff_eur_kwh": .8}, headers=headers).status_code == 200
         assert client.get("/api/charges").json()["items"][0]["pricing"] == charge["pricing"]
         data = client.get("/api/export").json()
-        assert data["schema_version"] == 12
+        assert data["schema_version"] == 13
         restored = client.post("/api/import", json={"confirmed": True, "data": data}, headers=headers)
         assert restored.status_code == 200, restored.text
         assert client.get("/api/charges").json()["items"][0]["cost_eur"] == 2

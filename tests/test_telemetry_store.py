@@ -216,6 +216,7 @@ def test_v3_round_trip_and_legacy_restore_clear_v3_data_without_mixing(tmp_path)
 
     legacy = copy.deepcopy(exported)
     legacy["schema_version"] = 2
+    legacy["settings"].pop("vehicle_color")
     legacy.pop("charger_pricing_history")
     legacy.pop("charger_energy")
     legacy.pop("charger")

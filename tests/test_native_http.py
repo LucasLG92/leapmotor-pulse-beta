@@ -201,7 +201,7 @@ def test_native_unlink_and_import_revoke_only_affected_owner(clients):
     first_grant = register(native, pair(web, selected)).json()
     second_grant = register(native, pair(other, second), "fixture-second-access").json()
     exported = web.get("/api/export").json()
-    assert exported["schema_version"] == 12
+    assert exported["schema_version"] == 13
     assert set(exported) == {"schema_version", "exported_at", "mode", "settings", "charges", "journeys",
                              "maintenance", "protection", "command_history", "widget_profiles", "telemetry_snapshots", "charger", "charger_pricing", "observed_events", "charger_energy", "charger_pricing_history"}
     assert "widget_token" not in str(exported) and "code_hash" not in str(exported)

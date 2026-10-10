@@ -78,7 +78,7 @@ def test_csrf_cookie_origin_and_json_gate(client):
     assert client.post("/api/demo", json={"enabled": True}, headers={"X-Pulse-CSRF": csrf, "Origin": "http://testserver"}).status_code == 200
 
 
-@pytest.mark.parametrize("headers", [{"Remote-User": "operator"}, {"X-Forwarded-For": "127.0.0.1"}, {"Forwarded": "for=127.0.0.1"}])
+@pytest.mark.parametrize("headers", [{"Remote-User": "lucas"}, {"X-Forwarded-For": "127.0.0.1"}, {"Forwarded": "for=127.0.0.1"}])
 def test_proxy_header_cannot_authenticate_local(client, headers):
     response = client.get("/api/state", headers=headers)
     assert response.status_code == 403
@@ -105,7 +105,7 @@ def test_body_size_limit_for_stream_without_content_length(client):
 def test_restore_preserves_previous_consistent_backup_and_bad_restore_atomic(client):
     mutation(client, "POST", "/api/maintenance", {"title": "Manual", "due_date": "2026-11-01"})
     document = client.get("/api/export").json()
-    assert document["schema_version"] == 12
+    assert document["schema_version"] == 13
     bad = {**document, "schema_version": 999}
     assert mutation(client, "POST", "/api/import", {"confirmed": True, "data": bad}).status_code == 400
     assert client.get("/api/export").json()["maintenance"] == document["maintenance"]
@@ -155,7 +155,7 @@ def test_second_process_owner_rejected_and_lock_released(tmp_path):
 
 def oidc_config(**kwargs):
     values = dict(auth_mode="oidc", public_url="https://pulse.example.org", oidc_issuer="https://identity.example.org",
-                  oidc_client_id="pulse-test", oidc_client_secret="synthetic-secret", allowed_users=("operator",), hosts=("pulse.example.org",))
+                  oidc_client_id="pulse-test", oidc_client_secret="synthetic-secret", allowed_users=("lucas",), hosts=("pulse.example.org",))
     return Config(**(values | kwargs))
 
 
@@ -174,7 +174,7 @@ class MockOIDC:
                 "userinfo": {"sub": "test-owner"}}
 
     async def userinfo(self, token):
-        return {"sub": "test-owner", "preferred_username": "operator", "name": "Test User"}
+        return {"sub": "test-owner", "preferred_username": "lucas", "name": "Lucas"}
 
 
 def test_oidc_session_rotation_and_logout(tmp_path):

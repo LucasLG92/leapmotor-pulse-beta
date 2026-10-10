@@ -101,7 +101,7 @@ def test_temporal_identity_export_and_private_response_fields(tmp_path):
     quote = temporal(item)
     store.save_charger_temporal_pricing(scope(), item, quote, None)
     document = store.export_data()
-    assert document["schema_version"] == 12
+    assert document["schema_version"] == 13
     assert document["charger_pricing"][0]["quote"] == quote
     public = ChargeQuote.model_validate(quote).model_dump()
     distribution = public["pricing"]["energy_distribution"]
@@ -112,10 +112,11 @@ def test_temporal_identity_export_and_private_response_fields(tmp_path):
     assert restored.priced_charger_sessions(scope())["items"][0]["pvpc"] == quote
     assert restored.charger_pricing_history(scope(), item["id"])["total"] == 1
     with sqlite3.connect(restored.path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 14
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 15
     for version in (11, 10, 9, 8):
         old = deepcopy(document)
         old["schema_version"] = version
+        old["settings"].pop("vehicle_color")
         if version < 11:
             old.pop("charger_pricing_history")
         if version < 10:
@@ -309,13 +310,22 @@ def test_semantic_migration_preserves_db13_uniform_data(tmp_path):
     store.save_charger_pricing(scope(), item, uniform(item))
     before = store.export_data()
     with sqlite3.connect(path) as db:
+        db.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
         db.execute("PRAGMA user_version = 13")
-        tables_before = db.execute("SELECT name,sql FROM sqlite_master ORDER BY name").fetchall()
+        tables_before = db.execute(
+            "SELECT name,sql FROM sqlite_master WHERE name != 'settings' ORDER BY name"
+        ).fetchall()
     migrated = Store(path, clock=lambda: NOW)
     assert migrated.export_data() == before
+    assert migrated.get_settings()["vehicle_color"] is None
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 14
-        assert db.execute("SELECT name,sql FROM sqlite_master ORDER BY name").fetchall() == tables_before
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert db.execute(
+            "SELECT name,sql FROM sqlite_master WHERE name != 'settings' ORDER BY name"
+        ).fetchall() == tables_before
+        assert "vehicle_color" in {
+            row[1] for row in db.execute("PRAGMA table_info(settings)")
+        }
 
 
 def test_private_http_quotes_and_history_do_not_expose_association_ids(tmp_path):

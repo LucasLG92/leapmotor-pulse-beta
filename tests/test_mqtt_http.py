@@ -37,7 +37,7 @@ def test_disabled_bridge_uses_no_network_and_public_status_has_no_credentials(tm
         csrf = client.get("/api/session").json()["csrf_token"]
         export = client.get("/api/export")
         assert export.status_code == 200
-        assert export.json()["schema_version"] == 12
+        assert export.json()["schema_version"] == 13
         for value in ("broker.example", "TEST_ONLY_USER", "TEST_ONLY_PASSWORD", "test-house"):
             assert value not in response.text
             assert value not in export.text
