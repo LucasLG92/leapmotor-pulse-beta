@@ -347,12 +347,12 @@
 
 {#if native}
 	<section class="push-panel" aria-labelledby="push-heading">
-		<div class="push-heading"><div><p class="section-label">NOTIFICACIONES</p><h3 id="push-heading">Avisos web</h3></div></div>
+		<div class="push-heading"><div><h3 id="push-heading">Avisos web</h3></div></div>
 		<p class="push-copy">Las notificaciones Web Push no están disponibles dentro de la app nativa.</p>
 	</section>
 {:else}
 	<section class="push-panel" aria-labelledby="push-heading">
-		<div class="push-heading"><div><p class="section-label">NOTIFICACIONES</p><h3 id="push-heading">Avisos de Pulse</h3></div>{#if loaded}<span class="push-limit">{devices.length} / {maxDevices}</span>{/if}</div>
+		<div class="push-heading"><div><h3 id="push-heading">Avisos de Pulse</h3></div>{#if loaded}<span class="push-limit">{devices.length} / {maxDevices}</span>{/if}</div>
 		<p class="push-copy">Activa avisos genéricos en esta PWA. Pulse no incluye datos del vehículo en las notificaciones. Desactivar una suscripción no cambia el permiso del navegador.</p>
 		<p class="push-note">Los envíos dependen de la sesión que autorizó cada dispositivo: dura 8 horas por defecto y nunca más de 24. Al caducar, los envíos se detienen; abrir Ajustes no renueva la sesión. Reactiva el dispositivo manualmente.</p>
 		{#if !secureContext && supported === false}<p class="push-note" role="status">El navegador requiere una conexión segura para activar avisos.</p>{/if}

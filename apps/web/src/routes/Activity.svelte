@@ -157,9 +157,8 @@
 
 <section class="page-intro">
 	<div>
-		<p class="eyebrow">ACTIVIDAD</p>
-		<h2>Todo queda en contexto.</h2>
-		<p>Revisa trayectos disponibles, acciones simuladas y el mantenimiento que hayas registrado.</p>
+		<h2>Tu diario</h2>
+		<p>Trayectos recibidos, acciones de demostración y mantenimiento guardado en Pulse, cada uno con su fecha.</p>
 	</div>
 	<span class="status-pill" class:status-demo={pulseState.mode === 'demo'}><span class="status-dot"></span>{pulseState.mode === 'demo' ? 'Incluye datos simulados' : 'Solo datos guardados'}</span>
 </section>
@@ -167,7 +166,7 @@
 <section class="activity-grid">
 	<div class="activity-main-column">
 		<section aria-labelledby="journeys-heading">
-			<div class="section-heading"><div><p class="section-label">TRAYECTOS</p><h2 id="journeys-heading">Recorridos</h2></div><span class="badge">{count(journeys.length)} disponibles</span></div>
+			<div class="section-heading"><div><h2 id="journeys-heading">Trayectos</h2><p class="activity-section-copy">Distancia, duración y energía que conserva cada registro.</p></div><span class="badge">{count(journeys.length)} disponibles</span></div>
 			{#if journeys.length === 0}
 				<div class="empty-state"><span class="empty-mark"><Glyph name="activity" /></span><h3>No hay trayectos recibidos</h3><p>{pulseState.mode === 'demo' ? 'El servidor no entrega recorridos en este momento.' : 'Pulse aún no tiene una integración que reciba recorridos del vehículo.'}</p></div>
 			{:else}
@@ -184,7 +183,7 @@
 		</section>
 
 		<section aria-labelledby="command-history-heading">
-			<div class="section-heading"><div><p class="section-label">CONTROLES</p><h2 id="command-history-heading">Historial de acciones</h2></div><span class="badge badge-demo">Simulaciones</span></div>
+			<div class="section-heading"><div><h2 id="command-history-heading">Historial de acciones</h2><p class="activity-section-copy">Resultados guardados por Pulse; no son confirmaciones del coche.</p></div><span class="badge badge-demo">Simulaciones</span></div>
 			{#if loadingCommands}
 				<div class="card loading-card" role="status">Cargando historial…</div>
 			{:else if commandError}
@@ -208,7 +207,7 @@
 
 	<aside class="activity-side-column">
 		<section aria-labelledby="maintenance-heading">
-			<div class="section-heading"><div><p class="section-label">CUIDADO DEL VEHÍCULO</p><h2 id="maintenance-heading">Mantenimiento</h2></div><span class="badge">{count(maintenance.length)}</span></div>
+			<div class="section-heading"><div><h2 id="maintenance-heading">Mantenimiento</h2><p class="activity-section-copy">Recordatorios personales, separados de las órdenes del vehículo.</p></div><span class="badge">{count(maintenance.length)}</span></div>
 			{#if maintenance.length === 0}
 				<div class="empty-state maintenance-empty"><span class="empty-mark"><Glyph name="check" /></span><h3>Sin tareas pendientes</h3><p>Añade recordatorios personales para tenerlos a mano.</p></div>
 			{:else}
@@ -229,7 +228,7 @@
 		</section>
 
 		<section class="maintenance-form-card card" aria-labelledby="maintenance-form-heading">
-			<div class="section-heading"><div><p class="section-label">REGISTRO PERSONAL</p><h2 id="maintenance-form-heading">{editing ? 'Editar tarea' : 'Añadir tarea'}</h2></div><span class="form-icon"><Glyph name={editing ? 'settings' : 'plus'} size={18} /></span></div>
+			<div class="section-heading"><div><h2 id="maintenance-form-heading">{editing ? 'Editar tarea' : 'Añadir tarea'}</h2><p class="activity-section-copy">El formulario modifica únicamente tu registro en Pulse.</p></div><span class="form-icon"><Glyph name={editing ? 'settings' : 'plus'} size={18} /></span></div>
 			<form class="maintenance-form" onsubmit={saveMaintenance}>
 				<div class="field"><label for="maintenance-title">Tarea</label><input id="maintenance-title" maxlength="120" bind:value={title} oninput={() => clearMaintenanceError('title')} placeholder="Por ejemplo, revisar neumáticos" required aria-invalid={formErrorField === 'title' ? 'true' : undefined} aria-describedby={formErrorField === 'title' ? 'maintenance-title-error' : undefined} />{#if formError && formErrorField === 'title'}<p id="maintenance-title-error" class="form-error" role="alert">{formError}</p>{/if}</div>
 				<div class="field"><label for="maintenance-date">Fecha prevista</label><input id="maintenance-date" type="date" bind:value={dueDate} oninput={() => clearMaintenanceError('date')} required aria-invalid={formErrorField === 'date' ? 'true' : undefined} aria-describedby={formErrorField === 'date' ? 'maintenance-date-error' : undefined} />{#if formError && formErrorField === 'date'}<p id="maintenance-date-error" class="form-error" role="alert">{formError}</p>{/if}</div>
@@ -244,11 +243,15 @@
 </section>
 
 <style>
+	.page-intro h2 { margin: 0; font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing: -.035em; }
+	.activity-section-copy { max-width: 58ch; margin: 6px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
 	.activity-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(270px, .8fr); align-items: start; gap: 22px; }
 	.activity-main-column, .activity-side-column { display: grid; min-width: 0; gap: 28px; }
 	.activity-grid .section-heading { margin-top: 0; }
+	.journey-list.card, .command-history.card { overflow: visible; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 	.journey-list, .command-history { overflow: hidden; }
-	.journey-row { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 79px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+	.journey-row { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 79px; padding: 13px 4px; border-bottom: 1px solid var(--line); }
+	.journey-row:first-child, .history-row:first-child { border-top: 1px solid var(--line); }
 	.journey-row:last-child, .history-row:last-child { border-bottom: 0; }
 	.journey-route-mark { display: grid; justify-items: center; gap: 3px; }
 	.journey-route-mark span { width: 7px; height: 7px; border: 2px solid var(--forest); border-radius: 50%; }
@@ -263,7 +266,7 @@
 	.journey-energy strong { font-size: 0.875rem; font-variant-numeric: tabular-nums; }
 	.journey-energy strong small { color: var(--muted); font-size: .75rem; font-weight: 500; }
 	.journey-energy span { color: var(--muted); font-size: .75rem; }
-	.command-history .history-row { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: start; gap: 10px; padding: 13px; border-bottom: 1px solid var(--line); }
+	.command-history .history-row { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: start; gap: 10px; padding: 13px 4px; border-bottom: 1px solid var(--line); }
 	.history-icon { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 9px; background: var(--accent-soft); color: var(--accent); }
 	.history-row > div:nth-child(2) { min-width: 0; }
 	.history-row > div:nth-child(2) strong { font-size: .875rem; }
@@ -271,8 +274,8 @@
 	.history-meta { display: grid; justify-items: end; gap: 6px; }
 	.history-meta time { color: var(--muted); font-size: .75rem; white-space: nowrap; }
 	.history-footnote { margin: 8px 0 0; }
-	.maintenance-list { display: grid; gap: 9px; }
-	.maintenance-card { padding: 15px; }
+	.maintenance-list { display: grid; gap: 0; border-top: 1px solid var(--line); }
+	.maintenance-card.card { padding: 14px 2px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; }
 	.maintenance-complete { opacity: .82; }
 	.maintenance-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 	.maintenance-date { color: var(--muted); font-size: .75rem; }
@@ -280,7 +283,7 @@
 	.maintenance-actions { display: flex; flex-wrap: wrap; gap: 5px 10px; border-top: 1px solid var(--line); }
 	.maintenance-actions .text-button { min-height: 44px; font-size: .875rem; }
 	.maintenance-empty { margin-bottom: 10px; }
-	.maintenance-form-card { padding: 17px; }
+	.maintenance-form-card { padding: 19px; }
 	.maintenance-form-card .section-heading { align-items: center; }
 	.maintenance-form-card .section-heading h2 { font-size: 1.0625rem; }
 	.maintenance-form { display: grid; gap: 13px; margin-top: 16px; }

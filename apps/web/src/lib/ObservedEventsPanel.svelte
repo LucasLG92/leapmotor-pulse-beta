@@ -179,7 +179,7 @@
 
 <section class="observed-section" aria-labelledby="observed-events-title" data-initial-loading={loading && events.length === 0 && !initialLoadComplete}>
 	<div class="section-heading">
-		<div><p class="section-label">LECTURAS DEL SERVIDOR</p><h2 id="observed-events-title">Cambios observados</h2><p>Un cambio compara dos lecturas recibidas; no confirma una acción física.</p></div>
+		<div><h2 id="observed-events-title">Cambios observados</h2><p>Un cambio compara dos lecturas recibidas; no confirma una acción física.</p></div>
 		<span class="badge">{count(total)} {total === 1 ? 'cambio' : 'cambios'}</span>
 	</div>
 

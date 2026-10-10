@@ -767,7 +767,7 @@
 
 <section class="page-intro">
 	<div>
-		<h2>Tu vehículo y tus preferencias</h2>
+		<h2>A tu manera.</h2>
 		<p>Personaliza tu B10, elige cómo calcular las cargas y revisa los servicios conectados.</p>
 	</div>
 	<span class="status-pill"><span class="status-dot"></span>{user || 'Cuenta personal'}</span>
@@ -775,21 +775,9 @@
 
 <section class="settings-layout">
 	<div class="settings-primary">
-		<SetupPanel {pulseState} {online} />
 		<section class="settings-card card" aria-labelledby="profile-heading">
-			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="settings" size={18} /></span><div><h2 id="profile-heading">Vehículo y energía</h2><p>Información propia para organizar los registros de Pulse.</p></div></div>
+			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="settings" size={18} /></span><div><h2 id="profile-heading">Tu B10 y tu tarifa</h2><p>Información propia para organizar los registros de Pulse.</p></div></div>
 			<form class="settings-form" onsubmit={saveSettings}>
-				<div class="form-grid">
-					<div class="field"><label for="vehicle-name">Nombre del vehículo</label><input id="vehicle-name" maxlength="80" bind:value={vehicleName} oninput={() => clearSettingsError('vehicleName')} required aria-invalid={settingsErrorField === 'vehicleName' ? 'true' : undefined} aria-describedby={settingsErrorField === 'vehicleName' ? 'settings-vehicle-name-error' : undefined} />{#if settingsError && settingsErrorField === 'vehicleName'}<p id="settings-vehicle-name-error" class="form-error" role="alert">{settingsError}</p>{/if}</div>
-					<div class="field"><label for="vehicle-model">Modelo o acabado</label><input id="vehicle-model" list="vehicle-models" maxlength="80" bind:value={model} oninput={() => clearSettingsError('model')} required aria-invalid={settingsErrorField === 'model' ? 'true' : undefined} aria-describedby={settingsErrorField === 'model' ? 'settings-model-error' : undefined} /><datalist id="vehicle-models"><option value="Leapmotor B10 Pro Max"></option><option value="Leapmotor B10 Pro"></option></datalist><p class="field-hint">Elige o escribe tu modelo y acabado. Pulse no lo deduce.</p>{#if settingsError && settingsErrorField === 'model'}<p id="settings-model-error" class="form-error" role="alert">{settingsError}</p>{/if}</div>
-					<div class="field"><label for="home-label">Punto de carga habitual</label><input id="home-label" maxlength="80" bind:value={homeLabel} oninput={() => clearSettingsError('homeLabel')} required aria-invalid={settingsErrorField === 'homeLabel' ? 'true' : undefined} aria-describedby={settingsErrorField === 'homeLabel' ? 'settings-home-label-error' : undefined} />{#if settingsError && settingsErrorField === 'homeLabel'}<p id="settings-home-label-error" class="form-error" role="alert">{settingsError}</p>{/if}</div>
-					<div class="field"><label for="pricing-method">Método de cálculo</label><select id="pricing-method" value={pricingMethod} onchange={(event) => { const value = event.currentTarget.value; if (value === 'manual' || value === 'pvpc') pricingMethod = value; clearSettingsError('tariff'); }}><option value="manual">Precio fijo manual</option><option value="pvpc">PVPC automático · Península</option></select><p class="field-hint">El método se aplica a las nuevas cargas; las anteriores conservan su cálculo.</p></div>
-					{#if pricingMethod === 'manual'}
-						<div class="field"><label for="tariff">Tarifa eléctrica fija</label><div class="input-with-unit"><input id="tariff" type="number" min="0" max="5" step="0.001" inputmode="decimal" bind:value={tariff} oninput={() => clearSettingsError('tariff')} required aria-invalid={settingsErrorField === 'tariff' ? 'true' : undefined} aria-describedby={settingsErrorField === 'tariff' ? 'settings-tariff-error' : undefined} /><span>€/kWh</span></div><p class="field-hint">Se aplica a las nuevas cargas manuales. Las cargas existentes conservan su coste.</p>{#if settingsError && settingsErrorField === 'tariff'}<p id="settings-tariff-error" class="form-error" role="alert">{settingsError}</p>{/if}</div>
-					{:else}
-						<div class="field pvpc-setting-note"><strong>PVPC automático</strong><p class="field-hint">Península · precio por hora de Red Eléctrica · energía sin impuestos ni potencia fija</p><p class="field-hint">Pulse consultará los precios oficiales al calcular cada sesión. Esta selección no cambia tus cargas anteriores.</p></div>
-					{/if}
-				</div>
 				<div class="vehicle-personalization">
 					<VehicleArtwork color={vehicleColor} />
 					<fieldset class="vehicle-color-field" aria-describedby="vehicle-color-hint">
@@ -807,6 +795,18 @@
 						</div>
 					</fieldset>
 				</div>
+				<div class="form-grid">
+					<div class="field"><label for="vehicle-name">Nombre del vehículo</label><input id="vehicle-name" maxlength="80" bind:value={vehicleName} oninput={() => clearSettingsError('vehicleName')} required aria-invalid={settingsErrorField === 'vehicleName' ? 'true' : undefined} aria-describedby={settingsErrorField === 'vehicleName' ? 'settings-vehicle-name-error' : undefined} />{#if settingsError && settingsErrorField === 'vehicleName'}<p id="settings-vehicle-name-error" class="form-error" role="alert">{settingsError}</p>{/if}</div>
+					<div class="field"><label for="vehicle-model">Modelo o acabado</label><input id="vehicle-model" list="vehicle-models" maxlength="80" bind:value={model} oninput={() => clearSettingsError('model')} required aria-invalid={settingsErrorField === 'model' ? 'true' : undefined} aria-describedby={settingsErrorField === 'model' ? 'settings-model-error' : undefined} /><datalist id="vehicle-models"><option value="Leapmotor B10 Pro Max"></option><option value="Leapmotor B10 Pro"></option></datalist><p class="field-hint">Elige o escribe tu modelo y acabado. Pulse no lo deduce.</p>{#if settingsError && settingsErrorField === 'model'}<p id="settings-model-error" class="form-error" role="alert">{settingsError}</p>{/if}</div>
+					<div class="field"><label for="home-label">Punto de carga habitual</label><input id="home-label" maxlength="80" bind:value={homeLabel} oninput={() => clearSettingsError('homeLabel')} required aria-invalid={settingsErrorField === 'homeLabel' ? 'true' : undefined} aria-describedby={settingsErrorField === 'homeLabel' ? 'settings-home-label-error' : undefined} />{#if settingsError && settingsErrorField === 'homeLabel'}<p id="settings-home-label-error" class="form-error" role="alert">{settingsError}</p>{/if}</div>
+					<div class="field"><label for="pricing-method">Método de cálculo</label><select id="pricing-method" value={pricingMethod} onchange={(event) => { const value = event.currentTarget.value; if (value === 'manual' || value === 'pvpc') pricingMethod = value; clearSettingsError('tariff'); }}><option value="manual">Precio fijo manual</option><option value="pvpc">PVPC automático · Península</option></select><p class="field-hint">El método se aplica a las nuevas cargas; las anteriores conservan su cálculo.</p></div>
+					{#if pricingMethod === 'manual'}
+						<div class="field"><label for="tariff">Tarifa eléctrica fija</label><div class="input-with-unit"><input id="tariff" type="number" min="0" max="5" step="0.001" inputmode="decimal" bind:value={tariff} oninput={() => clearSettingsError('tariff')} required aria-invalid={settingsErrorField === 'tariff' ? 'true' : undefined} aria-describedby={settingsErrorField === 'tariff' ? 'settings-tariff-error' : undefined} /><span>€/kWh</span></div><p class="field-hint">Se aplica a las nuevas cargas manuales. Las cargas existentes conservan su coste.</p>{#if settingsError && settingsErrorField === 'tariff'}<p id="settings-tariff-error" class="form-error" role="alert">{settingsError}</p>{/if}</div>
+					{:else}
+						<div class="field pvpc-setting-note"><strong>PVPC automático</strong><p class="field-hint">Península · precio por hora de Red Eléctrica · energía sin impuestos ni potencia fija</p><p class="field-hint">Pulse consultará los precios oficiales al calcular cada sesión. Esta selección no cambia tus cargas anteriores.</p></div>
+					{/if}
+				</div>
+
 				{#if settingsError && settingsErrorField === null}<p id="settings-general-error" class="form-error" role="alert">{settingsError}</p>{/if}
 				<div class="form-actions"><button class="button button-primary" type="submit" disabled={busy}>{busy ? 'Guardando…' : 'Guardar ajustes'}</button>{#if pricingMethod === 'manual'}<span class="settings-current-rate">Tarifa fija actual: {euros(pulseState.settings.tariff_eur_kwh)} / kWh</span>{:else}<span class="settings-current-rate">Método seleccionado: PVPC automático · Península</span>{/if}</div>
 			</form>
@@ -828,6 +828,8 @@
 				<button class="button button-secondary button-small" type="button" disabled={busy || demoToggleBusy} onclick={toggleDemo}>{demoToggleBusy ? 'Un momento…' : pulseState.mode === 'demo' ? 'Salir de demo' : 'Activar demo'}</button>
 			</div>
 		</section>
+
+		<details class="setup-disclosure"><summary>Comprobar preparación de Pulse <span class="setup-chevron"><Glyph name="chevron" size={18} /></span></summary><SetupPanel {pulseState} {online} /></details>
 
 		<section class="settings-card card" aria-labelledby="home-integration-heading">
 			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="overview" size={18} /></span><div><h2 id="home-integration-heading">Home Assistant</h2><p>Consulta las lecturas de Pulse desde tu sistema de casa.</p></div></div>
@@ -1055,7 +1057,7 @@
 	.widget-intro { margin: 12px 0 14px; font-size: 1rem; line-height: 1.55; }
 	.widget-count { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--muted); font-size: .875rem; }
 	.widget-count strong { color: var(--ink); font-size: .875rem; font-variant-numeric: tabular-nums; }
-	.widget-demo-note { display: flex; align-items: center; gap: 7px; margin-top: 11px; color: #88521d; font-size: .875rem; }
+	.widget-demo-note { display: flex; align-items: center; gap: 7px; margin-top: 11px; color: var(--accent); font-size: .875rem; }
 	.widget-demo-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: #c88437; }
 	.widget-offline { margin-top: 11px; align-items: flex-start; font-size: .875rem; line-height: 1.5; }
 	.widget-offline :global(svg) { flex: 0 0 16px; }
@@ -1156,4 +1158,11 @@
 	.vehicle-color-option > span:not(.paint-swatch) { flex: 1; }
 	.paint-swatch { width: 24px; height: 24px; flex: 0 0 24px; border: 1px solid #7d838b; border-radius: 50%; }
 	@media (max-width: 1100px) { .vehicle-personalization { grid-template-columns: 1fr; } }
+
+	.settings-layout{grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:48px}.settings-primary,.settings-secondary{gap:0}.settings-card{padding:24px 0;border:0;border-top:1px solid var(--line);border-radius:0;background:transparent;box-shadow:none}.settings-primary>.settings-card:first-of-type,.settings-secondary>.settings-card:first-child{border-top:0;padding-top:0}.settings-card-heading h2{font-size:1.125rem;margin-top:0}.settings-card-heading p:not(.section-label){font-size:.875rem}.settings-icon{width:24px;height:24px;flex-basis:24px;background:transparent;border-radius:0}.settings-form{margin-top:12px}.vehicle-personalization{grid-template-columns:minmax(0,1fr);margin:0 0 24px;padding:0 0 24px;border-top:0;border-bottom:1px solid var(--line);gap:12px}.vehicle-color-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.vehicle-color-option{background:transparent;min-height:48px;padding:8px;border-color:transparent;border-radius:8px;font-size:.8125rem}.vehicle-color-option.selected{border-color:var(--forest)}.vehicle-color-option:hover{background:var(--surface-soft)}.paint-swatch{border-color:var(--line-strong)}.connection-status-card{padding:14px 0;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent}.pvpc-setting-note{border:0;background:var(--forest-soft);color:var(--forest)}.form-grid{gap:20px 16px}.settings-current-rate{font-size:.8125rem}
+	@media(max-width:1000px){.settings-layout{grid-template-columns:minmax(0,1fr);gap:24px}.settings-secondary{grid-template-columns:minmax(0,1fr)}.settings-secondary>.settings-card:first-child{border-top:1px solid var(--line);padding-top:24px}}
+	@media(max-width:700px){.settings-layout{gap:0}.settings-card{padding:24px 0}.vehicle-color-options{gap:4px}.settings-form .field-hint{font-size:.8125rem}.settings-form .form-actions>.button{width:100%}}
+	@media(max-width:359px){.vehicle-color-options{grid-template-columns:minmax(0,1fr)}}
+
+	.setup-disclosure{margin:0 0 24px;border-top:1px solid var(--line);padding-top:12px}.setup-disclosure summary{display:flex;align-items:center;gap:8px;min-height:48px;cursor:pointer;color:var(--forest);font-size:.875rem;font-weight:600}.setup-chevron{margin-left:auto}.setup-disclosure[open] .setup-chevron{transform:rotate(90deg)}
 </style>

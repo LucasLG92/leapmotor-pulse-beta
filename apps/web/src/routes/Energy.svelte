@@ -625,24 +625,34 @@
 	}
 </script>
 
-<section class="page-intro">
+<section class="page-intro energy-intro">
 	<div>
-		<p class="eyebrow">ENERGÍA</p>
-		<h2>Conoce lo que has cargado.</h2>
-		<p>Las cargas detectadas por evcc aparecen primero. Los registros personales se conservan por separado.</p>
+		<h2>Energía</h2>
+		<p>Consulta las sesiones del cargador, su coste y los registros personales por separado.</p>
 	</div>
-	<span class="status-pill"><span class="status-dot"></span>{pulseState.mode === 'demo' ? 'Demostración activa' : 'Cargas y coste'}</span>
+	<span class="status-pill" class:status-demo={pulseState.mode === 'demo'}><span class="status-dot"></span>{pulseState.mode === 'demo' ? 'Demostración activa' : pulseState.mode === 'telemetry_read_only' ? 'Lecturas del servidor' : 'Cargas y coste'}</span>
 </section>
 
-
-<ChargerPanel {online} {busy} {revision} {quoteCharge} {onSessionExpired} pricingMethod={pulseState.settings.pricing_method ?? 'manual'} />
+<section class="energy-session-layout" aria-label="Cargador y criterio de coste">
+	<div class="energy-charger-column">
+		<ChargerPanel {online} {busy} {revision} {quoteCharge} {onSessionExpired} pricingMethod={pulseState.settings.pricing_method ?? 'manual'} />
+	</div>
+	<aside class="energy-cost-profile" aria-labelledby="energy-cost-profile-title">
+		<h3 id="energy-cost-profile-title">Coste y procedencia</h3>
+		<p>Las sesiones importadas vienen de evcc. Las cargas personales mantienen su origen y método de precio.</p>
+		<dl class="energy-cost-facts">
+			<div><dt>Precio para nuevas cargas manuales</dt><dd>{pulseState.settings.pricing_method === 'pvpc' ? 'PVPC · Península' : 'Precio fijo'}</dd></div>
+			{#if pulseState.settings.pricing_method !== 'pvpc'}<div><dt>Tarifa configurada</dt><dd>{euros(pulseState.settings.tariff_eur_kwh)} / kWh</dd></div>{/if}
+		</dl>
+		<a class="energy-settings-link" href="/settings">Revisar tarifa en Ajustes</a>
+	</aside>
+</section>
 
 <section class="personal-records" aria-labelledby="personal-records-title">
 	<div class="personal-records-heading">
 		<div>
-			<p class="section-label">TU ACTIVIDAD</p>
 			<h2 id="personal-records-title">Registros personales</h2>
-			<p>Las cargas manuales y las de demostración se consultan por separado de evcc.</p>
+			<p>Historial manual y de demostración, separado de las sesiones importadas del cargador.</p>
 		</div>
 		<div class="personal-records-actions">
 			<button class="button button-secondary personal-toggle" type="button" aria-expanded={personalExpanded} aria-controls="energy-personal-content" disabled={personalExpanded && (busy || savingCharge || quoteBusy)} onclick={togglePersonalRecords}>{personalExpanded ? 'Ocultar registros' : 'Mostrar registros'}</button>
@@ -652,7 +662,7 @@
 	<div id="energy-personal-content" class="energy-personal-content" hidden={!personalExpanded}>
 		{#if online && pulseState.energy.totals_by_source}
 			<section class="source-totals card" aria-label="Totales de registros personales por origen">
-				<div><p class="section-label">TOTALES POR ORIGEN</p><p>El servidor mantiene separados los registros manuales y los de demostración.</p></div>
+				<div><h3>Totales por origen</h3><p>Pulse mantiene separados los registros manuales y los de demostración.</p></div>
 				<div class="source-value"><span><i class="source-dot source-manual"></i>Total manual</span><strong>{number(pulseState.energy.totals_by_source.manual.kwh)} kWh <small>· {euros(pulseState.energy.totals_by_source.manual.cost_eur)}</small></strong></div>
 				{#if pulseState.mode === 'demo'}
 					<div class="source-value"><span><i class="source-dot source-demo"></i>Total de demostración</span><strong>{number(pulseState.energy.totals_by_source.demo.kwh)} kWh <small>· {euros(pulseState.energy.totals_by_source.demo.cost_eur)}</small></strong></div>
@@ -662,7 +672,7 @@
 
 <section class="energy-main-grid">
 	<div class="energy-history-column">
-		<div class="section-heading"><div><p class="section-label">HISTORIAL PERSONAL</p><h2>Cargas manuales y de demostración</h2></div></div>
+		<div class="section-heading"><div><h2>Cargas manuales y de demostración</h2><p class="energy-section-copy">Cada registro conserva su fecha, energía, coste y fuente.</p></div></div>
 		{#if loadingCharges}
 			<div class="card loading-card" role="status">Cargando cargas del servidor…</div>
 		{:else if chargeError}
@@ -722,7 +732,7 @@
 	</div>
 
 	<aside class="charge-form-card card" aria-labelledby="charge-form-title">
-		<div class="section-heading"><div><p class="section-label">REGISTRO PERSONAL</p><h2 id="charge-form-title">{editing ? 'Editar carga' : 'Añadir una carga'}</h2></div><span class="form-icon"><Glyph name={editing ? 'settings' : 'plus'} size={18} /></span></div>
+		<div class="section-heading"><div><h2 id="charge-form-title">{editing ? 'Editar carga' : 'Añadir una carga'}</h2><p class="energy-section-copy">Guarda energía y coste con el método que corresponda.</p></div><span class="form-icon"><Glyph name={editing ? 'settings' : 'plus'} size={18} /></span></div>
 		<p class="muted-copy">Elige el precio fijo o una estimación PVPC por hora. Las cargas manuales permanecen identificadas como tales.</p>
 		{#if !online}<p class="offline-charge-note" role="status">Sin conexión. La cotización y el guardado requieren Pulse; el formulario no conserva datos en este dispositivo.</p>{/if}
 		<form class="charge-form" onsubmit={saveCharge} oninput={onChargeInput} onchange={onChargeInput}>
@@ -798,7 +808,7 @@
 		</div>
 
 		<section class="analytics-months" aria-labelledby="monthly-title">
-			<div class="analytics-subheading"><div><p class="section-label">ENERGÍA REGISTRADA</p><h3 id="monthly-title">Por mes</h3></div><span class="badge">Meses UTC</span></div>
+			<div class="analytics-subheading"><div><h3 id="monthly-title">Energía por mes</h3></div><span class="badge">Meses UTC</span></div>
 			<p class="analytics-explainer">Cada barra suma sesiones del origen indicado. No se rellenan meses ni huecos con estimaciones.</p>
 			{#if analytics.months.length === 0 || analytics.months.every((month) => month.manual.sessions === 0 && month.demo.sessions === 0)}
 				<div class="analytics-empty-chart"><strong>Sin registros en esta ventana</strong><span>No hay sesiones manuales o de demostración para representar.</span></div>
@@ -846,7 +856,7 @@
 </section>
 
 <style>
-	.analytics-panel { display: grid; gap: 19px; margin-top: 17px; padding: clamp(16px, 2.5vw, 22px); }
+	.analytics-panel { display: grid; gap: 19px; margin-top: 28px; padding: 22px 0 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; }
 	.analytics-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
 	.analytics-heading h2 { margin: 5px 0 0; font-size: 1.125rem; font-weight: 640; letter-spacing: -.03em; }
 	.analytics-heading > div:first-child > p:last-child { max-width: 580px; margin: 7px 0 0; color: var(--muted); font-size: 1rem; line-height: 1.55; }
@@ -863,9 +873,10 @@
 	.analytics-error p { margin: 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
 	.analytics-window { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: -6px; color: var(--muted); font-size: .75rem; }
 	.analytics-window > span + span::before { content: '·'; margin-right: 16px; }
-	.analytics-source-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-	.analytics-source-card { display: grid; align-content: start; gap: 14px; min-width: 0; padding: 15px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface-raised); }
-	.analytics-source-demo { background: color-mix(in srgb, var(--accent-soft) 38%, var(--surface-raised)); }
+	.analytics-source-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; border-block: 1px solid var(--line); }
+	.analytics-source-card { display: grid; align-content: start; gap: 14px; min-width: 0; padding: 14px 18px 14px 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+	.analytics-source-card + .analytics-source-card { padding-right: 0; padding-left: 18px; border-left: 1px solid var(--line); }
+	.analytics-source-demo { background: transparent; }
 	.analytics-source-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 	.analytics-source-heading h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: .875rem; font-weight: 680; }
 	.analytics-source-heading .source-dot { flex: 0 0 8px; }
@@ -883,8 +894,8 @@
 	.analytics-retention-note { margin: 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
 	.analytics-empty-chart { display: grid; align-content: center; gap: 5px; min-height: 76px; }
 	.analytics-empty-chart span { color: var(--muted); font-size: .875rem; }
-	.month-chart { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
-	.month-chart-row { display: grid; gap: 7px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-raised); }
+	.month-chart { display: grid; gap: 0; margin: 0; padding: 0; border-bottom: 1px solid var(--line); list-style: none; }
+	.month-chart-row { display: grid; gap: 7px; padding: 12px 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; }
 	.month-chart-label { font-size: .875rem; font-weight: 680; text-transform: capitalize; }
 	.month-origin-row { display: grid; grid-template-columns: 48px minmax(45px, 1fr) 83px; align-items: center; gap: 8px; color: var(--muted); font-size: .875rem; }
 	.month-origin-row > strong { color: var(--ink); font-size: .875rem; font-weight: 620; text-align: right; font-variant-numeric: tabular-nums; }
@@ -924,7 +935,7 @@
 	.energy-personal-content { display: grid; gap: 16px; min-width: 0; }
 	.energy-personal-content[hidden] { display: none; }
 	.form-icon { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 11px; background: var(--forest-soft); color: var(--forest); }
-	.source-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 205px), 1fr)); gap: 16px; align-items: center; padding: 16px 18px; }
+	.source-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 205px), 1fr)); gap: 16px; align-items: center; margin: 4px 0; padding: 17px 0; border: 0; border-block: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; }
 	.source-totals > div:first-child p:last-child { margin: 6px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
 	.source-value { display: grid; gap: 6px; }
 	.source-value > span { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: .875rem; }
@@ -935,7 +946,7 @@
 	.energy-main-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(255px, .75fr); align-items: start; gap: 18px; margin-top: 28px; }
 	.energy-history-column { min-width: 0; }
 	.energy-history-column .section-heading { margin-top: 0; }
-	.chart-card { padding: 18px 18px 8px; }
+	.chart-card { padding: 18px 0 8px; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; }
 	.chart-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px; }
 	.chart-heading > div:first-child { flex: 1 1 200px; min-width: 0; }
 	.chart-heading h3 { margin: 0; font-size: .875rem; }
@@ -948,7 +959,8 @@
 	.chart-bar-demo { fill: var(--accent); }
 	.chart-indices { position: relative; min-height: 1.5em; color: var(--muted); font-size: .75rem; font-variant-numeric: tabular-nums; }
 	.chart-indices span { position: absolute; transform: translateX(-50%); }
-	.charge-list { overflow: hidden; margin-top: 11px; }
+	.charge-list { overflow: visible; margin-top: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+	.charge-row:first-child { border-top: 1px solid var(--line); }
 	.charge-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 66px; padding: 9px 13px; border-bottom: 1px solid var(--line); }
 	.charge-row:last-child { border-bottom: 0; }
 	.charge-mark { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 9px; background: var(--surface-soft); color: var(--forest); }
@@ -1031,11 +1043,45 @@
 	}
 
 	@media (max-width: 360px) {
-		.analytics-panel { padding-inline: 12px; }
+		.analytics-panel { padding-inline: 0; }
 		.analytics-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 		.month-origin-row { grid-template-columns: 42px minmax(24px, 1fr) 78px; gap: 6px; }
 		.pagination { align-items: flex-start; flex-direction: column; }
 		.pagination > div { width: 100%; }
 		.pagination .button { flex: 1 1 0; }
+	}
+	.energy-intro { margin-bottom: 24px; }
+	.energy-intro h2 { margin: 0; font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing: -.035em; }
+	.energy-session-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(245px, .72fr); align-items: start; gap: clamp(20px, 3vw, 42px); margin: 0 0 34px; }
+	.energy-charger-column { min-width: 0; }
+	:global(.charger-panel.card) { margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+	:global(.charger-heading > div) { flex: 1 1 auto; min-width: 0; }
+	:global(.charger-heading h2) { margin: 0; }
+	:global(.charger-heading > div > p) { margin: 7px 0 0; }
+	:global(.charger-state) { flex: 0 0 auto; white-space: nowrap; }
+	.energy-cost-profile { min-width: 0; margin-top: 18px; padding: 18px 0 8px 22px; border-left: 1px solid var(--line); }
+	.energy-cost-profile h3 { margin: 0; font-size: 1.125rem; font-weight: 650; letter-spacing: -.02em; }
+	.energy-cost-profile > p { margin: 9px 0 0; color: var(--muted); font-size: .9375rem; line-height: 1.55; }
+	.energy-cost-facts { display: grid; gap: 0; margin: 17px 0 8px; }
+	.energy-cost-facts > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+	.energy-cost-facts dt { color: var(--muted); font-size: .875rem; line-height: 1.45; }
+	.energy-cost-facts dd { margin: 0; color: var(--ink); font-size: .875rem; font-weight: 650; text-align: right; font-variant-numeric: tabular-nums; }
+	.energy-settings-link { display: inline-flex; min-height: 44px; align-items: center; color: var(--forest); font-size: .875rem; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
+	.source-totals > div:first-child h3 { margin: 0; font-size: .9375rem; font-weight: 660; }
+	.energy-section-copy { margin: 5px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
+	.energy-history-column > .section-heading { align-items: flex-end; }
+	.energy-history-column > .section-heading h2 { margin: 0; }
+	.energy-history-column > .section-heading .energy-section-copy { max-width: 54ch; }
+	.charge-form-card .section-heading > div { min-width: 0; }
+	.analytics-subheading h3 { margin: 0; font-size: .9375rem; font-weight: 650; }
+	@media (max-width: 1000px) {
+		.energy-session-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+		.energy-cost-profile { margin-top: 0; padding: 15px 0 0; border-top: 1px solid var(--line); border-left: 0; }
+	}
+	@media (max-width: 700px) {
+		.analytics-source-card { padding-right: 0; }
+		.analytics-source-card + .analytics-source-card { padding-left: 0; border-top: 1px solid var(--line); border-left: 0; }
+		.source-value { padding-top: 12px; border-top: 1px solid var(--line); }
+		.source-totals > div:first-child + .source-value { padding-top: 0; border-top: 0; }
 	}
 </style>

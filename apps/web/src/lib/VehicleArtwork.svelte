@@ -4,16 +4,26 @@
 	let artwork = $derived(vehicleArtwork(color));
 </script>
 
-<figure class="vehicle-artwork">
-	<div class="vehicle-stage">
-		<img src={artwork.image} alt={`Ilustración del Leapmotor B10${color ? ` en ${artwork.label}` : ', sin color elegido'}`} width="627" height="280" decoding="async" />
+<figure class="vehicle-artwork" aria-label="Representación orientativa del Leapmotor B10">
+	<div class="vehicle-frame">
+		<img
+			src={artwork.image}
+			alt={`Representación del Leapmotor B10 en ${color ? artwork.label : 'un color orientativo'}`}
+			width="1120"
+			height="630"
+			decoding="async"
+			fetchpriority="high"
+		/>
 	</div>
-	<figcaption>Representación del B10 · {color ? artwork.label : 'Color sin elegir'}. El acabado es orientativo.</figcaption>
+	<figcaption>B10 · {color ? artwork.label : 'color sin elegir'} · acabado orientativo</figcaption>
 </figure>
 
 <style>
-	.vehicle-artwork { min-width: 0; margin: 0; }
-	.vehicle-stage { overflow: hidden; padding: 12px 8px; border-radius: 16px; background: #eceef0; }
-	img { display: block; width: 100%; height: auto; aspect-ratio: 627 / 280; object-fit: contain; }
-	figcaption { margin-top: 10px; color: var(--muted); font-size: .75rem; line-height: 1.5; }
+	.vehicle-artwork { min-width: 0; min-height: 0; margin: 0; }
+	.vehicle-frame { display: grid; min-width: 0; min-height: 0; height: 260px; place-items: center; }
+	img { display: block; min-width: 0; min-height: 0; max-width: 100%; max-height: 100%; width: 100%; height: 100%; object-fit: contain; object-position: 50% 60%; }
+	figcaption { margin-top: 2px; color: var(--muted); font-size: .75rem; line-height: 1.35; text-align: center; }
+	@media (max-width: 700px) {
+		.vehicle-frame { height: 180px; }
+	}
 </style>

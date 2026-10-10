@@ -360,7 +360,6 @@
 <section class="charger-panel card" aria-labelledby="charger-title">
 	<div class="charger-heading">
 		<div>
-			<p class="section-label">CARGADOR DE CASA</p>
 			<h2 id="charger-title">Tu cargador</h2>
 			<p>Al confirmar evcc el cierre, Pulse guarda inicio, fin y kWh. {pricingMethod === 'pvpc' ? 'Con PVPC estima el coste automáticamente, sin formulario.' : 'La comparación con PVPC se solicita manualmente.'}</p>
 		</div>
@@ -591,7 +590,7 @@
 	.pricing-event-heading strong { color: var(--ink); font-size: .875rem; font-weight: 680; overflow-wrap: anywhere; }
 	.pricing-event-heading span, .pricing-event-session { color: var(--muted); font-size: .75rem; line-height: 1.45; overflow-wrap: anywhere; }
 	.pricing-event-primary { grid-template-columns: minmax(82px, .65fr) minmax(0, 1.35fr); }
-	.pricing-correction { display: grid; gap: 3px; padding: 9px 10px; border-inline-start: 3px solid var(--accent); background: var(--surface-soft); color: var(--muted-strong); font-size: .875rem; line-height: 1.45; overflow-wrap: anywhere; }
+	.pricing-correction { display: grid; gap: 3px; padding: 9px 10px; border-inline-start: 1px solid var(--accent); background: var(--surface-soft); color: var(--muted-strong); font-size: .875rem; line-height: 1.45; overflow-wrap: anywhere; }
 	.pricing-correction strong { color: var(--ink); }
 	.pricing-history-pagination { margin-top: 2px; }
 	.pricing-history-panel .pricing-history-pagination .button { min-height: 48px; }

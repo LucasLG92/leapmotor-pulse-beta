@@ -6,7 +6,7 @@ Tu coche y tus cargas, en una interfaz sencilla que alojas en tu propio servidor
 
 ## Apariencia del B10
 
-El Resumen incorpora una ilustración original del B10 y temas Claro/Charcoal. En **Ajustes → Color del B10** puedes elegir entre los seis colores de la gama española y guardar la selección, incluso sin conectar el coche. [Guía de apariencia y actualización](docs/VEHICLE-APPEARANCE.md).
+La interfaz reúne Coche, Energía, Mapa, Actividad, Estados y Ajustes; cada vista conserva la procedencia y antigüedad de sus datos. El Resumen incorpora una ilustración original del B10 y temas Claro/Charcoal. En **Ajustes → Color del B10** puedes elegir entre los seis colores de la gama española y guardar la selección, incluso sin conectar el coche. [Guía de apariencia y actualización](docs/VEHICLE-APPEARANCE.md).
 
 La versión actual usa SQLite esquema 15 y exportación JSON 13. Restaura copias JSON 1–12 asignando el color a `null`. Para volver al binario con esquema 14 hay que restaurar su imagen **junto con** la copia SQLite anterior. Sigue siendo beta; QA sintética y builds no sustituyen las comprobaciones con teléfonos, coche o cargador.
 
