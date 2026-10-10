@@ -4,3 +4,6 @@ minimumReleaseAgeExclude:
   - '@capacitor/cli@8.5.3'
   - '@capacitor/core@8.5.3'
   - '@capacitor/ios@8.5.3'
+overrides:
+  # GHSA-w5hq-g745-h8pq; xcode uses require('uuid').v4().
+  'xcode@3.0.1>uuid': '11.1.1'
