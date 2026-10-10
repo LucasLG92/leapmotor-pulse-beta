@@ -75,7 +75,7 @@ private fun PulseWidgetContent(
             .fillMaxSize()
             .background(palette.background)
             .clickable(actionStartActivity(mainActivity))
-            .padding(horizontal = if (compact) 14.dp else 18.dp, vertical = 12.dp),
+            .padding(horizontal = if (compact) 14.dp else 18.dp, vertical = if (compact) 6.dp else 12.dp),
         verticalAlignment = Alignment.Top,
     ) {
         Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -88,7 +88,7 @@ private fun PulseWidgetContent(
                         fontWeight = GlanceFontWeight.Bold,
                     ),
                 )
-                display.profileName?.let { name ->
+                display.profileName?.takeUnless { compact }?.let { name ->
                     Text(
                         text = name,
                         style = TextStyle(
@@ -110,7 +110,7 @@ private fun PulseWidgetContent(
             }
         }
 
-        Spacer(modifier = GlanceModifier.height(if (compact) 8.dp else 14.dp))
+        Spacer(modifier = GlanceModifier.height(if (compact) 4.dp else 14.dp))
 
         when (display.status) {
             "setup" -> Text("Abre Pulse para configurar", style = bodyStyle(palette))
@@ -130,24 +130,22 @@ private fun PulseWidgetContent(
             if (display.kind == "energy") {
                 display.observedAtMillis?.let { calculatedAt ->
                     Text(
-                        text = "Calculado · ${formatUtcDateTime(calculatedAt)}",
-                        style = TextStyle(color = palette.secondary, fontSize = 10.sp),
+                        text = if (compact) "Cálculo UTC · ${formatUtcTime(calculatedAt)}" else "Calculado · ${formatUtcDateTime(calculatedAt)}",
+                        style = TextStyle(color = palette.secondary, fontSize = if (compact) 9.sp else 10.sp),
                     )
                 }
                 val start = display.energyWindowStartMillis
                 val end = display.energyWindowEndMillis
                 if (start != null && end != null) {
                     Text(
-                        text = "Periodo UTC · ${formatUtcDate(start)} – ${formatUtcDate(end)}",
-                        style = TextStyle(color = palette.secondary, fontSize = 10.sp),
+                        text = if (compact) "Periodo UTC · ${formatUtcShortDate(start)}–${formatUtcShortDate(end)}" else "Periodo UTC · ${formatUtcDate(start)} – ${formatUtcDate(end)}",
+                        style = TextStyle(color = palette.secondary, fontSize = if (compact) 9.sp else 10.sp),
                     )
                 }
             } else {
                 Text(
-                    text = if (compact && display.status == "stale") {
-                        "Antiguos · frescura física desconocida"
-                    } else if (compact) {
-                        "Recientes · frescura física desconocida"
+                    text = if (compact) {
+                        "Frescura física desconocida"
                     } else if (display.status == "stale") {
                         "Datos antiguos · frescura física desconocida"
                     } else {
@@ -155,20 +153,21 @@ private fun PulseWidgetContent(
                     },
                     style = TextStyle(
                         color = palette.secondary,
-                        fontSize = 10.sp,
+                        fontSize = if (compact) 9.sp else 10.sp,
                     ),
                 )
                 display.observedAtMillis?.let { observedAt ->
-                    val observedText = DateFormat.getDateTimeInstance(
-                        DateFormat.SHORT,
-                        DateFormat.SHORT,
-                        Locale.getDefault(),
-                    ).format(Date(observedAt))
+                    val observedText = if (compact) {
+                        val ageLabel = if (display.status == "stale") "Antiguos" else "Recientes"
+                        "$ageLabel · ${DateFormat.getTimeInstance(DateFormat.SHORT, Locale.getDefault()).format(Date(observedAt))}"
+                    } else {
+                        "Observado ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale.getDefault()).format(Date(observedAt))}"
+                    }
                     Text(
-                        text = "Observado $observedText",
+                        text = observedText,
                         style = TextStyle(
                             color = palette.secondary,
-                            fontSize = 10.sp,
+                            fontSize = if (compact) 9.sp else 10.sp,
                         ),
                     )
                 }
@@ -187,12 +186,12 @@ private fun Metrics(display: WidgetDisplay, compact: Boolean, palette: WidgetPal
     }
 
     if (display.kind == "energy") {
-        Text("Energía registrada · 30 días", style = bodyStyle(palette))
+        if (!compact) Text("Energía registrada · 30 días", style = bodyStyle(palette))
         if (compact) {
             val field = fields.first()
-            Metric(energyLabel(field), energyValue(field, display), palette, compact = true)
+            Metric(energyLabel(field), energyValue(field, display), palette, compact = true, inline = true)
         } else {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 fields.forEach { field ->
                     Metric(
                         energyLabel(field),
@@ -209,9 +208,9 @@ private fun Metrics(display: WidgetDisplay, compact: Boolean, palette: WidgetPal
 
     if (compact) {
         val field = fields.first()
-        Metric(vehicleLabel(field), vehicleValue(field, display), palette, compact = true)
+        Metric(vehicleLabel(field), vehicleValue(field, display), palette, compact = true, inline = true)
     } else {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             fields.forEach { field ->
                 Metric(
                     vehicleLabel(field),
@@ -259,31 +258,31 @@ private fun Metric(
     value: String,
     palette: WidgetPalette,
     compact: Boolean = false,
+    inline: Boolean = false,
     modifier: GlanceModifier = GlanceModifier,
 ) {
-    Column(
-        modifier = modifier.padding(bottom = if (compact) 0.dp else 5.dp),
-    ) {
-        Text(
-            text = label,
-            style = TextStyle(
-                color = palette.secondary,
-                fontSize = 10.sp,
-            ),
-        )
-        Text(
-            text = value,
-            style = TextStyle(
-                color = palette.primary,
-                fontSize = when {
-                    value.length > 14 -> 11.sp
-                    value.length > 11 -> 13.sp
-                    compact -> 16.sp
-                    else -> 18.sp
-                },
-                fontWeight = GlanceFontWeight.Bold,
-            ),
-        )
+    val labelStyle = TextStyle(color = palette.secondary, fontSize = 10.sp)
+    val valueStyle = TextStyle(
+        color = palette.primary,
+        fontSize = when {
+            value.length > 14 -> 11.sp
+            value.length > 11 -> 13.sp
+            compact -> 16.sp
+            else -> 18.sp
+        },
+        fontWeight = GlanceFontWeight.Bold,
+    )
+    if (inline) {
+        Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(label, style = labelStyle)
+            Spacer(modifier = GlanceModifier.defaultWeight())
+            Text(value, style = valueStyle)
+        }
+    } else {
+        Column(modifier = modifier.padding(bottom = if (compact) 0.dp else 5.dp)) {
+            Text(label, style = labelStyle)
+            Text(value, style = valueStyle)
+        }
     }
 }
 
@@ -333,6 +332,16 @@ private fun formatUtcDateTime(epochMillis: Long): String =
 
 private fun formatUtcDate(epochMillis: Long): String =
     SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }.format(Date(epochMillis))
+
+private fun formatUtcTime(epochMillis: Long): String =
+    SimpleDateFormat("HH:mm", Locale.ROOT).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }.format(Date(epochMillis))
+
+private fun formatUtcShortDate(epochMillis: Long): String =
+    SimpleDateFormat("dd/MM", Locale.ROOT).apply {
         timeZone = TimeZone.getTimeZone("UTC")
     }.format(Date(epochMillis))
 
