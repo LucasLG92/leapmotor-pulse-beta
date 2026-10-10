@@ -9,6 +9,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
@@ -42,8 +43,10 @@ import kotlinx.coroutines.withContext
 class PulseWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(
         setOf(
+            DpSize(160.dp, 90.dp),
             DpSize(180.dp, 100.dp),
             DpSize(280.dp, 170.dp),
+            DpSize(400.dp, 260.dp),
         ),
     )
 
@@ -61,7 +64,25 @@ private fun PulseWidgetContent(
 ) {
     val palette = widgetPalette(display.appearance)
     val size = LocalSize.current
-    val compact = size.width < 240.dp || size.height < 132.dp
+    val largeText = LocalContext.current.resources.configuration.fontScale > 1.2f
+    val compact = size.width < 240.dp || size.height < 132.dp || largeText
+    val expandedText = largeText && size.width >= 400.dp && size.height >= 260.dp
+    // Preserve the system text size. A small widget cannot fit values plus their
+    // source and age at large scales, so offer its existing full-app action.
+    if (size.width < 180.dp || size.height < 100.dp ||
+        (largeText && (size.width < 240.dp || size.height < 160.dp))
+    ) {
+        Column(
+            modifier = GlanceModifier.fillMaxSize()
+                .background(palette.background)
+                .clickable(actionStartActivity(mainActivity))
+                .padding(horizontal = 14.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Amplía o abre Pulse", style = bodyStyle(palette))
+        }
+        return
+    }
     val sourceLabel = when {
         display.kind == "energy" -> "ENERGÍA"
         display.demo -> "DEMO"
@@ -122,7 +143,7 @@ private fun PulseWidgetContent(
                 if (display.kind == "energy") "Sin registros de energía disponibles" else "Sin datos disponibles",
                 style = bodyStyle(palette),
             )
-            else -> Metrics(display = display, compact = compact, palette = palette)
+            else -> Metrics(display = display, compact = compact && !expandedText, stacked = expandedText, palette = palette)
         }
 
         Spacer(modifier = GlanceModifier.defaultWeight())
@@ -177,11 +198,23 @@ private fun PulseWidgetContent(
 }
 
 @Composable
-private fun Metrics(display: WidgetDisplay, compact: Boolean, palette: WidgetPalette) {
+private fun Metrics(display: WidgetDisplay, compact: Boolean, stacked: Boolean, palette: WidgetPalette) {
     val fields = display.selectedFieldOrder.filter { it in display.selectedFields }
         .take(WidgetPolicy.MAX_SELECTED_FIELDS)
     if (fields.isEmpty()) {
         Text("No hay campos seleccionados", style = bodyStyle(palette))
+        return
+    }
+
+    if (stacked) {
+        fields.forEach { field ->
+            val energy = display.kind == "energy"
+            Metric(
+                if (energy) energyLabel(field) else vehicleLabel(field),
+                if (energy) energyValue(field, display) else vehicleValue(field, display),
+                palette, compact = true, inline = true,
+            )
+        }
         return
     }
 
