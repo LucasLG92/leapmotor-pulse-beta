@@ -1,0 +1,11 @@
+// Copy to NativeConfig.xcconfig and replace every example with confirmed public
+// values for the operator's OIDC service. Do not put secrets in this file.
+PULSE_API_ORIGIN = https:/$()/pulse.example.org
+PULSE_OIDC_ISSUER = https:/$()/auth.example.org
+PULSE_AUTHORIZATION_ENDPOINT = https:/$()/auth.example.org/api/oidc/authorization
+PULSE_TOKEN_ENDPOINT = https:/$()/auth.example.org/api/oidc/token
+PULSE_CLIENT_ID = replace-with-public-native-client-id
+PULSE_AUDIENCE = replace-with-pulse-api-audience
+PULSE_CALLBACK = https:/$()/pulse.example.org/native/oauth/callback
+PULSE_APP_GROUP = group.com.lucas.pulse
+PULSE_ASSOCIATED_DOMAIN = pulse.example.org

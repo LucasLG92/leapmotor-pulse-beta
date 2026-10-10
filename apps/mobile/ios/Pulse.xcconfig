@@ -1,0 +1,19 @@
+// Keep Capacitor's generated debug setting available to the app target.
+#include "debug.xcconfig"
+
+// Public native runtime settings. Empty values keep native auth and API calls disabled.
+PULSE_API_ORIGIN =
+PULSE_OIDC_ISSUER =
+PULSE_AUTHORIZATION_ENDPOINT =
+PULSE_TOKEN_ENDPOINT =
+PULSE_CLIENT_ID =
+PULSE_AUDIENCE =
+PULSE_CALLBACK =
+
+// Shared app/widget configuration. Replace the disabled association domain only
+// after the operator's HTTPS callback and Apple association files are verified.
+PULSE_APP_GROUP = group.com.lucas.pulse
+PULSE_ASSOCIATED_DOMAIN = disabled.invalid
+
+// Operator-specific public values live in this ignored, untracked file.
+#include? "NativeConfig.xcconfig"
