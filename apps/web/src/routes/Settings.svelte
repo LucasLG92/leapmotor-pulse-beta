@@ -8,15 +8,18 @@
 	import SetupPanel from '../lib/SetupPanel.svelte';
 	import { isNativeApp } from '../lib/native';
 	import WidgetPreview from '../lib/WidgetPreview.svelte';
+	import VehicleArtwork from '../lib/VehicleArtwork.svelte';
+	import { vehicleColors, type VehicleColor } from '../lib/vehicle-colors';
 	import { ApiError, getEnergyAnalytics, getNativeCapabilities, getWidgetGrants, getWidgetProfiles } from '../lib/api';
 	import { count, dateTime, euros } from '../lib/format';
 	import type { EnergyAnalytics, NativeCapabilities, PageProps, PricingMethod, ThemePreference, WidgetGrant, WidgetPairingResult, WidgetProfile, WidgetProfileField, WidgetProfileInput } from '../lib/types';
 
-	type PreferencesDraft = { vehicleName: string; model: string; homeLabel: string; tariff: string; pricingMethod: PricingMethod };
+	type PreferencesDraft = { vehicleName: string; model: string; vehicleColor: VehicleColor; homeLabel: string; tariff: string; pricingMethod: PricingMethod };
 
 	let { pulseState, busy, online, revision, user, theme, canInstall, mutate, createWidgetPairing, notifications, runNotificationAction, confirmAction, setTheme, onLogout, onExport, onImport, onInstall, drafts }: PageProps = $props();
 	let vehicleName = $state('');
 	let model = $state('');
+	let vehicleColor = $state<VehicleColor>(null);
 	let homeLabel = $state('');
 	let tariff = $state('');
 	let pricingMethod = $state<PricingMethod>('manual');
@@ -72,22 +75,23 @@
 	let settingsDisposed = false;
 
 	function currentPreferences(): PreferencesDraft {
-		return { vehicleName, model, homeLabel, tariff, pricingMethod };
+		return { vehicleName, model, vehicleColor, homeLabel, tariff, pricingMethod };
 	}
 
 	function samePreferences(left: PreferencesDraft, right: PreferencesDraft): boolean {
-		return left.vehicleName === right.vehicleName && left.model === right.model && left.homeLabel === right.homeLabel && left.tariff === right.tariff && left.pricingMethod === right.pricingMethod;
+		return left.vehicleName === right.vehicleName && left.model === right.model && left.vehicleColor === right.vehicleColor && left.homeLabel === right.homeLabel && left.tariff === right.tariff && left.pricingMethod === right.pricingMethod;
 	}
 
 	function isPreferencesDirty(): boolean {
 		if (!preferencesBaseline) return false;
 		const current = currentPreferences();
-		return current.vehicleName !== preferencesBaseline.vehicleName || current.model !== preferencesBaseline.model || current.homeLabel !== preferencesBaseline.homeLabel || current.pricingMethod !== preferencesBaseline.pricingMethod || (current.pricingMethod === 'manual' && current.tariff !== preferencesBaseline.tariff);
+		return current.vehicleName !== preferencesBaseline.vehicleName || current.model !== preferencesBaseline.model || current.vehicleColor !== preferencesBaseline.vehicleColor || current.homeLabel !== preferencesBaseline.homeLabel || current.pricingMethod !== preferencesBaseline.pricingMethod || (current.pricingMethod === 'manual' && current.tariff !== preferencesBaseline.tariff);
 	}
 
 	function applyPreferences(values: PreferencesDraft) {
 		vehicleName = values.vehicleName;
 		model = values.model;
+		vehicleColor = values.vehicleColor;
 		homeLabel = values.homeLabel;
 		tariff = values.tariff;
 		pricingMethod = values.pricingMethod;
@@ -278,6 +282,7 @@
 		const incoming: PreferencesDraft = {
 			vehicleName: pulseState.settings.vehicle_name,
 			model: pulseState.settings.model,
+			vehicleColor: pulseState.settings.vehicle_color ?? null,
 			homeLabel: pulseState.settings.home_label,
 			tariff: String(pulseState.settings.tariff_eur_kwh),
 			pricingMethod: pulseState.settings.pricing_method ?? 'manual'
@@ -292,6 +297,7 @@
 			} else if (!preferencesSaving) {
 				if (current.vehicleName === previous.vehicleName && current.vehicleName !== incoming.vehicleName) vehicleName = incoming.vehicleName;
 				if (current.model === previous.model && current.model !== incoming.model) model = incoming.model;
+				if (current.vehicleColor === previous.vehicleColor && current.vehicleColor !== incoming.vehicleColor) vehicleColor = incoming.vehicleColor;
 				if (current.homeLabel === previous.homeLabel && current.homeLabel !== incoming.homeLabel) homeLabel = incoming.homeLabel;
 				// Method and rate form one editable choice: never hide a pending rate.
 				const pricingDirty = current.pricingMethod !== previous.pricingMethod || (current.pricingMethod === 'manual' && current.tariff !== previous.tariff);
@@ -690,6 +696,7 @@
 		const payload = {
 			vehicle_name: cleanVehicle,
 			model: cleanModel,
+			vehicle_color: submittedDraft.vehicleColor,
 			home_label: cleanHome,
 			pricing_method: pricingMethod,
 			...(pricingMethod === 'manual' ? { tariff_eur_kwh: rate } : {})
@@ -697,6 +704,7 @@
 		const savedDraft: PreferencesDraft = {
 			vehicleName: cleanVehicle,
 			model: cleanModel,
+			vehicleColor: submittedDraft.vehicleColor,
 			homeLabel: cleanHome,
 			tariff: submittedDraft.pricingMethod === 'manual' ? String(rate) : submittedDraft.tariff,
 			pricingMethod: submittedDraft.pricingMethod
@@ -759,9 +767,8 @@
 
 <section class="page-intro">
 	<div>
-		<p class="eyebrow">AJUSTES DE PULSE</p>
-		<h2>Tu espacio, a tu manera.</h2>
-		<p>Configura etiquetas y tarifa, gestiona copias y consulta con claridad qué funciones están disponibles.</p>
+		<h2>Tu vehículo y tus preferencias</h2>
+		<p>Personaliza tu B10, elige cómo calcular las cargas y revisa los servicios conectados.</p>
 	</div>
 	<span class="status-pill"><span class="status-dot"></span>{user || 'Cuenta personal'}</span>
 </section>
@@ -770,11 +777,11 @@
 	<div class="settings-primary">
 		<SetupPanel {pulseState} {online} />
 		<section class="settings-card card" aria-labelledby="profile-heading">
-			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="settings" size={18} /></span><div><p class="section-label">PERFIL</p><h2 id="profile-heading">Vehículo y energía</h2><p>Información propia para organizar los registros de Pulse.</p></div></div>
+			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="settings" size={18} /></span><div><h2 id="profile-heading">Vehículo y energía</h2><p>Información propia para organizar los registros de Pulse.</p></div></div>
 			<form class="settings-form" onsubmit={saveSettings}>
 				<div class="form-grid">
 					<div class="field"><label for="vehicle-name">Nombre del vehículo</label><input id="vehicle-name" maxlength="80" bind:value={vehicleName} oninput={() => clearSettingsError('vehicleName')} required aria-invalid={settingsErrorField === 'vehicleName' ? 'true' : undefined} aria-describedby={settingsErrorField === 'vehicleName' ? 'settings-vehicle-name-error' : undefined} />{#if settingsError && settingsErrorField === 'vehicleName'}<p id="settings-vehicle-name-error" class="form-error" role="alert">{settingsError}</p>{/if}</div>
-					<div class="field"><label for="vehicle-model">Modelo o acabado</label><input id="vehicle-model" maxlength="80" bind:value={model} oninput={() => clearSettingsError('model')} required aria-invalid={settingsErrorField === 'model' ? 'true' : undefined} aria-describedby={settingsErrorField === 'model' ? 'settings-model-error' : undefined} /><p class="field-hint">Escribe el acabado exacto cuando lo tengas. Pulse no lo deduce.</p>{#if settingsError && settingsErrorField === 'model'}<p id="settings-model-error" class="form-error" role="alert">{settingsError}</p>{/if}</div>
+					<div class="field"><label for="vehicle-model">Modelo o acabado</label><input id="vehicle-model" list="vehicle-models" maxlength="80" bind:value={model} oninput={() => clearSettingsError('model')} required aria-invalid={settingsErrorField === 'model' ? 'true' : undefined} aria-describedby={settingsErrorField === 'model' ? 'settings-model-error' : undefined} /><datalist id="vehicle-models"><option value="Leapmotor B10 Pro Max"></option><option value="Leapmotor B10 Pro"></option></datalist><p class="field-hint">Elige o escribe tu modelo y acabado. Pulse no lo deduce.</p>{#if settingsError && settingsErrorField === 'model'}<p id="settings-model-error" class="form-error" role="alert">{settingsError}</p>{/if}</div>
 					<div class="field"><label for="home-label">Punto de carga habitual</label><input id="home-label" maxlength="80" bind:value={homeLabel} oninput={() => clearSettingsError('homeLabel')} required aria-invalid={settingsErrorField === 'homeLabel' ? 'true' : undefined} aria-describedby={settingsErrorField === 'homeLabel' ? 'settings-home-label-error' : undefined} />{#if settingsError && settingsErrorField === 'homeLabel'}<p id="settings-home-label-error" class="form-error" role="alert">{settingsError}</p>{/if}</div>
 					<div class="field"><label for="pricing-method">Método de cálculo</label><select id="pricing-method" value={pricingMethod} onchange={(event) => { const value = event.currentTarget.value; if (value === 'manual' || value === 'pvpc') pricingMethod = value; clearSettingsError('tariff'); }}><option value="manual">Precio fijo manual</option><option value="pvpc">PVPC automático · Península</option></select><p class="field-hint">El método se aplica a las nuevas cargas; las anteriores conservan su cálculo.</p></div>
 					{#if pricingMethod === 'manual'}
@@ -783,13 +790,30 @@
 						<div class="field pvpc-setting-note"><strong>PVPC automático</strong><p class="field-hint">Península · precio por hora de Red Eléctrica · energía sin impuestos ni potencia fija</p><p class="field-hint">Pulse consultará los precios oficiales al calcular cada sesión. Esta selección no cambia tus cargas anteriores.</p></div>
 					{/if}
 				</div>
+				<div class="vehicle-personalization">
+					<VehicleArtwork color={vehicleColor} />
+					<fieldset class="vehicle-color-field" aria-describedby="vehicle-color-hint">
+						<legend>Color del B10</legend>
+						<p id="vehicle-color-hint" class="field-hint">Gama española. Elige el aspecto del coche en Pulse; no cambia ningún ajuste del vehículo.</p>
+						<div class="vehicle-color-options">
+							{#each vehicleColors as option (option.id)}
+								<label class="vehicle-color-option" class:selected={vehicleColor === option.id}>
+									<input class="sr-only" type="radio" name="vehicle-color" value={option.id} bind:group={vehicleColor} />
+									<span class="paint-swatch" style:background={option.swatch} aria-hidden="true"></span><span>{option.label}</span>
+									{#if vehicleColor === option.id}<Glyph name="check" size={16} />{/if}
+								</label>
+							{/each}
+							<label class="vehicle-color-option" class:selected={vehicleColor === null}><input class="sr-only" type="radio" name="vehicle-color" value={null} bind:group={vehicleColor} /><span>Sin elegir</span>{#if vehicleColor === null}<Glyph name="check" size={16} />{/if}</label>
+						</div>
+					</fieldset>
+				</div>
 				{#if settingsError && settingsErrorField === null}<p id="settings-general-error" class="form-error" role="alert">{settingsError}</p>{/if}
 				<div class="form-actions"><button class="button button-primary" type="submit" disabled={busy}>{busy ? 'Guardando…' : 'Guardar ajustes'}</button>{#if pricingMethod === 'manual'}<span class="settings-current-rate">Tarifa fija actual: {euros(pulseState.settings.tariff_eur_kwh)} / kWh</span>{:else}<span class="settings-current-rate">Método seleccionado: PVPC automático · Península</span>{/if}</div>
 			</form>
 		</section>
 
 		<section class="settings-card card" aria-labelledby="connection-heading">
-			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="plug" size={18} /></span><div><p class="section-label">CONEXIÓN</p><h2 id="connection-heading">Vehículo y servicios</h2><p>El estado procede de la API de Pulse.</p></div></div>
+			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="plug" size={18} /></span><div><h2 id="connection-heading">Vehículo y servicios</h2><p>El estado procede de la API de Pulse.</p></div></div>
 			<div class="connection-status-card">
 				<span class="connection-status-mark"><Glyph name="plug" size={19} /></span>
 				<div><strong>{connectionHeadline()}</strong><p>{connectionDetail()}</p></div>
@@ -806,17 +830,17 @@
 		</section>
 
 		<section class="settings-card card" aria-labelledby="home-integration-heading">
-			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="overview" size={18} /></span><div><p class="section-label">CASA CONECTADA</p><h2 id="home-integration-heading">Home Assistant</h2><p>Consulta las lecturas de Pulse desde tu sistema de casa.</p></div></div>
+			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="overview" size={18} /></span><div><h2 id="home-integration-heading">Home Assistant</h2><p>Consulta las lecturas de Pulse desde tu sistema de casa.</p></div></div>
 			<HomeIntegrationPanel mqtt={pulseState.integrations?.mqtt} {online} />
 		</section>
 
 		<section class="settings-card card" aria-labelledby="abrp-integration-heading">
-			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="navigation" size={18} /></span><div><p class="section-label">PLANIFICACIÓN DE RUTAS</p><h2 id="abrp-integration-heading">ABRP</h2><p>Comparte solo una lectura válida de batería y su hora de observación.</p></div></div>
+			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="navigation" size={18} /></span><div><h2 id="abrp-integration-heading">ABRP</h2><p>Comparte solo una lectura válida de batería y su hora de observación.</p></div></div>
 			<AbrpIntegrationPanel abrp={pulseState.integrations?.abrp} mode={pulseState.mode} {online} {busy} {mutate} {confirmAction} />
 		</section>
 
 		<section class="settings-card card" aria-labelledby="backup-heading">
-			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="download" size={18} /></span><div><p class="section-label">COPIAS</p><h2 id="backup-heading">Exportar o restaurar</h2><p>Los archivos se procesan en esta sesión y se envían al servidor solo al restaurar.</p></div></div>
+			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="download" size={18} /></span><div><h2 id="backup-heading">Exportar o restaurar</h2><p>Los archivos se procesan en esta sesión y se envían al servidor solo al restaurar.</p></div></div>
 			<div class="backup-actions">
 				<div><strong>Descargar una copia</strong><span>El servidor prepara un JSON versionado con tus datos de Pulse.</span></div>
 				<button class="button button-secondary" type="button" onclick={onExport}><Glyph name="download" size={16} /> Exportar JSON</button>
@@ -832,15 +856,15 @@
 
 	<aside class="settings-secondary">
 		<section class="settings-card card" aria-labelledby="appearance-heading">
-			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="sun" size={18} /></span><div><p class="section-label">PREFERENCIAS</p><h2 id="appearance-heading">Apariencia</h2></div></div>
+			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="sun" size={18} /></span><div><h2 id="appearance-heading">Apariencia</h2></div></div>
 			<div class="field theme-field"><label for="theme-select">Tema</label><select id="theme-select" value={theme} onchange={(event) => { const value = event.currentTarget.value; if (value === 'system' || value === 'light' || value === 'dark') setTheme(value as ThemePreference); }}>
-				<option value="system">Según el dispositivo</option><option value="light">Claro</option><option value="dark">Oscuro</option>
+				<option value="system">Según el dispositivo</option><option value="light">Claro</option><option value="dark">Charcoal</option>
 			</select><p class="field-hint">Esta es la única preferencia que Pulse guarda en el navegador.</p></div>
 		</section>
 
 		{#if !isNativeApp()}
 		<section class="settings-card card" aria-labelledby="pwa-heading">
-			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="overview" size={18} /></span><div><p class="section-label">APLICACIÓN WEB</p><h2 id="pwa-heading">Instala Pulse</h2></div></div>
+			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="overview" size={18} /></span><div><h2 id="pwa-heading">Instala Pulse</h2></div></div>
 			<p class="muted-copy pwa-intro">La PWA puede abrirse como una aplicación y mostrar una pantalla genérica sin conexión. Los datos siguen en el servidor.</p>
 			{#if canInstall}<button class="button button-primary button-block" type="button" onclick={onInstall}>Instalar Pulse</button>{/if}
 			<div class="install-guide"><strong>iPhone o iPad</strong><span>En Safari, abre Compartir y elige «Añadir a pantalla de inicio».</span></div>
@@ -852,7 +876,7 @@
 		<PushNotificationsPanel {online} {revision} {busy} native={isNativeApp()} {notifications} {runNotificationAction} {confirmAction} {drafts} />
 
 		<section class="settings-card card" aria-labelledby="widgets-heading">
-			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="activity" size={18} /></span><div><p class="section-label">WIDGETS</p><h2 id="widgets-heading">Perfiles de widget</h2><p>{isNativeApp() ? 'Prepara vistas compactas para el widget de esta app.' : 'Prepara vistas compactas para una futura extensión móvil.'}</p></div></div>
+			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="activity" size={18} /></span><div><h2 id="widgets-heading">Perfiles de widget</h2><p>{isNativeApp() ? 'Prepara vistas compactas para el widget de esta app.' : 'Prepara vistas compactas para una futura extensión móvil.'}</p></div></div>
 			<p class="muted-copy widget-intro">El editor guarda tus perfiles en el servidor. El widget consulta los campos que selecciones, sin conectar Pulse con el vehículo.</p>
 			{#if isNativeApp()}<NativeWidgetPanel {online} {revision} {confirmAction} {drafts} />{/if}
 			<div class="widget-count"><span>Perfiles guardados</span><strong>{widgetProfilesLoaded ? `${count(widgetProfiles.length)} / 5` : '— / 5'}</strong></div>
@@ -882,7 +906,7 @@
 
 				{#if widgetProfileFormOpen}
 					<form class="widget-profile-form" onsubmit={saveWidgetProfile}>
-						<div class="widget-form-title"><div><p class="section-label">{widgetProfileEditingId ? 'EDITAR PERFIL' : 'NUEVO PERFIL'}</p><h3>{widgetProfileEditingId ? 'Ajusta esta vista' : 'Diseña una vista compacta'}</h3></div><button class="button button-small button-quiet" type="button" onclick={cancelWidgetProfileEdit} aria-label="Cerrar editor">Cerrar</button></div>
+						<div class="widget-form-title"><div><h3>{widgetProfileEditingId ? 'Ajusta esta vista' : 'Diseña una vista compacta'}</h3></div><button class="button button-small button-quiet" type="button" onclick={cancelWidgetProfileEdit} aria-label="Cerrar editor">Cerrar</button></div>
 						<div class="field"><label for="widget-profile-name">Nombre del perfil</label><input id="widget-profile-name" maxlength="60" autocomplete="off" bind:value={widgetProfileDraft.name} oninput={() => { if (widgetProfileFormErrorField === 'name') { widgetProfileFormError = ''; widgetProfileFormErrorField = null; } }} placeholder="Por ejemplo, Mi mañana" required disabled={busy || widgetProfileBusy} aria-invalid={widgetProfileFormErrorField === 'name' ? 'true' : undefined} aria-describedby={widgetProfileFormErrorField === 'name' ? 'widget-profile-name-error' : undefined} />{#if widgetProfileFormError && widgetProfileFormErrorField === 'name'}<p id="widget-profile-name-error" class="form-error" role="alert">{widgetProfileFormError}</p>{/if}</div>
 						<fieldset class="widget-templates"><legend>Empieza con una plantilla</legend>
 							{#each widgetTemplates as template (template.id)}<button type="button" aria-pressed={widgetDraftTemplate === template.id} disabled={busy || widgetProfileBusy} onclick={() => applyWidgetTemplate(template.fields)}><strong>{template.name}</strong><span>{template.detail}</span></button>{/each}
@@ -917,7 +941,7 @@
 				{/if}
 
 				<section class="native-device-panel" aria-labelledby="native-devices-heading">
-					<div class="native-device-heading"><div><p class="section-label">ACCESO DEL WIDGET</p><h3 id="native-devices-heading">Enlazar dispositivo</h3></div><span class="native-device-limit">{nativeCapabilities?.max_devices_per_profile ?? 5} máx.</span></div>
+					<div class="native-device-heading"><div><h3 id="native-devices-heading">Enlazar dispositivo</h3></div><span class="native-device-limit">{nativeCapabilities?.max_devices_per_profile ?? 5} máx.</span></div>
 					<p class="native-device-intro">Los dispositivos enlazados pueden consultar la vista de este perfil durante un máximo de 30 días. Esto no conecta Pulse con el vehículo.</p>
 					{#if !online}
 						<div class="native-device-notice" role="status">Sin conexión. Los datos mostrados pueden estar desactualizados; no se pueden crear códigos ni revocar dispositivos.</div>
@@ -983,7 +1007,7 @@
 		</section>
 
 		<section class="settings-card account-card card" aria-labelledby="account-heading">
-			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="protection" size={18} /></span><div><p class="section-label">SESIÓN</p><h2 id="account-heading">Acceso privado</h2></div></div>
+			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="protection" size={18} /></span><div><h2 id="account-heading">Acceso privado</h2></div></div>
 			<p class="muted-copy">Sesión: <strong>{user || 'Desarrollo local'}</strong>. La autenticación la gestiona el servidor.</p>
 			<button class="button button-quiet button-block" type="button" disabled={busy} onclick={onLogout}>Cerrar sesión</button>
 		</section>
@@ -1121,4 +1145,15 @@
 		.widget-profile-actions { flex-wrap: wrap; }
 		.widget-profile-actions .button { flex: 1 1 100%; }
 	}
+
+	.vehicle-personalization { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 22px; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--line); align-items: start; }
+	.vehicle-color-field { min-width: 0; margin: 0; padding: 0; border: 0; }
+	.vehicle-color-field legend { margin-bottom: 4px; font-size: 1rem; font-weight: 650; }
+	.vehicle-color-options { display: grid; gap: 7px; margin-top: 12px; }
+	.vehicle-color-option { display: flex; min-height: 48px; align-items: center; gap: 11px; padding: 9px 12px; border: 1px solid var(--line-strong); border-radius: 10px; color: var(--ink); background: var(--surface); cursor: pointer; font-size: .875rem; line-height: 1.4; }
+	.vehicle-color-option.selected { border-color: var(--forest); background: var(--forest-soft); }
+	.vehicle-color-option:focus-within { outline: 2px solid var(--focus); outline-offset: 3px; }
+	.vehicle-color-option > span:not(.paint-swatch) { flex: 1; }
+	.paint-swatch { width: 24px; height: 24px; flex: 0 0 24px; border: 1px solid #7d838b; border-radius: 50%; }
+	@media (max-width: 1100px) { .vehicle-personalization { grid-template-columns: 1fr; } }
 </style>
