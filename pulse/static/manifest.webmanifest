@@ -1,0 +1,18 @@
+{
+  "name": "Leapmotor Pulse",
+  "short_name": "Pulse",
+  "description": "Aplicación personal e independiente para consultar y organizar datos de movilidad.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F6F7F2",
+  "theme_color": "#245841",
+  "icons": [
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

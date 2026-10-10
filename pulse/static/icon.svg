@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Marca abstracta de Pulse</title>
+  <rect width="64" height="64" rx="18" fill="#245841"/>
+  <path d="M11 34h12l6-13 9 25 7-15h8" fill="none" stroke="#C9E8D1" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+</svg>

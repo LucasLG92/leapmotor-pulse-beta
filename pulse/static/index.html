@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#F6F7F2">
+    <meta name="description" content="Leapmotor Pulse, una aplicación personal e independiente para consultar y organizar datos de movilidad.">
+    <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+    <link rel="manifest" href="/static/manifest.webmanifest">
+    <link rel="stylesheet" href="/static/app.css">
+    <script src="/static/app.js" defer></script>
+    <title>Leapmotor Pulse</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Saltar al contenido</a>
+    <div class="app-shell" id="app-shell">
+      <aside class="sidebar" aria-label="Navegación de Leapmotor Pulse">
+        <a class="brand-lockup" href="#/overview" aria-label="Leapmotor Pulse, ir al resumen">
+          <img class="brand-mark" src="/static/icon.svg" alt="" width="38" height="38">
+          <span class="brand-copy">
+            <span class="brand-name" data-app-name>Leapmotor Pulse</span>
+            <span class="brand-caption">MOVILIDAD PERSONAL</span>
+          </span>
+        </a>
+
+        <nav class="primary-nav" aria-label="Principal">
+          <a class="nav-link" href="#/overview" data-route="overview">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 10.5 12 3.8l8.5 6.7v9.2a.8.8 0 0 1-.8.8h-5v-6.1H9.3v6.1h-5a.8.8 0 0 1-.8-.8z"/></svg>
+            <span>Resumen</span>
+          </a>
+          <a class="nav-link" href="#/energy" data-route="energy">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.6 2.9 6.3 13h5.1l-.9 8.1L17.7 11h-5.1z"/></svg>
+            <span>Energía</span>
+          </a>
+          <a class="nav-link" href="#/activity" data-route="activity">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19.5V4.5M5 19.5h15M8.2 15l3.2-3.5 2.6 2 4.2-5"/><circle cx="18.2" cy="8.5" r="1.2"/></svg>
+            <span>Actividad</span>
+          </a>
+          <a class="nav-link" href="#/protection" data-route="protection">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.3 19 6v5.2c0 4.4-2.7 7.7-7 9.5-4.3-1.8-7-5.1-7-9.5V6zM9 12.2l2 2 4-4.3"/></svg>
+            <span>Protección</span>
+          </a>
+          <a class="nav-link" href="#/settings" data-route="settings">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.3a3.7 3.7 0 1 0 0 7.4 3.7 3.7 0 0 0 0-7.4Z"/><path d="m19.2 13.6 1.1.8-1.6 2.8-1.3-.5a7.8 7.8 0 0 1-1.6.9l-.2 1.4h-3.2l-.2-1.4a7.8 7.8 0 0 1-1.6-.9l-1.3.5-1.6-2.8 1.1-.8a7.1 7.1 0 0 1 0-1.9l-1.1-.8 1.6-2.8 1.3.5a7.8 7.8 0 0 1 1.6-.9l.2-1.4h3.2l.2 1.4a7.8 7.8 0 0 1 1.6.9l1.3-.5 1.6 2.8-1.1.8a7.1 7.1 0 0 1 0 1.9Z"/></svg>
+            <span>Ajustes</span>
+          </a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <p class="independent-note">Aplicación independiente y no oficial. Sin afiliación con Leapmotor.</p>
+          <button class="theme-button" type="button" data-action="theme" aria-pressed="false">
+            <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.2 15.4A8.4 8.4 0 0 1 8.6 4.8 8.5 8.5 0 1 0 19.2 15.4Z"/></svg>
+            <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.8"/><path d="M12 2.8v2M12 19.2v2M21.2 12h-2M4.8 12h-2m15.7-6.5-1.4 1.4M6.9 17.1l-1.4 1.4m13 0-1.4-1.4M6.9 6.9 5.5 5.5"/></svg>
+            <span data-theme-label>Tema oscuro</span>
+          </button>
+          <p class="sidebar-footnote">Tus preferencias de tema se guardan en este dispositivo.</p>
+        </div>
+      </aside>
+
+      <div class="main-column">
+        <header class="topbar">
+          <a class="mobile-brand" href="#/overview" aria-label="Ir al resumen de Leapmotor Pulse">
+            <img src="/static/icon.svg" alt="" width="30" height="30">
+            <span data-app-name>Leapmotor Pulse</span>
+          </a>
+          <div class="topbar-status">
+            <span class="connection-pill" id="connection-pill"><span class="status-dot" aria-hidden="true"></span><span id="connection-label">Cargando estado</span></span>
+            <time class="updated-label" id="updated-at"></time>
+          </div>
+          <button class="theme-button mobile-theme-button" type="button" data-action="theme" aria-pressed="false" aria-label="Cambiar tema">
+            <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.2 15.4A8.4 8.4 0 0 1 8.6 4.8 8.5 8.5 0 1 0 19.2 15.4Z"/></svg>
+            <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.8"/><path d="M12 2.8v2M12 19.2v2M21.2 12h-2M4.8 12h-2m15.7-6.5-1.4 1.4M6.9 17.1l-1.4 1.4m13 0-1.4-1.4M6.9 6.9 5.5 5.5"/></svg>
+            <span class="visually-hidden">Cambiar tema</span>
+          </button>
+        </header>
+
+        <div class="demo-banner" id="demo-banner" hidden>
+          <span class="demo-mark" aria-hidden="true">D</span>
+          <p><strong>Demostración activa.</strong> Las lecturas y órdenes de esta vista son simuladas.</p>
+          <button class="demo-exit" type="button" data-action="leave-demo">Salir de la demo</button>
+        </div>
+
+        <main class="main-content" id="main" tabindex="-1">
+          <div class="global-error" id="global-error" role="alert" aria-live="assertive" hidden>
+            <div>
+              <strong id="global-error-title">No se pudo cargar Pulse.</strong>
+              <p id="global-error-message">Comprueba la conexión e inténtalo de nuevo.</p>
+            </div>
+            <button class="button button-secondary" type="button" data-action="retry">Reintentar</button>
+          </div>
+          <div class="screen" id="screen" aria-live="polite">
+            <div class="loading-state" role="status"><span class="loading-line"></span><span class="loading-copy">Cargando el estado de Pulse…</span></div>
+          </div>
+        </main>
+      </div>
+
+      <dialog class="confirm-dialog" id="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-description">
+        <div class="dialog-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 3.5 20 18H4zM12 9v4.5M12 16.4v.1"/></svg>
+        </div>
+        <h2 id="confirm-title">Confirmar acción</h2>
+        <p id="confirm-description">Revisa el efecto antes de continuar.</p>
+        <div class="dialog-actions">
+          <button class="button button-quiet" type="button" data-action="cancel-confirm">Cancelar</button>
+          <button class="button button-primary" type="button" id="confirm-submit" data-action="confirm">Confirmar</button>
+        </div>
+      </dialog>
+
+      <div class="toast-region" id="toast-region" role="status" aria-live="polite" aria-atomic="true"></div>
+      <div class="sr-only" id="error-live" role="alert" aria-live="assertive" aria-atomic="true"></div>
+      <input id="import-file" type="file" accept="application/json,.json" hidden>
+    </div>
+    <noscript><p class="noscript-message">Leapmotor Pulse necesita JavaScript para cargar el estado y guardar cambios.</p></noscript>
+  </body>
+</html>
