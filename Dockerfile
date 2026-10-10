@@ -40,16 +40,17 @@ RUN PYTHONPATH=/build-tools/lib/python3.12/site-packages \
 
 # Minimal runtime: Python, app files, static PWA, hashed wheels, and patched SQLite.
 FROM python:3.12.14-slim-trixie@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4db6d462c84e51f AS runtime
-# Apply the Trixie OpenSSL security revision from the signed frozen repository.
-# APT verifies repository signatures; all three OpenSSL packages are pinned.
+# Apply Trixie OpenSSL and PCRE2 security revisions from the signed snapshot.
+# APT verifies repository signatures; exact patched package revisions are pinned.
 RUN python -c 'from pathlib import Path; stamp="20261010T000000Z"; p=Path("/etc/apt/sources.list.d/debian.sources"); text=p.read_text(); text=text.replace("http://deb.debian.org/debian-security", f"https://snapshot.debian.org/archive/debian-security/{stamp}"); text=text.replace("https://deb.debian.org/debian-security", f"https://snapshot.debian.org/archive/debian-security/{stamp}"); text=text.replace("http://deb.debian.org/debian", f"https://snapshot.debian.org/archive/debian/{stamp}"); text=text.replace("https://deb.debian.org/debian", f"https://snapshot.debian.org/archive/debian/{stamp}"); p.write_text(text)'
 RUN apt-get -o Acquire::Check-Valid-Until=false update \
     && apt-get install -y --no-install-recommends --only-upgrade \
         libssl3t64=3.5.7-1~deb13u3 openssl=3.5.7-1~deb13u3 \
-        openssl-provider-legacy=3.5.7-1~deb13u3 \
+        openssl-provider-legacy=3.5.7-1~deb13u3 libpcre2-8-0=10.46-1~deb13u3 \
     && test "$(dpkg-query -W -f='${Version}' libssl3t64)" = '3.5.7-1~deb13u3' \
     && test "$(dpkg-query -W -f='${Version}' openssl)" = '3.5.7-1~deb13u3' \
     && test "$(dpkg-query -W -f='${Version}' openssl-provider-legacy)" = '3.5.7-1~deb13u3' \
+    && test "$(dpkg-query -W -f='${Version}' libpcre2-8-0)" = '10.46-1~deb13u3' \
     && rm -rf /var/lib/apt/lists/*
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
