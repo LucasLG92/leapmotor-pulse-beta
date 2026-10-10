@@ -4603,6 +4603,25 @@
               "pvpc"
             ],
             "title": "Pricing Method"
+          },
+          "vehicle_color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "starry_night_blue",
+                  "midnight_purple",
+                  "tundra_grey",
+                  "metallic_black",
+                  "stellar_silver",
+                  "lunar_white"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle Color"
           }
         },
         "type": "object",
@@ -4611,7 +4630,8 @@
           "model",
           "tariff_eur_kwh",
           "home_label",
-          "pricing_method"
+          "pricing_method",
+          "vehicle_color"
         ],
         "title": "Settings"
       },
@@ -4640,6 +4660,25 @@
               }
             ],
             "title": "Model"
+          },
+          "vehicle_color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "starry_night_blue",
+                  "midnight_purple",
+                  "tundra_grey",
+                  "metallic_black",
+                  "stellar_silver",
+                  "lunar_white"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle Color"
           },
           "tariff_eur_kwh": {
             "anyOf": [
