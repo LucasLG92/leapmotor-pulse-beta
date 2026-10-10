@@ -9,6 +9,7 @@ Tu coche y tus cargas, en una interfaz sencilla que alojas en tu propio servidor
 | Capacidad | Estado de la beta |
 | --- | --- |
 | Interfaz adaptable, temas y PWA instalable | Implementada; instalación, recuperación offline y avisos con teléfonos bloqueados probados en iPhone y Android. No equivale a compatibilidad con todos los dispositivos. |
+| Preparación de funciones y próximos pasos | Ajustes detecta las habilitaciones del servidor y señala qué pruebas reales faltan. [Guía de preparación](docs/SETUP.md). |
 | Registro personal de cargas y análisis | Disponible sin coche conectado. Los datos de demostración están identificados y separados. |
 | Precios PVPC oficiales para la Península | Integrados. El coste energético se calcula cuando hay precios completos; no incluye potencia fija ni impuestos. |
 | Sesiones automáticas con evcc | Integración opcional: importa inicio, fin y energía. Pendiente de validación con cargadores reales. |
@@ -53,6 +54,7 @@ Son características del proyecto, no una clasificación de superioridad: no se 
 - [PWA, avisos, apps y widgets](docs/MOBILE.md).
 - [Integraciones opcionales](docs/INTEGRATIONS.md).
 - [Privacidad](docs/PRIVACY.md) y [seguridad](SECURITY.md).
+- [Preparación y comprobaciones pendientes](docs/SETUP.md).
 - [Contrato OpenAPI](docs/openapi.json).
 
 ## Contribuir y licencia
