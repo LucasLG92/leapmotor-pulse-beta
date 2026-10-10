@@ -175,3 +175,34 @@ lectores suma 271 casos correctos, incluyendo los nuevos. Esta evidencia cubre
 el control del cuerpo HTTP: no acredita PNG válidos, OAuth completo, límites de
 memoria/RSS, todos los codecs opcionales, servicios reales ni ausencia de CVE.
 No requiere cambiar el código de ejecución, dependencias o configuración.
+
+## Corrección de componentes Rust de Pydantic
+
+La pareja oficial `pydantic==2.14.0` / `pydantic-core==2.50.0` sustituye
+`2.13.5` / `2.46.5`. El manifiesto de Pydantic requiere esa versión exacta
+de Core. Se conservan las demás versiones y hashes de los locks de runtime
+y desarrollo; los artefactos nuevos tienen hashes SHA-256 de PyPI.
+
+El Cargo.lock publicado y el SBOM del wheel CPython 3.12/Linux de Core
+coinciden en las versiones registry y declaran PyO3 `0.29.2` y LRU `0.18.5`.
+Superan las versiones corregidas de
+[RUSTSEC-2026-0176](https://rustsec.org/advisories/RUSTSEC-2026-0176.html),
+[RUSTSEC-2026-0177](https://rustsec.org/advisories/RUSTSEC-2026-0177.html) y
+[RUSTSEC-2026-0253](https://rustsec.org/advisories/RUSTSEC-2026-0253.html).
+Los dos primeros avisos tienen alias GHSA; cinco identificadores describen
+tres condiciones. No se ha demostrado explotación en Pulse.
+
+La consulta OSV 2.6.0 del candidato comprueba 754 entradas en los seis locks,
+100 paquetes en Cargo.lock y 99 componentes en el SBOM: ocho inventarios
+completos, salida 0 y ningún aviso conocido, sin exclusiones. El SBOM declara
+`all_targets`; no acredita por sí solo todos los componentes compilados o
+alcanzables. El checker habitual de seis locks no inspecciona estos dos
+inventarios Rust; la comprobación nativa fue adicional y debe repetirse al
+actualizar esos artefactos.
+
+La cualificación local usa Python 3.12.14 y SQLite 3.53.4: 977 pruebas Python
+correctas, seis del SDK opcional omitidas, contrato OpenAPI existente exacto,
+tipos, pruebas y builds web/móvil correctos. Esta evidencia no acredita que
+una instalación particular esté actualizada ni pruebas físicas. Los avisos
+de la imagen del sistema, otras dependencias nativas y la seguridad integral
+mantienen su evaluación separada.
