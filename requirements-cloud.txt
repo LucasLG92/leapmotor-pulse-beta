@@ -1,0 +1,3 @@
+# Extra opcional: el adapter Pulse consume B10ReadClient cuando se configura.
+# Se fija al commit público cuyo pyproject declara mate-api 0.1.0a16.
+mate-api[certificates] @ git+https://github.com/ProtossBlaster/MATE-API.git@5b7d30c30ae10eb18677214e36a9d42398a769e6
