@@ -60,8 +60,8 @@ from pulse.observed_events import (
     validate_observed_events_archive, validate_observed_event_future_dates,
 )
 
-SCHEMA_VERSION = 14
-EXPORT_VERSION = 12
+SCHEMA_VERSION = 15
+EXPORT_VERSION = 13
 MAX_IMPORT_BYTES = 1_000_000
 MAX_V3_IMPORT_BYTES = 5_000_000
 MAX_V4_IMPORT_BYTES = 5_000_000
@@ -73,6 +73,7 @@ MAX_V9_IMPORT_BYTES = 5_000_000
 MAX_V10_IMPORT_BYTES = 5_000_000
 MAX_V11_IMPORT_BYTES = 5_000_000
 MAX_V12_IMPORT_BYTES = 5_000_000
+MAX_V13_IMPORT_BYTES = 5_000_000
 MAX_ROWS_PER_COLLECTION = 100_000
 MAX_TEXT_LENGTH = 240
 MAX_STATE_CHARGES = 100
@@ -107,9 +108,15 @@ _DEFAULT_SETTINGS: dict[str, Any] = {
     "tariff_eur_kwh": 0.15,
     "home_label": "Casa",
     "pricing_method": "manual",
+    "vehicle_color": None,
 }
 
 _LEGACY_SETTINGS_FIELDS = {"vehicle_name", "model", "tariff_eur_kwh", "home_label"}
+_V12_SETTINGS_FIELDS = set(_DEFAULT_SETTINGS) - {"vehicle_color"}
+_VEHICLE_COLOR_IDS = frozenset({
+    "starry_night_blue", "midnight_purple", "tundra_grey",
+    "metallic_black", "stellar_silver", "lunar_white",
+})
 
 _COMMANDS: tuple[tuple[str, str], ...] = (
     ("lock", "Bloquear"),
@@ -328,6 +335,19 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
             # New quote semantics: older binaries must not open temporal quotes.
             # Tables/data are unchanged; preserve uniform historical snapshots.
             connection.execute("PRAGMA user_version = 14")
+            version = 14
+        if version == 14:
+            self._migrate_v14_to_v15(connection)
+            connection.execute("PRAGMA user_version = 15")
+
+    def _migrate_v14_to_v15(self, connection: sqlite3.Connection) -> None:
+        connection.execute(
+            """ALTER TABLE settings ADD COLUMN vehicle_color TEXT
+               CHECK (vehicle_color IS NULL OR vehicle_color IN (
+                   'starry_night_blue', 'midnight_purple', 'tundra_grey',
+                   'metallic_black', 'stellar_silver', 'lunar_white'
+               ))"""
+        )
 
     def _migrate_v10_to_v11(self, connection: sqlite3.Connection) -> None:
         connection.execute("""CREATE TABLE abrp_preference (
@@ -1296,6 +1316,8 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                 normalized[key] = _number(value, key, minimum=0, maximum=5)
             elif key == "pricing_method":
                 normalized[key] = _validate_pricing_method(value)
+            elif key == "vehicle_color":
+                normalized[key] = _validate_vehicle_color(value)
             else:
                 normalized[key] = _text(
                     value,
@@ -1309,7 +1331,7 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
             current.update(normalized)
             connection.execute(
                 """UPDATE settings SET vehicle_name = ?, model = ?, tariff_eur_kwh = ?, home_label = ?,
-                   pricing_method = ?
+                   pricing_method = ?, vehicle_color = ?
                    WHERE id = 1""",
                 (
                     current["vehicle_name"],
@@ -1317,6 +1339,7 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                     current["tariff_eur_kwh"],
                     current["home_label"],
                     current["pricing_method"],
+                    current["vehicle_color"],
                 ),
             )
             self._touch(connection)
@@ -1818,7 +1841,7 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                 ).encode("utf-8")
             except (TypeError, ValueError, UnicodeEncodeError):
                 raise DomainError("No se pudo validar el documento de exportación.", 500) from None
-            if len(encoded) > MAX_V12_IMPORT_BYTES:
+            if len(encoded) > MAX_V13_IMPORT_BYTES:
                 raise DomainError(
                     "La exportación supera el tamaño máximo admitido para una restauración.", 413
                 )
@@ -1866,7 +1889,7 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
             settings = document["settings"]
             connection.execute(
                 """UPDATE settings SET vehicle_name = ?, model = ?, tariff_eur_kwh = ?, home_label = ?,
-                   pricing_method = ?
+                   pricing_method = ?, vehicle_color = ?
                    WHERE id = 1""",
                 (
                     settings["vehicle_name"],
@@ -1874,6 +1897,7 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                     settings["tariff_eur_kwh"],
                     settings["home_label"],
                     settings["pricing_method"],
+                    settings["vehicle_color"],
                 ),
             )
             for item in document["charges"]:
@@ -2187,6 +2211,7 @@ def _read_settings(connection: sqlite3.Connection) -> dict[str, Any]:
         "tariff_eur_kwh": float(row["tariff_eur_kwh"]),
         "home_label": row["home_label"],
         "pricing_method": row["pricing_method"],
+        "vehicle_color": row["vehicle_color"],
     }
 
 
@@ -2873,6 +2898,14 @@ def _validate_pricing_method(value: Any) -> str:
     return value
 
 
+def _validate_vehicle_color(value: Any) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or value not in _VEHICLE_COLOR_IDS:
+        raise DomainError("vehicle_color debe ser uno de los colores oficiales del B10 o null.")
+    return value
+
+
 def _parse_optional_datetime(value: Any, name: str) -> str | None:
     return None if value is None else _parse_datetime(value, name)
 
@@ -3198,6 +3231,8 @@ def _validate_import(data: Any) -> dict[str, Any]:
         raise DomainError("La importación supera el tamaño permitido para la versión 11.")
     if version == 12 and encoded_size > MAX_V12_IMPORT_BYTES:
         raise DomainError("La importación supera el tamaño permitido para la versión 12.")
+    if version == 13 and encoded_size > MAX_V13_IMPORT_BYTES:
+        raise DomainError("La importación supera el tamaño permitido para la versión 13.")
     mode = decoded.get("mode")
     if mode not in ("demo", "unconfigured"):
         raise DomainError("El modo del documento no es válido.")
@@ -3222,7 +3257,12 @@ def _validate_import(data: Any) -> dict[str, Any]:
     root = _exact_object(decoded, fields, "documento")
     _parse_datetime(root["exported_at"], "exported_at")
 
-    settings_fields = set(_DEFAULT_SETTINGS) if version >= 4 else _LEGACY_SETTINGS_FIELDS
+    settings_fields = (
+        set(_DEFAULT_SETTINGS)
+        if version >= 13
+        else _V12_SETTINGS_FIELDS if version >= 4
+        else _LEGACY_SETTINGS_FIELDS
+    )
     settings_raw = _exact_object(root["settings"], settings_fields, "settings")
     settings = {
         "vehicle_name": _text(settings_raw["vehicle_name"], "vehicle_name", max_length=80),
@@ -3237,6 +3277,11 @@ def _validate_import(data: Any) -> dict[str, Any]:
             _validate_pricing_method(settings_raw["pricing_method"])
             if version >= 4
             else "manual"
+        ),
+        "vehicle_color": (
+            _validate_vehicle_color(settings_raw["vehicle_color"])
+            if version >= 13
+            else None
         ),
     }
 
