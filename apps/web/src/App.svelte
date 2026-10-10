@@ -15,15 +15,15 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 	};
 
 	const navigation: Array<{ route: Route; path: string; label: string; icon: string }> = [
-		{ route: 'overview', path: '/', label: 'Resumen', icon: 'overview' },
+		{ route: 'overview', path: '/', label: 'Coche', icon: 'car' },
 		{ route: 'energy', path: '/energy', label: 'Energía', icon: 'energy' },
-		{ route: 'navigation', path: '/navigation', label: 'Navegación', icon: 'navigation' },
+		{ route: 'navigation', path: '/navigation', label: 'Mapa', icon: 'navigation' },
 		{ route: 'activity', path: '/activity', label: 'Actividad', icon: 'activity' },
-		{ route: 'protection', path: '/protection', label: 'Protección', icon: 'protection' },
+		{ route: 'protection', path: '/protection', label: 'Estados', icon: 'protection' },
 		{ route: 'settings', path: '/settings', label: 'Ajustes', icon: 'settings' }
 	];
 	const titles: Record<Route, string> = {
-		overview: 'Resumen', energy: 'Energía', navigation: 'Navegación', activity: 'Actividad', protection: 'Protección', settings: 'Ajustes'
+		overview: 'Coche', energy: 'Energía', navigation: 'Mapa', activity: 'Actividad', protection: 'Estados', settings: 'Ajustes'
 	};
 	const loaders: Record<Route, () => Promise<{ default: ViewComponent }>> = {
 		overview: () => import('./routes/Overview.svelte') as Promise<{ default: ViewComponent }>,
@@ -132,7 +132,7 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 
 	function updateThemeColor(preference: ThemePreference) {
 		const dark = preference === 'dark' || (preference === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-		document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#202226' : '#f5f6f8');
+		document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#1c1f21' : '#f5f6f4');
 	}
 
 	function setTheme(preference: ThemePreference) {
@@ -909,13 +909,11 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 {#if bootStatus === 'loading'}
 	<main class="boot-screen" aria-live="polite">
 		<div class="boot-mark" aria-hidden="true"><span></span><span></span><span></span></div>
-		<p class="eyebrow">LEAPMOTOR PULSE</p>
 		<h1>{bootMessage}</h1>
 	</main>
 {:else if bootStatus === 'error'}
 	<main class="boot-screen">
 		<div class="boot-mark" aria-hidden="true"><span></span><span></span><span></span></div>
-		<p class="eyebrow">LEAPMOTOR PULSE</p>
 		<h1>{bootMessage}</h1>
 		<p class="body-copy">La aplicación no almacena datos del vehículo en este dispositivo. Cuando vuelva la conexión, podrás cargar el estado más reciente del servidor.</p>
 		<button class="button button-primary" onclick={startSession}>Reintentar conexión</button>
@@ -924,7 +922,6 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 {:else if bootStatus === 'unauthenticated'}
 	<main class="boot-screen">
 		<div class="boot-mark" aria-hidden="true"><span></span><span></span><span></span></div>
-		<p class="eyebrow">LEAPMOTOR PULSE</p>
 		<h1>Tu espacio privado de movilidad.</h1>
 		<p class="body-copy">Inicia sesión para consultar los datos guardados en tu servidor Pulse.</p>
 		{#if nativeApp}
@@ -944,9 +941,8 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 		<aside class="desktop-rail" aria-label="Navegación principal">
 			<a class="brand-lockup" href="/" onclick={(event) => navigate(event, '/')} aria-label={`${appName}, ir al resumen`}>
 				<span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
-				<span><strong>{appName}</strong><small>Tu espacio de movilidad</small></span>
+				<span><strong>{appName}</strong></span>
 			</a>
-			<div class="rail-section-label">Tu movilidad</div>
 			<nav class="primary-nav" aria-label="Secciones de Pulse">
 				{#each navigation as item (item.route)}
 					<a class:active={route === item.route} href={item.path} aria-current={route === item.route ? 'page' : undefined} onclick={(event) => navigate(event, item.path)}>
@@ -959,7 +955,7 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 				<div class="rail-connection"><span class:offline={!online} class="status-dot"></span><span>{online ? 'Red disponible' : 'Sin conexión'}</span></div>
 				<a class="account-link" href="/settings" onclick={(event) => navigate(event, '/settings')}>
 					<span class="account-avatar" aria-hidden="true">{(session?.user?.name || 'L').slice(0, 1).toUpperCase()}</span>
-					<span><strong>{session?.user?.name || 'Cuenta personal'}</strong><small>Preferencias y copias</small></span>
+					<span class="sr-only">{session?.user?.name || 'Cuenta personal'} · Preferencias y copias</span>
 				</a>
 			</div>
 		</aside>
@@ -967,10 +963,11 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 		<div class="workspace">
 			<header class="topbar">
 				<div class="topbar-context">
-					<p class="topbar-vehicle">{pulseState.settings.vehicle_name || 'Tu espacio Pulse'}</p>
 					<h1 id="page-title" tabindex="-1" bind:this={pageTitle}>{titles[route]}</h1>
 				</div>
 				<div class="topbar-actions">
+					<a class="header-icon-link" href="/protection" aria-label="Ver historial de estados" onclick={(event) => navigate(event, '/protection')}><Glyph name="protection" size={20} /></a>
+					<a class="header-profile-link" href="/settings" aria-label="Abrir ajustes del vehículo" onclick={(event) => navigate(event, '/settings')}><span aria-hidden="true">B10</span><span class="header-profile-name">{pulseState.settings.vehicle_name}</span><Glyph name="chevron" size={16} /></a>
 					{#if !online}<span class="status-pill status-neutral mobile-network-status">Sin conexión</span>{/if}
 					<label class="theme-control"><span class="sr-only">Apariencia de Pulse</span><select value={theme} onchange={(event) => setTheme(event.currentTarget.value as ThemePreference)}><option value="system">Sistema</option><option value="light">Claro</option><option value="dark">Charcoal</option></select></label>
 				<div class="topbar-meta">
@@ -1038,14 +1035,7 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 					<Glyph name={item.icon} size={20} /><span>{item.route === 'navigation' ? 'Mapa' : item.label}</span>
 				</a>
 			{/each}
-			<details class="mobile-more" bind:open={moreNavigationOpen}>
-				<summary class:active={route === 'protection' || route === 'settings'} aria-expanded={moreNavigationOpen} aria-label={`Más secciones${route === 'protection' || route === 'settings' ? ` · ${titles[route]}` : ''}`}><Glyph name="more" size={20} /><span>Más</span></summary>
-				<nav aria-label="Otras secciones">
-					{#each navigation.filter((item) => ['protection', 'settings'].includes(item.route)) as item (item.route)}
-						<a class:active={route === item.route} href={item.path} aria-current={route === item.route ? 'page' : undefined} onclick={(event) => navigate(event, item.path)}><Glyph name={item.icon} size={20} /><span>{item.label}</span></a>
-					{/each}
-				</nav>
-			</details>
+
 		</nav>
 		</div>
 	</div>
@@ -1058,7 +1048,6 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 <dialog aria-labelledby="confirm-title" aria-describedby="confirm-message" class="confirm-dialog" bind:this={confirmDialog} oncancel={(event) => { event.preventDefault(); answerConfirmation(false); }}>
 	<form method="dialog" onsubmit={(event) => event.preventDefault()}>
 		<div class="dialog-mark" aria-hidden="true"><Glyph name="check" size={19} /></div>
-		<p class="eyebrow">CONFIRMACIÓN</p>
 		<h2 id="confirm-title">{confirmTitle}</h2>
 		<p id="confirm-message" class="body-copy">{confirmMessage}</p>
 		<div class="dialog-actions">
