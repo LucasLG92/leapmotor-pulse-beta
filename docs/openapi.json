@@ -1,0 +1,5911 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Leapmotor Pulse",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/session": {
+      "get": {
+        "summary": "Session",
+        "operationId": "session_api_session_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "get": {
+        "summary": "Login",
+        "operationId": "login_api_auth_login_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/callback": {
+      "get": {
+        "summary": "Callback",
+        "operationId": "callback_api_auth_callback_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "summary": "Logout",
+        "operationId": "logout_api_auth_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/navigation/status": {
+      "get": {
+        "summary": "Navigation Status",
+        "operationId": "navigation_status_api_navigation_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NavigationStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/navigation/places": {
+      "post": {
+        "summary": "Navigation Places",
+        "operationId": "navigation_places_api_navigation_places_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NavigationSearchPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NavigationSearch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/navigation/chargers": {
+      "post": {
+        "summary": "Navigation Chargers",
+        "operationId": "navigation_chargers_api_navigation_chargers_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NavigationChargersPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NavigationChargers"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/navigation/tiles": {
+      "post": {
+        "summary": "Navigation Tile",
+        "operationId": "navigation_tile_api_navigation_tiles_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NavigationTilePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NavigationTile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "summary": "Ready",
+        "operationId": "ready_readyz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/state": {
+      "get": {
+        "summary": "State",
+        "operationId": "state_api_state_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StateResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/telemetry": {
+      "get": {
+        "summary": "Telemetry",
+        "operationId": "telemetry_api_telemetry_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelemetryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/telemetry/history": {
+      "get": {
+        "summary": "Telemetry History",
+        "operationId": "telemetry_history_api_telemetry_history_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelemetryPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/protection/observations": {
+      "get": {
+        "summary": "Observed Events",
+        "operationId": "observed_events_api_protection_observations_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservedEventPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings": {
+      "put": {
+        "summary": "Settings",
+        "operationId": "settings_api_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/demo": {
+      "post": {
+        "summary": "Demo",
+        "operationId": "demo_api_demo_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TogglePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integrations/abrp": {
+      "put": {
+        "summary": "Abrp Consent",
+        "operationId": "abrp_consent_api_integrations_abrp_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TogglePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/commands": {
+      "post": {
+        "summary": "Command",
+        "operationId": "command_api_commands_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/commands/history": {
+      "get": {
+        "summary": "History",
+        "operationId": "history_api_commands_history_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandHistory"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/protection": {
+      "put": {
+        "summary": "Protection",
+        "operationId": "protection_api_protection_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TogglePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/protection/event": {
+      "post": {
+        "summary": "Event",
+        "operationId": "event_api_protection_event_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/charges": {
+      "get": {
+        "summary": "Charges",
+        "operationId": "charges_api_charges_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChargePage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Charge",
+        "operationId": "charge_api_charges_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChargePayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/energy": {
+      "get": {
+        "summary": "Energy Analytics",
+        "operationId": "energy_analytics_api_analytics_energy_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 365,
+              "minimum": 1,
+              "default": 30,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnergyAnalytics"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/charger": {
+      "get": {
+        "summary": "Charger Status",
+        "operationId": "charger_status_api_charger_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChargerStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/charger/sessions": {
+      "get": {
+        "summary": "Charger Sessions",
+        "operationId": "charger_sessions_api_charger_sessions_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChargerSessionPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/charger/pricing-history": {
+      "get": {
+        "summary": "Charger Pricing History",
+        "operationId": "charger_pricing_history_api_charger_pricing_history_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 32,
+              "pattern": "^[0-9a-f]{32}$",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "minimum": 1,
+              "default": 10,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 2048,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChargerPricingHistoryPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/charges/quote": {
+      "post": {
+        "summary": "Quote",
+        "operationId": "quote_api_charges_quote_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChargePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChargeQuote"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/charges/{item_id}": {
+      "put": {
+        "summary": "Edit Charge",
+        "operationId": "edit_charge_api_charges__item_id__put",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChargeEditPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Charge",
+        "operationId": "delete_charge_api_charges__item_id__delete",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/maintenance": {
+      "post": {
+        "summary": "Maintenance",
+        "operationId": "maintenance_api_maintenance_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaintenancePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/maintenance/{item_id}": {
+      "put": {
+        "summary": "Edit Maintenance",
+        "operationId": "edit_maintenance_api_maintenance__item_id__put",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaintenanceEditPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Maintenance",
+        "operationId": "delete_maintenance_api_maintenance__item_id__delete",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/native-capabilities": {
+      "get": {
+        "summary": "Capabilities",
+        "operationId": "capabilities_api_native_capabilities_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativeCapabilities"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/native/app-sessions": {
+      "post": {
+        "summary": "App Session",
+        "operationId": "app_session_api_native_app_sessions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NativeEmptyPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativeAppSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "NativeAppOAuthAccess": []
+          }
+        ]
+      }
+    },
+    "/api/widget-profiles/{profile_id}/pairings": {
+      "post": {
+        "summary": "Pairing",
+        "operationId": "pairing_api_widget_profiles__profile_id__pairings_post",
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NativeEmptyPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WidgetPairingResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/widget-profiles/{profile_id}/native-grants": {
+      "get": {
+        "summary": "Grants",
+        "operationId": "grants_api_widget_profiles__profile_id__native_grants_get",
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WidgetGrantList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/widget-profiles/{profile_id}/native-grants/{grant_id}": {
+      "delete": {
+        "summary": "Revoke",
+        "operationId": "revoke_api_widget_profiles__profile_id__native_grants__grant_id__delete",
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Profile Id"
+            }
+          },
+          {
+            "name": "grant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Grant Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NativeEmptyPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/native/widget-grants": {
+      "post": {
+        "summary": "Registration",
+        "operationId": "registration_api_native_widget_grants_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NativeRegistrationPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WidgetGrantResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "NativeOAuthAccess": []
+          }
+        ]
+      }
+    },
+    "/api/native/widget-grants/{grant_id}/snapshot": {
+      "get": {
+        "summary": "Snapshot",
+        "operationId": "snapshot_api_native_widget_grants__grant_id__snapshot_get",
+        "security": [
+          {
+            "WidgetReadPermission": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "grant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Grant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WidgetSnapshot"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/native/widget-grants/{grant_id}": {
+      "delete": {
+        "summary": "Unlink",
+        "operationId": "unlink_api_native_widget_grants__grant_id__delete",
+        "security": [
+          {
+            "WidgetReadPermission": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "grant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Grant Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NativeEmptyPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/push/capabilities": {
+      "get": {
+        "summary": "Capabilities",
+        "operationId": "capabilities_api_push_capabilities_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushCapabilities"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/push/subscriptions": {
+      "get": {
+        "summary": "Devices",
+        "operationId": "devices_api_push_subscriptions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushDeviceList"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Subscribe",
+        "operationId": "subscribe_api_push_subscriptions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushRegister"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushDevice"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/push/subscriptions/{item_id}": {
+      "delete": {
+        "summary": "Revoke",
+        "operationId": "revoke_api_push_subscriptions__item_id__delete",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/push/subscriptions/{item_id}/test": {
+      "post": {
+        "summary": "Test",
+        "operationId": "test_api_push_subscriptions__item_id__test_post",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushTest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushTestResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/widget-profiles": {
+      "get": {
+        "summary": "Widget Profiles",
+        "operationId": "widget_profiles_api_widget_profiles_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WidgetProfileList"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Widget Profile",
+        "operationId": "create_widget_profile_api_widget_profiles_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WidgetProfilePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WidgetProfileResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/widget-profiles/{profile_id}": {
+      "put": {
+        "summary": "Edit Widget Profile",
+        "operationId": "edit_widget_profile_api_widget_profiles__profile_id__put",
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WidgetProfileEditPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WidgetProfileResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Widget Profile",
+        "operationId": "delete_widget_profile_api_widget_profiles__profile_id__delete",
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/export": {
+      "get": {
+        "summary": "Export",
+        "operationId": "export_api_export_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/import": {
+      "post": {
+        "summary": "Restore",
+        "operationId": "restore_api_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events": {
+      "get": {
+        "summary": "Events",
+        "operationId": "events_api_events_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sw.js": {
+      "get": {
+        "summary": "Worker",
+        "operationId": "worker_sw_js_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/manifest.webmanifest": {
+      "get": {
+        "summary": "Manifest",
+        "operationId": "manifest_manifest_webmanifest_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AbrpStatus": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "consent": {
+            "type": "boolean",
+            "title": "Consent"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "paused",
+              "waiting",
+              "sharing",
+              "shared",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "reason_code": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "consent_required",
+              "demo_excluded",
+              "waiting_observation",
+              "observation_invalid",
+              "observation_stale",
+              "already_attempted",
+              "sharing",
+              "shared",
+              "send_failed"
+            ],
+            "title": "Reason Code"
+          },
+          "fields": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "battery_pct",
+                "observed_at"
+              ]
+            },
+            "type": "array",
+            "title": "Fields"
+          },
+          "max_age_seconds": {
+            "type": "integer",
+            "title": "Max Age Seconds"
+          },
+          "last_shared_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Shared At"
+          },
+          "validation": {
+            "type": "string",
+            "const": "not_qualified",
+            "title": "Validation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "consent",
+          "status",
+          "reason_code",
+          "fields",
+          "max_age_seconds",
+          "last_shared_at",
+          "validation"
+        ],
+        "title": "AbrpStatus"
+      },
+      "AppInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "version"
+        ],
+        "title": "AppInfo"
+      },
+      "Charge": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "started_at": {
+            "type": "string",
+            "title": "Started At"
+          },
+          "kwh": {
+            "type": "number",
+            "title": "Kwh"
+          },
+          "cost_eur": {
+            "type": "number",
+            "title": "Cost Eur"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "demo"
+            ],
+            "title": "Source"
+          },
+          "tariff_eur_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tariff Eur Kwh"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "pricing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PricingSnapshot"
+              },
+              {
+                "$ref": "#/components/schemas/TemporalPricingSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricing"
+          },
+          "pricing_method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "manual",
+                  "pvpc"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricing Method"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "started_at",
+          "kwh",
+          "cost_eur",
+          "source",
+          "tariff_eur_kwh",
+          "ended_at",
+          "pricing",
+          "pricing_method"
+        ],
+        "title": "Charge"
+      },
+      "ChargeAggregate": {
+        "properties": {
+          "sessions": {
+            "type": "integer",
+            "title": "Sessions"
+          },
+          "kwh": {
+            "type": "number",
+            "title": "Kwh"
+          },
+          "cost_eur": {
+            "type": "number",
+            "title": "Cost Eur"
+          },
+          "effective_tariff_eur_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Tariff Eur Kwh"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sessions",
+          "kwh",
+          "cost_eur",
+          "effective_tariff_eur_kwh"
+        ],
+        "title": "ChargeAggregate"
+      },
+      "ChargeEditPayload": {
+        "properties": {
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "kwh": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 500.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kwh"
+          },
+          "tariff_eur_kwh": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 5.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tariff Eur Kwh"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "pricing_method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "manual",
+                  "pvpc"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricing Method"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ChargeEditPayload"
+      },
+      "ChargePage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Charge"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "total"
+        ],
+        "title": "ChargePage"
+      },
+      "ChargePayload": {
+        "properties": {
+          "started_at": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Started At"
+          },
+          "kwh": {
+            "type": "number",
+            "maximum": 500.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Kwh"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "pricing_method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "manual",
+                  "pvpc"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricing Method"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "started_at",
+          "kwh"
+        ],
+        "title": "ChargePayload"
+      },
+      "ChargeQuote": {
+        "properties": {
+          "cost_eur": {
+            "type": "number",
+            "title": "Cost Eur"
+          },
+          "tariff_eur_kwh": {
+            "type": "number",
+            "title": "Tariff Eur Kwh"
+          },
+          "pricing": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PricingSnapshot"
+              },
+              {
+                "$ref": "#/components/schemas/TemporalPricingSnapshot"
+              }
+            ],
+            "title": "Pricing",
+            "discriminator": {
+              "propertyName": "accuracy",
+              "mapping": {
+                "estimated_intervals": "#/components/schemas/TemporalPricingSnapshot",
+                "estimated_uniform": "#/components/schemas/PricingSnapshot"
+              }
+            }
+          }
+        },
+        "type": "object",
+        "required": [
+          "cost_eur",
+          "tariff_eur_kwh",
+          "pricing"
+        ],
+        "title": "ChargeQuote"
+      },
+      "ChargerEnergyStatus": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "waiting",
+              "received",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "reason_code": {
+            "type": "string",
+            "title": "Reason Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "retained_intervals": {
+            "type": "integer",
+            "title": "Retained Intervals"
+          },
+          "total_kwh": {
+            "type": "number",
+            "title": "Total Kwh"
+          },
+          "first_started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Started At"
+          },
+          "last_ended_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Ended At"
+          },
+          "last_received_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Received At"
+          },
+          "retention_limit": {
+            "type": "integer",
+            "title": "Retention Limit"
+          },
+          "validation": {
+            "type": "string",
+            "const": "not_qualified",
+            "title": "Validation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "status",
+          "reason_code",
+          "message",
+          "last_success_at",
+          "retained_intervals",
+          "total_kwh",
+          "first_started_at",
+          "last_ended_at",
+          "last_received_at",
+          "retention_limit",
+          "validation"
+        ],
+        "title": "ChargerEnergyStatus"
+      },
+      "ChargerObservation": {
+        "properties": {
+          "received_at": {
+            "type": "string",
+            "title": "Received At"
+          },
+          "loadpoint": {
+            "type": "string",
+            "title": "Loadpoint"
+          },
+          "connected": {
+            "type": "boolean",
+            "title": "Connected"
+          },
+          "charging": {
+            "type": "boolean",
+            "title": "Charging"
+          },
+          "power_w": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Power W"
+          },
+          "charged_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Charged Kwh"
+          },
+          "active_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "received_at",
+          "loadpoint",
+          "connected",
+          "charging",
+          "power_w",
+          "charged_kwh",
+          "active_seconds"
+        ],
+        "title": "ChargerObservation"
+      },
+      "ChargerPricingEvent": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "priced",
+              "baseline",
+              "invalidated"
+            ],
+            "title": "Kind"
+          },
+          "recorded_at": {
+            "type": "string",
+            "title": "Recorded At"
+          },
+          "session": {
+            "$ref": "#/components/schemas/ChargerPricingInputs"
+          },
+          "quote": {
+            "$ref": "#/components/schemas/ChargeQuote"
+          },
+          "corrected_session": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChargerPricingInputs"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "recorded_at",
+          "session",
+          "quote",
+          "corrected_session"
+        ],
+        "title": "ChargerPricingEvent"
+      },
+      "ChargerPricingHistoryPage": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChargerPricingEvent"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          },
+          "retention_limit": {
+            "type": "integer",
+            "title": "Retention Limit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "items",
+          "total",
+          "limit",
+          "offset",
+          "retention_limit"
+        ],
+        "title": "ChargerPricingHistoryPage"
+      },
+      "ChargerPricingInputs": {
+        "properties": {
+          "started_at": {
+            "type": "string",
+            "title": "Started At"
+          },
+          "ended_at": {
+            "type": "string",
+            "title": "Ended At"
+          },
+          "kwh": {
+            "type": "number",
+            "title": "Kwh"
+          }
+        },
+        "type": "object",
+        "required": [
+          "started_at",
+          "ended_at",
+          "kwh"
+        ],
+        "title": "ChargerPricingInputs"
+      },
+      "ChargerSession": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "upstream_id": {
+            "type": "integer",
+            "title": "Upstream Id"
+          },
+          "loadpoint": {
+            "type": "string",
+            "title": "Loadpoint"
+          },
+          "started_at": {
+            "type": "string",
+            "title": "Started At"
+          },
+          "ended_at": {
+            "type": "string",
+            "title": "Ended At"
+          },
+          "kwh": {
+            "type": "number",
+            "title": "Kwh"
+          },
+          "active_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Seconds"
+          },
+          "received_at": {
+            "type": "string",
+            "title": "Received At"
+          },
+          "pvpc": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChargeQuote"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pricing_status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "pending",
+              "ineligible",
+              "disabled"
+            ],
+            "title": "Pricing Status",
+            "default": "disabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "upstream_id",
+          "loadpoint",
+          "started_at",
+          "ended_at",
+          "kwh",
+          "active_seconds",
+          "received_at"
+        ],
+        "title": "ChargerSession"
+      },
+      "ChargerSessionPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChargerSession"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "ChargerSessionPage"
+      },
+      "ChargerStatus": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "waiting",
+              "ready",
+              "stale",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "reason_code": {
+            "type": "string",
+            "title": "Reason Code"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "history_status": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "waiting",
+              "ready",
+              "error"
+            ],
+            "title": "History Status"
+          },
+          "history_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "History Message"
+          },
+          "last_history_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last History At"
+          },
+          "observation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChargerObservation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "validation": {
+            "type": "string",
+            "const": "not_qualified",
+            "title": "Validation"
+          },
+          "retention_limit": {
+            "type": "integer",
+            "title": "Retention Limit"
+          },
+          "history_months": {
+            "type": "integer",
+            "title": "History Months"
+          },
+          "energy_history": {
+            "$ref": "#/components/schemas/ChargerEnergyStatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "status",
+          "message",
+          "reason_code",
+          "last_success_at",
+          "history_status",
+          "history_message",
+          "last_history_at",
+          "observation",
+          "validation",
+          "retention_limit",
+          "history_months",
+          "energy_history"
+        ],
+        "title": "ChargerStatus"
+      },
+      "Command": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "enabled",
+          "reason"
+        ],
+        "title": "Command"
+      },
+      "CommandHistory": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CommandResult"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "CommandHistory"
+      },
+      "CommandPayload": {
+        "properties": {
+          "command": {
+            "type": "string",
+            "maxLength": 32,
+            "title": "Command"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "title": "Confirmed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "command",
+          "confirmed"
+        ],
+        "title": "CommandPayload"
+      },
+      "CommandResult": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "command": {
+            "type": "string",
+            "title": "Command"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "command",
+          "status",
+          "created_at",
+          "message"
+        ],
+        "title": "CommandResult"
+      },
+      "Connection": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "freshness": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Freshness"
+          },
+          "last_contact_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Contact At"
+          },
+          "last_observed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Observed At"
+          },
+          "commands_enabled": {
+            "type": "boolean",
+            "title": "Commands Enabled",
+            "default": false
+          },
+          "capabilities": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capabilities"
+          },
+          "sdk": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sdk"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "reason"
+        ],
+        "title": "Connection"
+      },
+      "Energy": {
+        "properties": {
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/Charge"
+            },
+            "type": "array",
+            "title": "Sessions"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/Totals"
+          },
+          "totals_by_source": {
+            "$ref": "#/components/schemas/Sources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sessions",
+          "totals",
+          "totals_by_source"
+        ],
+        "title": "Energy"
+      },
+      "EnergyAnalytics": {
+        "properties": {
+          "window_start": {
+            "type": "string",
+            "title": "Window Start"
+          },
+          "window_end": {
+            "type": "string",
+            "title": "Window End"
+          },
+          "bucket_timezone": {
+            "type": "string",
+            "const": "UTC",
+            "title": "Bucket Timezone"
+          },
+          "manual": {
+            "$ref": "#/components/schemas/ChargeAggregate"
+          },
+          "demo": {
+            "$ref": "#/components/schemas/ChargeAggregate"
+          },
+          "months": {
+            "items": {
+              "$ref": "#/components/schemas/EnergyMonth"
+            },
+            "type": "array",
+            "title": "Months"
+          },
+          "observations": {
+            "$ref": "#/components/schemas/ObservationCoverage"
+          },
+          "estimates": {
+            "$ref": "#/components/schemas/EnergyEstimates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "window_start",
+          "window_end",
+          "bucket_timezone",
+          "manual",
+          "demo",
+          "months",
+          "observations",
+          "estimates"
+        ],
+        "title": "EnergyAnalytics"
+      },
+      "EnergyDistribution": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "const": 1,
+            "title": "Version"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "source_version": {
+            "type": "string",
+            "title": "Source Version"
+          },
+          "basis": {
+            "type": "string",
+            "const": "charger_total",
+            "title": "Basis"
+          },
+          "intervals": {
+            "items": {
+              "$ref": "#/components/schemas/EnergyInterval"
+            },
+            "type": "array",
+            "title": "Intervals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "source_id",
+          "source_version",
+          "basis",
+          "intervals"
+        ],
+        "title": "EnergyDistribution"
+      },
+      "EnergyEstimates": {
+        "properties": {
+          "consumption_kwh_100km": {
+            "type": "null",
+            "title": "Consumption Kwh 100Km"
+          },
+          "reason_code": {
+            "type": "string",
+            "const": "energy_not_observed",
+            "title": "Reason Code",
+            "default": "energy_not_observed"
+          }
+        },
+        "type": "object",
+        "title": "EnergyEstimates"
+      },
+      "EnergyInterval": {
+        "properties": {
+          "started_at": {
+            "type": "string",
+            "title": "Started At"
+          },
+          "ended_at": {
+            "type": "string",
+            "title": "Ended At"
+          },
+          "kwh": {
+            "type": "number",
+            "title": "Kwh"
+          }
+        },
+        "type": "object",
+        "required": [
+          "started_at",
+          "ended_at",
+          "kwh"
+        ],
+        "title": "EnergyInterval"
+      },
+      "EnergyMonth": {
+        "properties": {
+          "month": {
+            "type": "string",
+            "title": "Month"
+          },
+          "manual": {
+            "$ref": "#/components/schemas/ChargeAggregate"
+          },
+          "demo": {
+            "$ref": "#/components/schemas/ChargeAggregate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "manual",
+          "demo"
+        ],
+        "title": "EnergyMonth"
+      },
+      "Event": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "kind",
+          "message"
+        ],
+        "title": "Event"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ImportPayload": {
+        "properties": {
+          "confirmed": {
+            "type": "boolean",
+            "title": "Confirmed"
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "confirmed",
+          "data"
+        ],
+        "title": "ImportPayload"
+      },
+      "IntegrationsStatus": {
+        "properties": {
+          "mqtt": {
+            "$ref": "#/components/schemas/MqttStatus"
+          },
+          "abrp": {
+            "$ref": "#/components/schemas/AbrpStatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mqtt",
+          "abrp"
+        ],
+        "title": "IntegrationsStatus"
+      },
+      "Journey": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "started_at": {
+            "type": "string",
+            "title": "Started At"
+          },
+          "from_label": {
+            "type": "string",
+            "title": "From Label"
+          },
+          "to_label": {
+            "type": "string",
+            "title": "To Label"
+          },
+          "distance_km": {
+            "type": "number",
+            "title": "Distance Km"
+          },
+          "duration_min": {
+            "type": "integer",
+            "title": "Duration Min"
+          },
+          "energy_kwh": {
+            "type": "number",
+            "title": "Energy Kwh"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "started_at",
+          "from_label",
+          "to_label",
+          "distance_km",
+          "duration_min",
+          "energy_kwh"
+        ],
+        "title": "Journey"
+      },
+      "Maintenance": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "due_date": {
+            "type": "string",
+            "title": "Due Date"
+          },
+          "completed": {
+            "type": "boolean",
+            "title": "Completed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "due_date",
+          "completed"
+        ],
+        "title": "Maintenance"
+      },
+      "MaintenanceEditPayload": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "completed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "MaintenanceEditPayload"
+      },
+      "MaintenancePayload": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Title"
+          },
+          "due_date": {
+            "type": "string",
+            "maxLength": 10,
+            "title": "Due Date"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "due_date"
+        ],
+        "title": "MaintenancePayload"
+      },
+      "MqttStatus": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "connecting",
+              "connected",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "data_status": {
+            "type": "string",
+            "enum": [
+              "no_data",
+              "demo",
+              "unavailable",
+              "published"
+            ],
+            "title": "Data Status"
+          },
+          "fields": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "battery_pct",
+                "range_km",
+                "charging"
+              ]
+            },
+            "type": "array",
+            "title": "Fields"
+          },
+          "max_age_seconds": {
+            "type": "integer",
+            "title": "Max Age Seconds"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "last_published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Published At"
+          },
+          "reason_code": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "connecting",
+              "waiting_observation",
+              "demo_excluded",
+              "observation_unavailable",
+              "published",
+              "connection_failed",
+              "publish_failed"
+            ],
+            "title": "Reason Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "status",
+          "data_status",
+          "fields",
+          "max_age_seconds",
+          "observed_at",
+          "last_published_at",
+          "reason_code"
+        ],
+        "title": "MqttStatus"
+      },
+      "NativeAppSessionResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "expires_in"
+        ],
+        "title": "NativeAppSessionResponse"
+      },
+      "NativeCapabilities": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "reason_code": {
+            "type": "string",
+            "enum": [
+              "configured",
+              "not_configured"
+            ],
+            "title": "Reason Code"
+          },
+          "pairing_ttl_seconds": {
+            "type": "integer",
+            "const": 300,
+            "title": "Pairing Ttl Seconds",
+            "default": 300
+          },
+          "grant_ttl_days": {
+            "type": "integer",
+            "const": 30,
+            "title": "Grant Ttl Days",
+            "default": 30
+          },
+          "max_devices_per_profile": {
+            "type": "integer",
+            "const": 5,
+            "title": "Max Devices Per Profile",
+            "default": 5
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "reason_code"
+        ],
+        "title": "NativeCapabilities"
+      },
+      "NativeEmptyPayload": {
+        "properties": {},
+        "additionalProperties": false,
+        "type": "object",
+        "title": "NativeEmptyPayload"
+      },
+      "NativeRegistrationPayload": {
+        "properties": {
+          "pairing_code": {
+            "type": "string",
+            "maxLength": 43,
+            "minLength": 43,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Pairing Code"
+          },
+          "installation_id": {
+            "type": "string",
+            "maxLength": 43,
+            "minLength": 43,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Installation Id"
+          },
+          "device_name": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Device Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "pairing_code",
+          "installation_id",
+          "device_name"
+        ],
+        "title": "NativeRegistrationPayload"
+      },
+      "NavigationChargers": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "OpenStreetMap Overpass",
+            "title": "Source"
+          },
+          "fetched_at": {
+            "type": "string",
+            "title": "Fetched At"
+          },
+          "cached": {
+            "type": "boolean",
+            "title": "Cached"
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated"
+          },
+          "stations": {
+            "items": {
+              "$ref": "#/components/schemas/NavigationStation"
+            },
+            "type": "array",
+            "maxItems": 60,
+            "title": "Stations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "fetched_at",
+          "cached",
+          "truncated",
+          "stations"
+        ],
+        "title": "NavigationChargers"
+      },
+      "NavigationChargersPayload": {
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Longitude"
+          },
+          "consent": {
+            "type": "boolean",
+            "title": "Consent"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "latitude",
+          "longitude",
+          "consent"
+        ],
+        "title": "NavigationChargersPayload"
+      },
+      "NavigationPlace": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "title": "Name"
+          },
+          "latitude": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Longitude"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "latitude",
+          "longitude"
+        ],
+        "title": "NavigationPlace"
+      },
+      "NavigationSearch": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "OpenStreetMap Nominatim",
+            "title": "Source"
+          },
+          "fetched_at": {
+            "type": "string",
+            "title": "Fetched At"
+          },
+          "cached": {
+            "type": "boolean",
+            "title": "Cached"
+          },
+          "places": {
+            "items": {
+              "$ref": "#/components/schemas/NavigationPlace"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Places"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "fetched_at",
+          "cached",
+          "places"
+        ],
+        "title": "NavigationSearch"
+      },
+      "NavigationSearchPayload": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 3,
+            "title": "Query"
+          },
+          "consent": {
+            "type": "boolean",
+            "title": "Consent"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "query",
+          "consent"
+        ],
+        "title": "NavigationSearchPayload"
+      },
+      "NavigationStation": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "title": "Name"
+          },
+          "latitude": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Longitude"
+          },
+          "operator": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operator"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "connectors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Connectors"
+          },
+          "power_kw": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 2000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Power Kw"
+          },
+          "distance_m": {
+            "type": "integer",
+            "maximum": 5100.0,
+            "minimum": 0.0,
+            "title": "Distance M"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "latitude",
+          "longitude",
+          "connectors",
+          "distance_m"
+        ],
+        "title": "NavigationStation"
+      },
+      "NavigationStatus": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "source": {
+            "type": "string",
+            "const": "OpenStreetMap",
+            "title": "Source"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "disabled"
+            ],
+            "title": "Reason"
+          },
+          "attribution": {
+            "type": "string",
+            "const": "© OpenStreetMap contributors",
+            "title": "Attribution"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "source",
+          "reason",
+          "attribution"
+        ],
+        "title": "NavigationStatus"
+      },
+      "NavigationTile": {
+        "properties": {
+          "data_url": {
+            "type": "string",
+            "maxLength": 180000,
+            "pattern": "^data:image/png;base64,[A-Za-z0-9+/]+=*$",
+            "title": "Data Url"
+          },
+          "cached": {
+            "type": "boolean",
+            "title": "Cached"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data_url",
+          "cached"
+        ],
+        "title": "NavigationTile"
+      },
+      "NavigationTilePayload": {
+        "properties": {
+          "z": {
+            "type": "integer",
+            "maximum": 18.0,
+            "minimum": 0.0,
+            "title": "Z"
+          },
+          "x": {
+            "type": "integer",
+            "maximum": 262143.0,
+            "minimum": 0.0,
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "maximum": 262143.0,
+            "minimum": 0.0,
+            "title": "Y"
+          },
+          "consent": {
+            "type": "boolean",
+            "title": "Consent"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "z",
+          "x",
+          "y",
+          "consent"
+        ],
+        "title": "NavigationTilePayload"
+      },
+      "ObservationCoverage": {
+        "properties": {
+          "sample_count": {
+            "type": "integer",
+            "title": "Sample Count"
+          },
+          "observed_count": {
+            "type": "integer",
+            "title": "Observed Count"
+          },
+          "missing_observation_count": {
+            "type": "integer",
+            "title": "Missing Observation Count"
+          },
+          "future_timestamp_count": {
+            "type": "integer",
+            "title": "Future Timestamp Count"
+          },
+          "outside_window_count": {
+            "type": "integer",
+            "title": "Outside Window Count"
+          },
+          "non_monotonic_count": {
+            "type": "integer",
+            "title": "Non Monotonic Count"
+          },
+          "duplicate_time_count": {
+            "type": "integer",
+            "title": "Duplicate Time Count"
+          },
+          "gap_count": {
+            "type": "integer",
+            "title": "Gap Count"
+          },
+          "max_gap_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Gap Seconds"
+          },
+          "covered_seconds": {
+            "type": "number",
+            "title": "Covered Seconds"
+          },
+          "coverage_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Percent"
+          },
+          "first_observed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Observed At"
+          },
+          "last_observed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Observed At"
+          },
+          "odometer_delta_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Odometer Delta Km"
+          },
+          "eligible_interval_count": {
+            "type": "integer",
+            "title": "Eligible Interval Count"
+          },
+          "retention_limit": {
+            "type": "integer",
+            "title": "Retention Limit"
+          },
+          "validation": {
+            "type": "string",
+            "const": "not_qualified",
+            "title": "Validation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sample_count",
+          "observed_count",
+          "missing_observation_count",
+          "future_timestamp_count",
+          "outside_window_count",
+          "non_monotonic_count",
+          "duplicate_time_count",
+          "gap_count",
+          "max_gap_seconds",
+          "covered_seconds",
+          "coverage_percent",
+          "first_observed_at",
+          "last_observed_at",
+          "odometer_delta_km",
+          "eligible_interval_count",
+          "retention_limit",
+          "validation"
+        ],
+        "title": "ObservationCoverage"
+      },
+      "ObservedEvent": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "field": {
+            "type": "string",
+            "enum": [
+              "locked",
+              "charging"
+            ],
+            "title": "Field"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "before": {
+            "type": "boolean",
+            "title": "Before"
+          },
+          "after": {
+            "type": "boolean",
+            "title": "After"
+          },
+          "previous_observed_at": {
+            "type": "string",
+            "title": "Previous Observed At"
+          },
+          "observed_at": {
+            "type": "string",
+            "title": "Observed At"
+          },
+          "previous_received_at": {
+            "type": "string",
+            "title": "Previous Received At"
+          },
+          "received_at": {
+            "type": "string",
+            "title": "Received At"
+          },
+          "previous_snapshot_id": {
+            "type": "string",
+            "title": "Previous Snapshot Id"
+          },
+          "snapshot_id": {
+            "type": "string",
+            "title": "Snapshot Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "field",
+          "source",
+          "before",
+          "after",
+          "previous_observed_at",
+          "observed_at",
+          "previous_received_at",
+          "received_at",
+          "previous_snapshot_id",
+          "snapshot_id"
+        ],
+        "title": "ObservedEvent"
+      },
+      "ObservedEventPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ObservedEvent"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "ObservedEventPage"
+      },
+      "Payload": {
+        "properties": {},
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Payload"
+      },
+      "PriceInterval": {
+        "properties": {
+          "started_at": {
+            "type": "string",
+            "title": "Started At"
+          },
+          "ended_at": {
+            "type": "string",
+            "title": "Ended At"
+          },
+          "kwh": {
+            "type": "number",
+            "title": "Kwh"
+          },
+          "price_eur_kwh": {
+            "type": "number",
+            "title": "Price Eur Kwh"
+          },
+          "cost_eur": {
+            "type": "number",
+            "title": "Cost Eur"
+          },
+          "price_fetched_at": {
+            "type": "string",
+            "title": "Price Fetched At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "started_at",
+          "ended_at",
+          "kwh",
+          "price_eur_kwh",
+          "cost_eur",
+          "price_fetched_at"
+        ],
+        "title": "PriceInterval"
+      },
+      "PricingSnapshot": {
+        "properties": {
+          "method": {
+            "type": "string",
+            "const": "pvpc",
+            "title": "Method"
+          },
+          "accuracy": {
+            "type": "string",
+            "const": "estimated_uniform",
+            "title": "Accuracy"
+          },
+          "region": {
+            "type": "string",
+            "const": "peninsula",
+            "title": "Region"
+          },
+          "source": {
+            "type": "string",
+            "const": "REE REData PVPC 1001",
+            "title": "Source"
+          },
+          "taxes_included": {
+            "type": "boolean",
+            "const": false,
+            "title": "Taxes Included"
+          },
+          "calculated_at": {
+            "type": "string",
+            "title": "Calculated At"
+          },
+          "intervals": {
+            "items": {
+              "$ref": "#/components/schemas/PriceInterval"
+            },
+            "type": "array",
+            "title": "Intervals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "method",
+          "accuracy",
+          "region",
+          "source",
+          "taxes_included",
+          "calculated_at",
+          "intervals"
+        ],
+        "title": "PricingSnapshot"
+      },
+      "Protection": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/Event"
+            },
+            "type": "array",
+            "title": "Events"
+          },
+          "observed_count": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 0.0,
+            "title": "Observed Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "events",
+          "observed_count"
+        ],
+        "title": "Protection"
+      },
+      "PushCapabilities": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "reason_code": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "available"
+            ],
+            "title": "Reason Code"
+          },
+          "application_server_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Application Server Key"
+          },
+          "privacy_mode": {
+            "type": "string",
+            "const": "generic",
+            "title": "Privacy Mode",
+            "default": "generic"
+          },
+          "max_devices": {
+            "type": "integer",
+            "title": "Max Devices",
+            "default": 8
+          },
+          "scope": {
+            "type": "string",
+            "const": "pwa",
+            "title": "Scope",
+            "default": "pwa"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "reason_code",
+          "application_server_key"
+        ],
+        "title": "PushCapabilities"
+      },
+      "PushDevice": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "endpoint_hash": {
+            "type": "string",
+            "title": "Endpoint Hash"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "expires_at": {
+            "type": "string",
+            "title": "Expires At"
+          },
+          "session_active": {
+            "type": "boolean",
+            "title": "Session Active"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "session_required"
+            ],
+            "title": "State"
+          },
+          "last_attempt_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Attempt At"
+          },
+          "last_accepted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Accepted At"
+          },
+          "last_result": {
+            "type": "string",
+            "enum": [
+              "never",
+              "pending",
+              "accepted",
+              "failed",
+              "uncertain"
+            ],
+            "title": "Last Result"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "endpoint_hash",
+          "created_at",
+          "updated_at",
+          "expires_at",
+          "session_active",
+          "state",
+          "last_attempt_at",
+          "last_accepted_at",
+          "last_result"
+        ],
+        "title": "PushDevice"
+      },
+      "PushDeviceList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PushDevice"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "max_devices": {
+            "type": "integer",
+            "title": "Max Devices",
+            "default": 8
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "PushDeviceList"
+      },
+      "PushKeys": {
+        "properties": {
+          "p256dh": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "P256Dh"
+          },
+          "auth": {
+            "type": "string",
+            "maxLength": 32,
+            "title": "Auth"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "p256dh",
+          "auth"
+        ],
+        "title": "PushKeys"
+      },
+      "PushPayload": {
+        "properties": {},
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PushPayload"
+      },
+      "PushRegister": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "subscription": {
+            "$ref": "#/components/schemas/PushSubscription"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "subscription"
+        ],
+        "title": "PushRegister"
+      },
+      "PushSubscription": {
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "maxLength": 2048,
+            "title": "Endpoint"
+          },
+          "expirationTime": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expirationtime"
+          },
+          "keys": {
+            "$ref": "#/components/schemas/PushKeys"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "endpoint",
+          "keys"
+        ],
+        "title": "PushSubscription"
+      },
+      "PushTest": {
+        "properties": {
+          "confirmed": {
+            "type": "boolean",
+            "title": "Confirmed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "confirmed"
+        ],
+        "title": "PushTest"
+      },
+      "PushTestResult": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "accepted",
+            "title": "Status"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "detail"
+        ],
+        "title": "PushTestResult"
+      },
+      "SessionResponse": {
+        "properties": {
+          "csrf_token": {
+            "type": "string",
+            "title": "Csrf Token"
+          },
+          "authenticated": {
+            "type": "boolean",
+            "title": "Authenticated"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "login_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Login Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "csrf_token",
+          "authenticated",
+          "user",
+          "login_url"
+        ],
+        "title": "SessionResponse"
+      },
+      "Settings": {
+        "properties": {
+          "vehicle_name": {
+            "type": "string",
+            "title": "Vehicle Name"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "tariff_eur_kwh": {
+            "type": "number",
+            "title": "Tariff Eur Kwh"
+          },
+          "home_label": {
+            "type": "string",
+            "title": "Home Label"
+          },
+          "pricing_method": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "pvpc"
+            ],
+            "title": "Pricing Method"
+          }
+        },
+        "type": "object",
+        "required": [
+          "vehicle_name",
+          "model",
+          "tariff_eur_kwh",
+          "home_label",
+          "pricing_method"
+        ],
+        "title": "Settings"
+      },
+      "SettingsPayload": {
+        "properties": {
+          "vehicle_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle Name"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "tariff_eur_kwh": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 5.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tariff Eur Kwh"
+          },
+          "home_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Label"
+          },
+          "pricing_method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "manual",
+                  "pvpc"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricing Method"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SettingsPayload"
+      },
+      "Sources": {
+        "properties": {
+          "manual": {
+            "$ref": "#/components/schemas/Totals"
+          },
+          "demo": {
+            "$ref": "#/components/schemas/Totals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "manual",
+          "demo"
+        ],
+        "title": "Sources"
+      },
+      "StateResponse": {
+        "properties": {
+          "app": {
+            "$ref": "#/components/schemas/AppInfo"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "demo",
+              "unconfigured",
+              "telemetry_read_only"
+            ],
+            "title": "Mode"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "vehicle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Vehicle"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "settings": {
+            "$ref": "#/components/schemas/Settings"
+          },
+          "energy": {
+            "$ref": "#/components/schemas/Energy"
+          },
+          "journeys": {
+            "items": {
+              "$ref": "#/components/schemas/Journey"
+            },
+            "type": "array",
+            "title": "Journeys"
+          },
+          "maintenance": {
+            "items": {
+              "$ref": "#/components/schemas/Maintenance"
+            },
+            "type": "array",
+            "title": "Maintenance"
+          },
+          "protection": {
+            "$ref": "#/components/schemas/Protection"
+          },
+          "commands": {
+            "items": {
+              "$ref": "#/components/schemas/Command"
+            },
+            "type": "array",
+            "title": "Commands"
+          },
+          "command_history": {
+            "items": {
+              "$ref": "#/components/schemas/CommandResult"
+            },
+            "type": "array",
+            "title": "Command History"
+          },
+          "connection": {
+            "$ref": "#/components/schemas/Connection"
+          },
+          "telemetry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TelemetryResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "integrations": {
+            "$ref": "#/components/schemas/IntegrationsStatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "app",
+          "mode",
+          "updated_at",
+          "vehicle",
+          "settings",
+          "energy",
+          "journeys",
+          "maintenance",
+          "protection",
+          "commands",
+          "command_history",
+          "connection",
+          "integrations"
+        ],
+        "title": "StateResponse"
+      },
+      "TelemetryPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TelemetrySnapshot"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "TelemetryPage"
+      },
+      "TelemetryResponse": {
+        "properties": {
+          "latest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TelemetrySnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quality": {
+            "$ref": "#/components/schemas/TemporalQuality"
+          },
+          "collector": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Collector"
+          }
+        },
+        "type": "object",
+        "required": [
+          "latest",
+          "quality",
+          "collector"
+        ],
+        "title": "TelemetryResponse"
+      },
+      "TelemetrySnapshot": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "provider_received_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Received At"
+          },
+          "server_received_at": {
+            "type": "string",
+            "title": "Server Received At"
+          },
+          "vehicle": {
+            "$ref": "#/components/schemas/TelemetryValues"
+          },
+          "field_sources": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Field Sources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source",
+          "observed_at",
+          "provider_received_at",
+          "server_received_at",
+          "vehicle",
+          "field_sources"
+        ],
+        "title": "TelemetrySnapshot"
+      },
+      "TelemetryValues": {
+        "properties": {
+          "battery_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Battery Pct"
+          },
+          "range_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Range Km"
+          },
+          "odometer_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Odometer Km"
+          },
+          "locked": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked"
+          },
+          "climate_on": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Climate On"
+          },
+          "charging": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Charging"
+          }
+        },
+        "type": "object",
+        "required": [
+          "battery_pct",
+          "range_km",
+          "odometer_km",
+          "locked",
+          "climate_on",
+          "charging"
+        ],
+        "title": "TelemetryValues"
+      },
+      "TemporalPricingSnapshot": {
+        "properties": {
+          "method": {
+            "type": "string",
+            "const": "pvpc",
+            "title": "Method"
+          },
+          "accuracy": {
+            "type": "string",
+            "const": "estimated_intervals",
+            "title": "Accuracy"
+          },
+          "region": {
+            "type": "string",
+            "const": "peninsula",
+            "title": "Region"
+          },
+          "source": {
+            "type": "string",
+            "const": "REE REData PVPC 1001",
+            "title": "Source"
+          },
+          "taxes_included": {
+            "type": "boolean",
+            "const": false,
+            "title": "Taxes Included"
+          },
+          "calculated_at": {
+            "type": "string",
+            "title": "Calculated At"
+          },
+          "intervals": {
+            "items": {
+              "$ref": "#/components/schemas/PriceInterval"
+            },
+            "type": "array",
+            "title": "Intervals"
+          },
+          "energy_distribution": {
+            "$ref": "#/components/schemas/EnergyDistribution"
+          }
+        },
+        "type": "object",
+        "required": [
+          "method",
+          "accuracy",
+          "region",
+          "source",
+          "taxes_included",
+          "calculated_at",
+          "intervals",
+          "energy_distribution"
+        ],
+        "title": "TemporalPricingSnapshot"
+      },
+      "TemporalQuality": {
+        "properties": {
+          "freshness": {
+            "type": "string",
+            "const": "unknown",
+            "title": "Freshness"
+          },
+          "temporal_status": {
+            "type": "string",
+            "enum": [
+              "fresh",
+              "stale",
+              "unknown",
+              "unavailable"
+            ],
+            "title": "Temporal Status"
+          },
+          "age_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Seconds"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "reason_code": {
+            "type": "string",
+            "title": "Reason Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "freshness",
+          "temporal_status",
+          "age_seconds",
+          "observed_at",
+          "reason_code"
+        ],
+        "title": "TemporalQuality"
+      },
+      "TogglePayload": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "TogglePayload"
+      },
+      "Totals": {
+        "properties": {
+          "kwh": {
+            "type": "number",
+            "title": "Kwh"
+          },
+          "cost_eur": {
+            "type": "number",
+            "title": "Cost Eur"
+          },
+          "distance_km": {
+            "type": "number",
+            "title": "Distance Km"
+          },
+          "consumption_kwh_100km": {
+            "type": "number",
+            "title": "Consumption Kwh 100Km"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kwh",
+          "cost_eur",
+          "distance_km",
+          "consumption_kwh_100km"
+        ],
+        "title": "Totals"
+      },
+      "User": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "User"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "Vehicle": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "battery_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Battery Pct"
+          },
+          "range_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Range Km"
+          },
+          "odometer_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Odometer Km"
+          },
+          "locked": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked"
+          },
+          "climate_on": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Climate On"
+          },
+          "charging": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Charging"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "model",
+          "battery_pct",
+          "range_km",
+          "odometer_km",
+          "locked",
+          "climate_on",
+          "charging",
+          "observed_at"
+        ],
+        "title": "Vehicle"
+      },
+      "WidgetEnergyWindow": {
+        "properties": {
+          "started_at": {
+            "type": "string",
+            "title": "Started At"
+          },
+          "ended_at": {
+            "type": "string",
+            "title": "Ended At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "started_at",
+          "ended_at"
+        ],
+        "title": "WidgetEnergyWindow"
+      },
+      "WidgetGrant": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "profile_id": {
+            "type": "string",
+            "title": "Profile Id"
+          },
+          "device_name": {
+            "type": "string",
+            "title": "Device Name"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "expires_at": {
+            "type": "string",
+            "title": "Expires At"
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "profile_id",
+          "device_name",
+          "created_at",
+          "expires_at"
+        ],
+        "title": "WidgetGrant"
+      },
+      "WidgetGrantList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WidgetGrant"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "WidgetGrantList"
+      },
+      "WidgetGrantResult": {
+        "properties": {
+          "grant": {
+            "$ref": "#/components/schemas/WidgetGrant"
+          },
+          "widget_token": {
+            "type": "string",
+            "title": "Widget Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "grant",
+          "widget_token"
+        ],
+        "title": "WidgetGrantResult"
+      },
+      "WidgetPairingResult": {
+        "properties": {
+          "pairing_code": {
+            "type": "string",
+            "title": "Pairing Code"
+          },
+          "expires_at": {
+            "type": "string",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pairing_code",
+          "expires_at"
+        ],
+        "title": "WidgetPairingResult"
+      },
+      "WidgetProfile": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "fields": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "battery_pct",
+                "range_km",
+                "charging",
+                "locked",
+                "energy_kwh",
+                "energy_cost_eur"
+              ]
+            },
+            "type": "array",
+            "title": "Fields"
+          },
+          "appearance": {
+            "type": "string",
+            "enum": [
+              "system",
+              "light",
+              "dark"
+            ],
+            "title": "Appearance"
+          },
+          "privacy_mode": {
+            "type": "string",
+            "enum": [
+              "masked",
+              "visible"
+            ],
+            "title": "Privacy Mode"
+          },
+          "max_age_minutes": {
+            "type": "integer",
+            "title": "Max Age Minutes"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "fields",
+          "appearance",
+          "privacy_mode",
+          "max_age_minutes",
+          "revision",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "WidgetProfile"
+      },
+      "WidgetProfileEditPayload": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "fields": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "battery_pct",
+                    "range_km",
+                    "charging",
+                    "locked",
+                    "energy_kwh",
+                    "energy_cost_eur"
+                  ]
+                },
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fields"
+          },
+          "appearance": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "system",
+                  "light",
+                  "dark"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Appearance"
+          },
+          "privacy_mode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "masked",
+                  "visible"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Privacy Mode"
+          },
+          "max_age_minutes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 120.0,
+                "minimum": 15.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Age Minutes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "WidgetProfileEditPayload"
+      },
+      "WidgetProfileList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WidgetProfile"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "WidgetProfileList"
+      },
+      "WidgetProfilePayload": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "fields": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "battery_pct",
+                "range_km",
+                "charging",
+                "locked",
+                "energy_kwh",
+                "energy_cost_eur"
+              ]
+            },
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Fields"
+          },
+          "appearance": {
+            "type": "string",
+            "enum": [
+              "system",
+              "light",
+              "dark"
+            ],
+            "title": "Appearance",
+            "default": "system"
+          },
+          "privacy_mode": {
+            "type": "string",
+            "enum": [
+              "masked",
+              "visible"
+            ],
+            "title": "Privacy Mode",
+            "default": "masked"
+          },
+          "max_age_minutes": {
+            "type": "integer",
+            "maximum": 120.0,
+            "minimum": 15.0,
+            "title": "Max Age Minutes",
+            "default": 60
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "fields"
+        ],
+        "title": "WidgetProfilePayload"
+      },
+      "WidgetProfileResult": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/WidgetProfile"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "profile"
+        ],
+        "title": "WidgetProfileResult"
+      },
+      "WidgetSnapshot": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "const": 2,
+            "title": "Schema Version"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/WidgetSnapshotProfile"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "vehicle",
+              "energy"
+            ],
+            "title": "Kind"
+          },
+          "energy_window": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WidgetEnergyWindow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "demo",
+              "telemetry",
+              "unavailable",
+              "manual_energy"
+            ],
+            "title": "Source"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "server_received_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Server Received At"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "physical_freshness": {
+            "type": "string",
+            "const": "unknown",
+            "title": "Physical Freshness"
+          },
+          "temporal_status": {
+            "type": "string",
+            "enum": [
+              "fresh",
+              "stale",
+              "unknown",
+              "unavailable"
+            ],
+            "title": "Temporal Status"
+          },
+          "reason_code": {
+            "type": "string",
+            "title": "Reason Code"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Until"
+          },
+          "values": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "propertyNames": {
+              "enum": [
+                "battery_pct",
+                "range_km",
+                "charging",
+                "locked",
+                "energy_kwh",
+                "energy_cost_eur"
+              ]
+            },
+            "type": "object",
+            "title": "Values"
+          }
+        },
+        "type": "object",
+        "required": [
+          "schema_version",
+          "profile",
+          "kind",
+          "energy_window",
+          "source",
+          "generated_at",
+          "server_received_at",
+          "observed_at",
+          "physical_freshness",
+          "temporal_status",
+          "reason_code",
+          "valid_until",
+          "values"
+        ],
+        "title": "WidgetSnapshot"
+      },
+      "WidgetSnapshotProfile": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "fields": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "battery_pct",
+                "range_km",
+                "charging",
+                "locked",
+                "energy_kwh",
+                "energy_cost_eur"
+              ]
+            },
+            "type": "array",
+            "title": "Fields"
+          },
+          "appearance": {
+            "type": "string",
+            "enum": [
+              "system",
+              "light",
+              "dark"
+            ],
+            "title": "Appearance"
+          },
+          "privacy_mode": {
+            "type": "string",
+            "enum": [
+              "masked",
+              "visible"
+            ],
+            "title": "Privacy Mode"
+          },
+          "max_age_minutes": {
+            "type": "integer",
+            "title": "Max Age Minutes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "revision",
+          "fields",
+          "appearance",
+          "privacy_mode",
+          "max_age_minutes"
+        ],
+        "title": "WidgetSnapshotProfile"
+      }
+    },
+    "securitySchemes": {
+      "NativeAppOAuthAccess": {
+        "type": "http",
+        "description": "Access token introspeccionado, audience Pulse y scope pulse.app.access; solo el bootstrap de sesión.",
+        "scheme": "bearer"
+      },
+      "NativeOAuthAccess": {
+        "type": "http",
+        "description": "Access token introspeccionado, audience Pulse y scope pulse.widget.read; solo el canje.",
+        "scheme": "bearer"
+      },
+      "WidgetReadPermission": {
+        "type": "http",
+        "description": "Credencial opaca exclusiva del perfil; solo snapshot y desvinculación propia.",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

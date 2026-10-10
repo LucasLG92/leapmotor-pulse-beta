@@ -1,0 +1,170 @@
+[
+  {
+    "name": "annotated-doc",
+    "version": "0.0.5",
+    "license": "MIT",
+    "homepage": "Homepage, https://github.com/fastapi/annotated-doc"
+  },
+  {
+    "name": "annotated-types",
+    "version": "0.8.0",
+    "license": "MIT",
+    "homepage": "Homepage, https://github.com/annotated-types/annotated-types"
+  },
+  {
+    "name": "anyio",
+    "version": "4.15.1",
+    "license": "MIT",
+    "homepage": "Documentation, https://anyio.readthedocs.io/en/latest/"
+  },
+  {
+    "name": "Authlib",
+    "version": "1.8.0",
+    "license": "BSD-3-Clause",
+    "homepage": "Documentation, https://docs.authlib.org/"
+  },
+  {
+    "name": "cffi",
+    "version": "2.1.1",
+    "license": "MIT-0",
+    "homepage": "Documentation, https://cffi.readthedocs.io/"
+  },
+  {
+    "name": "click",
+    "version": "8.5.0",
+    "license": "BSD-3-Clause",
+    "homepage": "Changes, https://click.palletsprojects.com/page/changes/"
+  },
+  {
+    "name": "cryptography",
+    "version": "50.0.2",
+    "license": "Apache-2.0 OR BSD-3-Clause",
+    "homepage": "changelog, https://cryptography.io/en/latest/changelog/"
+  },
+  {
+    "name": "fastapi",
+    "version": "0.140.0",
+    "license": "MIT",
+    "homepage": "Homepage, https://github.com/fastapi/fastapi"
+  },
+  {
+    "name": "h11",
+    "version": "0.16.0",
+    "license": "MIT",
+    "homepage": "https://github.com/python-hyper/h11"
+  },
+  {
+    "name": "http-ece",
+    "version": "1.2.1",
+    "license": "MIT",
+    "homepage": "https://github.com/web-push-libs/encrypted-content-encoding"
+  },
+  {
+    "name": "httpcore2",
+    "version": "2.13.1",
+    "license": "BSD-3-Clause",
+    "homepage": "Changelog, https://github.com/pydantic/httpx2/blob/main/src/httpcore2/CHANGELOG.md"
+  },
+  {
+    "name": "httpx2",
+    "version": "2.13.1",
+    "license": "BSD-3-Clause",
+    "homepage": "Changelog, https://github.com/pydantic/httpx2/blob/main/src/httpx2/CHANGELOG.md"
+  },
+  {
+    "name": "idna",
+    "version": "3.20",
+    "license": "BSD-3-Clause",
+    "homepage": "Changelog, https://github.com/kjd/idna/blob/master/HISTORY.md"
+  },
+  {
+    "name": "iniconfig",
+    "version": "2.3.1",
+    "license": "MIT",
+    "homepage": "Homepage, https://github.com/pytest-dev/iniconfig"
+  },
+  {
+    "name": "joserfc",
+    "version": "1.7.5",
+    "license": "BSD-3-Clause",
+    "homepage": "Documentation, https://jose.authlib.org/"
+  },
+  {
+    "name": "packaging",
+    "version": "26.3",
+    "license": "Apache-2.0 OR BSD-2-Clause",
+    "homepage": "Documentation, https://packaging.pypa.io/"
+  },
+  {
+    "name": "paho-mqtt",
+    "version": "2.1.0",
+    "license": "EPL-2.0 OR BSD-3-Clause; Pulse selects EDL-1.0 (BSD-3-Clause)",
+    "homepage": "https://github.com/eclipse-paho/paho.mqtt.python"
+  },
+  {
+    "name": "pluggy",
+    "version": "1.6.0",
+    "license": "MIT",
+    "homepage": null
+  },
+  {
+    "name": "pycparser",
+    "version": "3.0",
+    "license": "BSD-3-Clause",
+    "homepage": "Homepage, https://github.com/eliben/pycparser"
+  },
+  {
+    "name": "pydantic",
+    "version": "2.13.5",
+    "license": "MIT",
+    "homepage": "Homepage, https://github.com/pydantic/pydantic"
+  },
+  {
+    "name": "pydantic_core",
+    "version": "2.46.5",
+    "license": "MIT",
+    "homepage": "https://github.com/pydantic/pydantic"
+  },
+  {
+    "name": "Pygments",
+    "version": "2.21.0",
+    "license": "BSD-2-Clause",
+    "homepage": "Homepage, https://pygments.org"
+  },
+  {
+    "name": "pytest",
+    "version": "9.1.1",
+    "license": "MIT",
+    "homepage": "Changelog, https://docs.pytest.org/en/stable/changelog.html"
+  },
+  {
+    "name": "starlette",
+    "version": "1.7.0",
+    "license": "BSD-3-Clause",
+    "homepage": "Homepage, https://github.com/Kludex/starlette"
+  },
+  {
+    "name": "truststore",
+    "version": "0.10.4",
+    "license": "MIT",
+    "homepage": "Documentation, https://truststore.readthedocs.io"
+  },
+  {
+    "name": "typing-inspection",
+    "version": "0.4.4",
+    "license": "MIT",
+    "homepage": "Homepage, https://github.com/pydantic/typing-inspection"
+  },
+  {
+    "name": "typing_extensions",
+    "version": "4.16.0",
+    "license": "PSF-2.0",
+    "homepage": "Bug Tracker, https://github.com/python/typing_extensions/issues"
+  },
+  {
+    "name": "uvicorn",
+    "version": "0.54.0",
+    "license": "BSD-3-Clause",
+    "homepage": "Changelog, https://uvicorn.dev/release-notes"
+  }
+]
