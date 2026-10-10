@@ -4,6 +4,12 @@ Tu coche y tus cargas, en una interfaz sencilla que alojas en tu propio servidor
 
 **Beta temprana, independiente y no oficial.** Puedes instalar Pulse para probar su interfaz, usar registros personales y preparar tus integraciones. La conexión real al B10, los comandos del vehículo y el funcionamiento con distintos cargadores aún necesitan validación física. No se promete compatibilidad con todos los modelos ni una conexión al coche con un solo clic.
 
+## Apariencia del B10
+
+El Resumen incorpora una ilustración original del B10 y temas Claro/Charcoal. En **Ajustes → Color del B10** puedes elegir entre los seis colores de la gama española y guardar la selección, incluso sin conectar el coche. [Guía de apariencia y actualización](docs/VEHICLE-APPEARANCE.md).
+
+La versión actual usa SQLite esquema 15 y exportación JSON 13. Restaura copias JSON 1–12 asignando el color a `null`. Para volver al binario con esquema 14 hay que restaurar su imagen **junto con** la copia SQLite anterior. Sigue siendo beta; QA sintética y builds no sustituyen las comprobaciones con teléfonos, coche o cargador.
+
 ## Qué ofrece
 
 | Capacidad | Estado de la beta |
