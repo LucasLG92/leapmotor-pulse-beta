@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, tick } from 'svelte';
 	import { ApiError } from '../lib/api';
 	import MapCanvas from '../lib/MapCanvas.svelte';
 	import {
@@ -12,6 +12,7 @@
 		makeManualPlace,
 		mapLinks,
 		parsePlaceSearchQuery,
+		parsePublicCoordinate,
 		RequestGeneration,
 		sameMapArea,
 		type PublicPoint
@@ -37,7 +38,10 @@
 	let selectedPlace = $state<NavigationPlace | null>(null);
 	let manualLatitude = $state('');
 	let manualLongitude = $state('');
-	let manualError = $state('');
+	let latitudeError = $state('');
+	let longitudeError = $state('');
+	let latitudeInput: HTMLInputElement | undefined;
+	let longitudeInput: HTMLInputElement | undefined;
 	let mapOpen = $state(false);
 	let mapError = $state('');
 	let currentCenter = $state<PublicPoint | null>(null);
@@ -217,14 +221,18 @@
 		invalidateChargers('El destino ha cambiado. Vuelve a consultar los cargadores para este lugar.');
 	}
 
-	function chooseManualPlace(event: SubmitEvent) {
+	async function chooseManualPlace(event: SubmitEvent) {
 		event.preventDefault();
+		latitudeError = parsePublicCoordinate(manualLatitude, -90, 90) === null
+			? 'Introduce una latitud entre −90 y 90, con punto o coma decimal.' : '';
+		longitudeError = parsePublicCoordinate(manualLongitude, -180, 180) === null
+			? 'Introduce una longitud entre −180 y 180, con punto o coma decimal.' : '';
 		const place = makeManualPlace(manualLatitude, manualLongitude);
 		if (!place) {
-			manualError = 'Introduce una latitud entre −90 y 90 y una longitud entre −180 y 180.';
+			await tick();
+			(latitudeError ? latitudeInput : longitudeInput)?.focus();
 			return;
 		}
-		manualError = '';
 		searchGate.invalidate();
 		searchBusy = false;
 		places = [];
@@ -348,7 +356,8 @@
 		currentCenter = null;
 		manualLatitude = '';
 		manualLongitude = '';
-		manualError = '';
+		latitudeError = '';
+		longitudeError = '';
 		mapOpen = false;
 		mapError = '';
 		chargersBusy = false;
@@ -483,12 +492,19 @@
 				<div><h3 id="manual-heading">Usar coordenadas públicas</h3><p>Alternativa sin proveedor de búsqueda. Introduce las coordenadas de un lugar público.</p></div>
 			</div>
 			<form class="manual-form" onsubmit={chooseManualPlace}>
-				<div class="field"><label for="public-latitude">Latitud</label><input id="public-latitude" inputmode="decimal" autocomplete="off" value={manualLatitude} oninput={(event) => manualLatitude = event.currentTarget.value} placeholder="40.4168" disabled={!online || authExpired} /></div>
-				<div class="field"><label for="public-longitude">Longitud</label><input id="public-longitude" inputmode="decimal" autocomplete="off" value={manualLongitude} oninput={(event) => manualLongitude = event.currentTarget.value} placeholder="-3.7038" aria-describedby="coordinates-help" disabled={!online || authExpired} /></div>
+				<div class="field">
+					<label for="public-latitude">Latitud</label>
+					<input id="public-latitude" name="latitude" bind:this={latitudeInput} inputmode="decimal" autocomplete="off" value={manualLatitude} oninput={(event) => { manualLatitude = event.currentTarget.value; latitudeError = ''; }} placeholder="40.4168" aria-invalid={latitudeError ? 'true' : undefined} aria-describedby={latitudeError ? 'coordinates-help latitude-error' : 'coordinates-help'} disabled={!online || authExpired} />
+					{#if latitudeError}<p id="latitude-error" class="inline-error" role="alert">{latitudeError}</p>{/if}
+				</div>
+				<div class="field">
+					<label for="public-longitude">Longitud</label>
+					<input id="public-longitude" name="longitude" bind:this={longitudeInput} inputmode="decimal" autocomplete="off" value={manualLongitude} oninput={(event) => { manualLongitude = event.currentTarget.value; longitudeError = ''; }} placeholder="-3.7038" aria-invalid={longitudeError ? 'true' : undefined} aria-describedby={longitudeError ? 'coordinates-help longitude-error' : 'coordinates-help'} disabled={!online || authExpired} />
+					{#if longitudeError}<p id="longitude-error" class="inline-error" role="alert">{longitudeError}</p>{/if}
+				</div>
 				<button class="button button-secondary manual-submit" type="submit" disabled={!online || authExpired}>Usar estas coordenadas</button>
 			</form>
-			<p id="coordinates-help" class="field-hint coordinates-hint">Usa el punto como separador decimal. Estas coordenadas no representan la posición del vehículo.</p>
-			{#if manualError}<p class="inline-error" role="alert">{manualError}</p>{/if}
+			<p id="coordinates-help" class="field-hint coordinates-hint">Puedes usar punto o coma decimal. Estas coordenadas no representan la posición del vehículo.</p>
 		</section>
 	</div>
 
@@ -583,7 +599,7 @@
 	.empty-search { margin-top: 14px; padding: 14px; border: 1px dashed var(--line-strong); border-radius: 10px; background: var(--surface-soft); }
 	.empty-search h4 { margin: 0; font-size: .875rem; }
 	.empty-search p { margin: 5px 0 0; color: var(--muted); font-size: .875rem; }
-	.manual-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; align-items: end; gap: 10px; }
+	.manual-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 10px; }
 	.manual-submit { grid-column: 1 / -1; justify-self: start; }
 	.destination-empty { display: grid; justify-items: start; gap: 11px; min-height: 240px; align-content: center; padding: 22px; }
 	.destination-empty-mark { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 13px; background: var(--forest-soft); color: var(--forest); }
@@ -637,7 +653,7 @@
 	@media (max-width: 560px) {
 		.place-search-form { grid-template-columns: minmax(0, 1fr); }
 		.search-button { width: 100%; }
-		.manual-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+		.manual-form { grid-template-columns: minmax(0, 1fr); }
 		.manual-submit { width: 100%; }
 		.external-map-links { grid-template-columns: minmax(0, 1fr); }
 		.external-map-links .button { width: 100%; }
