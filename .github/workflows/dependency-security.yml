@@ -1,0 +1,34 @@
+name: dependency-security
+
+on:
+  push:
+    paths:
+      - 'requirements*-lock.txt'
+      - 'apps/**/pnpm-lock.yaml'
+      - 'apps/**/pnpm-workspace.yaml'
+      - 'apps/mobile/android/app/gradle.lockfile'
+      - 'scripts/check-dependencies.sh'
+      - '.github/workflows/dependency-security.yml'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependencies:
+    name: Known dependency vulnerabilities
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Check all pinned dependency locks
+        run: bash scripts/check-dependencies.sh
