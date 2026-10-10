@@ -40,6 +40,15 @@ RUN PYTHONPATH=/build-tools/lib/python3.12/site-packages \
 
 # Minimal runtime: Python, app files, static PWA, hashed wheels, and patched SQLite.
 FROM python:3.12.14-slim-bookworm@sha256:392307d22300de8b5986851a12d9176dfc0fc073e65bf6523ebd7dcbeb23564e AS runtime
+# Apply the available Bookworm OpenSSL security patch without changing its ABI.
+# APT verifies repository signatures; only these two exact versions are upgraded.
+RUN python -c 'from pathlib import Path; stamp="20261010T000000Z"; p=Path("/etc/apt/sources.list.d/debian.sources"); text=p.read_text(); text=text.replace("http://deb.debian.org/debian-security", f"https://snapshot.debian.org/archive/debian-security/{stamp}"); text=text.replace("https://deb.debian.org/debian-security", f"https://snapshot.debian.org/archive/debian-security/{stamp}"); text=text.replace("http://deb.debian.org/debian", f"https://snapshot.debian.org/archive/debian/{stamp}"); text=text.replace("https://deb.debian.org/debian", f"https://snapshot.debian.org/archive/debian/{stamp}"); p.write_text(text)'
+RUN apt-get -o Acquire::Check-Valid-Until=false update \
+    && apt-get install -y --no-install-recommends --only-upgrade \
+        libssl3=3.0.22-1~deb12u1 openssl=3.0.22-1~deb12u1 \
+    && test "$(dpkg-query -W -f='${Version}' libssl3)" = '3.0.22-1~deb12u1' \
+    && test "$(dpkg-query -W -f='${Version}' openssl)" = '3.0.22-1~deb12u1' \
+    && rm -rf /var/lib/apt/lists/*
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
@@ -61,6 +70,9 @@ RUN groupadd --gid 10001 pulse \
     && useradd --uid 10001 --gid 10001 --home-dir /home/pulse --create-home --shell /usr/sbin/nologin pulse \
     && install -d -o 10001 -g 10001 /data \
     && python -m pip check \
+    && python -m pip uninstall --yes pip \
+    && rm -rf /usr/local/lib/python3.12/ensurepip \
+    && python -c "import importlib.util; assert importlib.util.find_spec('pip') is None; assert importlib.util.find_spec('ensurepip') is None" \
     && python -c "import sqlite3; assert sqlite3.sqlite_version == '3.53.4', sqlite3.sqlite_version" \
     && test -s /app/apps/web/dist/index.html
 USER 10001:10001
