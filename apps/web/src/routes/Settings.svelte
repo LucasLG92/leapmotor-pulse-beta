@@ -5,6 +5,7 @@
 	import HomeIntegrationPanel from '../lib/HomeIntegrationPanel.svelte';
 	import NativeWidgetPanel from '../lib/NativeWidgetPanel.svelte';
 	import PushNotificationsPanel from '../lib/PushNotificationsPanel.svelte';
+	import SetupPanel from '../lib/SetupPanel.svelte';
 	import { isNativeApp } from '../lib/native';
 	import WidgetPreview from '../lib/WidgetPreview.svelte';
 	import { ApiError, getEnergyAnalytics, getNativeCapabilities, getWidgetGrants, getWidgetProfiles } from '../lib/api';
@@ -767,6 +768,7 @@
 
 <section class="settings-layout">
 	<div class="settings-primary">
+		<SetupPanel {pulseState} {online} />
 		<section class="settings-card card" aria-labelledby="profile-heading">
 			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="settings" size={18} /></span><div><p class="section-label">PERFIL</p><h2 id="profile-heading">Vehículo y energía</h2><p>Información propia para organizar los registros de Pulse.</p></div></div>
 			<form class="settings-form" onsubmit={saveSettings}>
