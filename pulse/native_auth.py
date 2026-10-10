@@ -150,9 +150,9 @@ class NativeAccessValidator:
                     raise ValueError
             body = bytearray()
             async for chunk in response.aiter_bytes():
-                body.extend(chunk)
-                if len(body) > MAX_INTROSPECTION_BYTES:
+                if len(body) + len(chunk) > MAX_INTROSPECTION_BYTES:
                     raise ValueError
+                body.extend(chunk)
             return json.loads(body, object_pairs_hook=_object, parse_constant=_constant)
 
     def _identity(self, claims, expected_scopes=WIDGET_SCOPES) -> NativeIdentity:
