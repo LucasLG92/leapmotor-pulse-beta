@@ -1,0 +1,104 @@
+apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+// Configuración pública del operador, sin client_secret ni valores enviados por JS.
+def pulseProperties = new Properties()
+def pulsePropertyFile = rootProject.file('native.properties')
+if (pulsePropertyFile.exists()) pulsePropertyFile.withInputStream { pulseProperties.load(it) }
+def pulseValue = { key -> pulseProperties.getProperty(key, '') }
+def pulseOrigin = pulseValue('pulse.apiOrigin')
+def pulseCallback = pulseOrigin ? pulseOrigin + '/native/oauth/callback' : ''
+def pulseUri = pulseOrigin ? new URI(pulseOrigin) : new URI('https://pulse.example.invalid')
+
+android {
+    namespace = "com.lucas.pulse"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.lucas.pulse"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "0.1.0"
+        manifestPlaceholders = [pulseHost: pulseUri.host ?: 'pulse.example.invalid']
+        buildConfigField 'String', 'PULSE_API_ORIGIN', groovy.json.JsonOutput.toJson(pulseOrigin)
+        buildConfigField 'String', 'PULSE_OIDC_ISSUER', groovy.json.JsonOutput.toJson(pulseValue('pulse.issuer'))
+        buildConfigField 'String', 'PULSE_AUTHORIZATION_ENDPOINT', groovy.json.JsonOutput.toJson(pulseValue('pulse.authorizationEndpoint'))
+        buildConfigField 'String', 'PULSE_TOKEN_ENDPOINT', groovy.json.JsonOutput.toJson(pulseValue('pulse.tokenEndpoint'))
+        buildConfigField 'String', 'PULSE_NATIVE_CLIENT_ID', groovy.json.JsonOutput.toJson(pulseValue('pulse.clientId'))
+        buildConfigField 'String', 'PULSE_NATIVE_AUDIENCE', groovy.json.JsonOutput.toJson(pulseValue('pulse.audience'))
+        buildConfigField 'String', 'PULSE_CALLBACK', groovy.json.JsonOutput.toJson(pulseCallback)
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    signingConfigs {
+        debug { storeFile = layout.buildDirectory.file('private/debug.keystore').get().asFile }
+    }
+    buildFeatures { compose = true; buildConfig = true }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+        coreLibraryDesugaringEnabled = true
+    }
+    kotlinOptions { jvmTarget = '21' }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencyLocking { lockAllConfigurations() }
+
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+    implementation 'androidx.glance:glance-appwidget:1.2.0'
+    // Actualiza el snapshot optativo con las restricciones de batería/red de Android.
+    implementation 'androidx.work:work-runtime:2.12.0'
+    implementation 'net.openid:appauth:0.11.1'
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+// Clave de comprobación propia del build: no leer ni modificar la del usuario.
+def pulseDebugKeystore = tasks.register('createPulseDebugKeystore') {
+    def signing = android.signingConfigs.debug
+    outputs.file(signing.storeFile)
+    doLast {
+        if (!signing.storeFile.exists()) {
+            signing.storeFile.parentFile.mkdirs()
+            if (!com.android.ide.common.signing.KeystoreHelper.createDebugStore(
+                    signing.storeType, signing.storeFile, signing.storePassword,
+                    signing.keyPassword, signing.keyAlias, com.android.utils.NullLogger.getLogger())) {
+                throw new GradleException('No se pudo crear la firma local de comprobación.')
+            }
+            signing.storeFile.setReadable(false, false)
+            signing.storeFile.setReadable(true, true)
+            signing.storeFile.setWritable(false, false)
+            signing.storeFile.setWritable(true, true)
+        }
+    }
+}
+tasks.configureEach { task ->
+    if (task.name == 'validateSigningDebug') task.dependsOn(pulseDebugKeystore)
+}
