@@ -48,3 +48,51 @@ jobs:
 
       - name: Run contracts, tests, and container checks
         run: bash scripts/check-container.sh
+
+      - name: Verify community installer lifecycle
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          project=leapmotor-pulse-beta-public
+          volume="${project}_pulse-data"
+          project_filter="label=com.docker.compose.project=${project}"
+          service_filter='label=com.docker.compose.service=pulse'
+
+          bash install.sh --check
+          cleanup() {
+            status=$?
+            trap - EXIT
+            bash install.sh --stop >/dev/null 2>&1 || true
+            exit "$status"
+          }
+          trap cleanup EXIT
+
+          bash install.sh --install
+          curl --fail --silent --show-error --max-time 10 --output /dev/null http://127.0.0.1:8780/readyz
+          curl --fail --silent --show-error --max-time 10 --output /dev/null http://127.0.0.1:8780/
+          bash install.sh --stop
+
+          mapfile -t containers < <(docker ps --all --filter "$project_filter" --filter "$service_filter" --format '{{.ID}}')
+          if [[ ${#containers[@]} -eq 0 ]]; then
+            printf '%s\n' 'No se encontró el contenedor de Pulse beta tras detenerlo.' >&2
+            exit 1
+          fi
+          running="$(docker ps --filter "$project_filter" --filter "$service_filter" --format '{{.ID}}')"
+          if [[ -n "$running" ]]; then
+            printf '%s\n' 'El servicio Pulse beta sigue ejecutándose después de --stop.' >&2
+            exit 1
+          fi
+          for container in "${containers[@]}"; do
+            state="$(docker inspect --format '{{.State.Status}}' "$container")"
+            if [[ "$state" != exited ]]; then
+              printf 'El contenedor Pulse beta %s tiene estado inesperado: %s\n' "$container" "$state" >&2
+              exit 1
+            fi
+          done
+
+          actual_volume="$(docker volume inspect --format '{{.Name}}' "$volume")"
+          if [[ "$actual_volume" != "$volume" ]]; then
+            printf '%s\n' 'No se encontró el volumen propio de Pulse beta tras --stop.' >&2
+            exit 1
+          fi
+          trap - EXIT
