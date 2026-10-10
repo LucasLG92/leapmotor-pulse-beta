@@ -425,7 +425,7 @@
 
 <section class="page-intro navigation-intro">
 	<div>
-		<h2>Tu próximo destino.</h2>
+		<h2>¿A dónde vamos?</h2>
 		<p>Encuentra lugares y cargadores. Abre el mapa cuando lo necesites.</p>
 	</div>
 </section>
@@ -512,7 +512,7 @@
 		{#if selectedPlace}
 			<section class="destination-card card card-pad" aria-labelledby="destination-heading">
 				<div class="section-heading destination-heading">
-					<div><p class="section-label">DESTINO ELEGIDO</p><h3 id="destination-heading">{selectedPlace.name}</h3></div>
+					<div><h3 id="destination-heading">{selectedPlace.name}</h3></div>
 				<button class="text-button clear-destination" type="button" onclick={clearDestination}>Quitar</button>
 				</div>
 				<dl class="destination-coordinates"><div><dt>Latitud</dt><dd>{selectedPlace.latitude.toFixed(6)}</dd></div><div><dt>Longitud</dt><dd>{selectedPlace.longitude.toFixed(6)}</dd></div></dl>
@@ -608,7 +608,6 @@
 	.destination-empty p { max-width: 50ch; margin: 0; color: var(--muted); font-size: .875rem; line-height: 1.6; }
 	.destination-heading { align-items: flex-start; margin: 0 0 12px; }
 	.destination-heading h3 { max-width: 35ch; margin-top: 5px; font-size: 1.125rem; overflow-wrap: anywhere; }
-	.destination-heading .section-label { font-size: .75rem; }
 	.clear-destination { flex: 0 0 auto; }
 	.destination-coordinates, .station-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
 	.destination-coordinates div, .station-facts div { min-width: 0; padding: 9px 10px; border-radius: 9px; background: var(--surface-soft); }
@@ -663,4 +662,8 @@
 		.map-card-heading .button { width: 100%; }
 		.navigation-intro { margin-bottom: 15px; }
 	}
+
+	.navigation-layout,.navigation-layout.map-visible{grid-template-columns:minmax(280px,.85fr) minmax(0,1.15fr);gap:32px}.navigation-main-column,.navigation-side-column{gap:24px}.search-card,.manual-card,.destination-card{padding:0 0 24px;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent}.place-results,.station-list{gap:0}.place-result,.station-card{border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:16px 0}.place-result:hover,.place-result[aria-pressed="true"]{background:var(--forest-soft)}.station-facts div,.destination-coordinates div{border-radius:0;background:transparent;padding:8px 0}.destination-empty{padding:24px 0;min-height:280px;border:0;border-radius:0;background:transparent}.destination-empty h3{font-size:1.25rem}.empty-search{border:0;padding:16px 0;border-radius:0;background:transparent}.map-card{border-radius:18px}.source-chip{background:var(--forest-soft);color:var(--forest);border:0}.manual-heading,.search-heading{margin-bottom:16px}.station-address,.station-operator{font-size:.8125rem}
+	@media(max-width:1000px){.navigation-layout,.navigation-layout.map-visible{grid-template-columns:minmax(0,1fr)}.navigation-main-column,.navigation-side-column{gap:24px}}
+	@media(max-width:560px){.destination-empty{min-height:200px}.station-facts{grid-template-columns:repeat(2,minmax(0,1fr))}.navigation-layout{gap:24px}}
 </style>

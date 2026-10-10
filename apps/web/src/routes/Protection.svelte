@@ -39,13 +39,13 @@
 
 <section class="page-intro">
 	<div>
-		<p class="eyebrow">PROTECCIÓN Y PRIVACIDAD</p>
-		<h2>Historial de cambios recibidos</h2>
-		<p>Cuando la fuente comunique estados de cierre o carga, Pulse comparará las lecturas recibidas. Cada cambio describe lo que indicaron dos lecturas; no confirma una acción física.</p>
+		<h2>Historial de estados</h2>
+		<p>Compara lo que cambió entre lecturas de cierre o carga, con su fuente y hora de recepción.</p>
 	</div>
 	<span class="status-pill" class:status-demo={pulseState.mode === 'demo'}><span class="status-dot"></span>{pulseState.mode === 'demo' ? 'Simulación' : 'Lecturas del servidor'}</span>
 </section>
 
+<section class="protection-stage" class:protection-stage-demo={pulseState.mode === 'demo'}>
 {#if pulseState.mode !== 'demo'}
 	<ObservedEventsPanel {online} {revision} mode={pulseState.mode} {onSessionExpired} />
 {/if}
@@ -54,7 +54,7 @@
 	<article class="protection-feature card">
 		<div class="protection-feature-heading">
 			<span class="protection-large-icon"><Glyph name="protection" size={26} /></span>
-			<div><p class="section-label">{pulseState.mode === 'demo' ? 'REGISTRO DE DEMOSTRACIÓN' : 'HISTORIAL DE ESTADOS'}</p><h2>{pulseState.mode === 'demo' ? (protection.enabled ? 'Eventos simulados activos' : 'Eventos simulados pausados') : pulseState.mode === 'telemetry_read_only' ? 'Historial preparado' : 'Lecturas de cierre y carga'}</h2></div>
+			<div><h2>{pulseState.mode === 'demo' ? (protection.enabled ? 'Eventos simulados activos' : 'Eventos simulados pausados') : pulseState.mode === 'telemetry_read_only' ? 'Historial preparado' : 'Lecturas de cierre y carga'}</h2></div>
 		</div>
 		{#if pulseState.mode === 'demo'}
 			<p class="body-copy">Puedes activar o pausar el registro ficticio. El cambio se guarda en Pulse y afecta únicamente a los eventos de demostración.</p>
@@ -70,8 +70,8 @@
 	</article>
 
 	<aside class="protection-boundaries card">
-		<p class="section-label">LÍMITES ACTUALES</p>
-		<h2>Privacidad por diseño.</h2>
+		<h2>Límites del historial</h2>
+		<p class="protection-boundaries-intro">Pulse conserva cambios comunicados; no certifica lo que ocurre físicamente en el coche.</p>
 		<ul>
 			<li><span class="boundary-check"><Glyph name="check" size={15} /></span><span><strong>Sin cámaras</strong><small>Pulse no graba ni transmite vídeo.</small></span></li>
 			<li><span class="boundary-check"><Glyph name="check" size={15} /></span><span><strong>Sin vigilancia nativa</strong><small>No hay centinela ni detección de intrusos.</small></span></li>
@@ -79,11 +79,10 @@
 		</ul>
 		<p class="fine-print">Las horas observada y recibida se muestran por separado para conservar la procedencia de cada cambio.</p>
 	</aside>
-</section>
 
 {#if pulseState.mode === 'demo'}
 	<section class="protection-events-section" aria-labelledby="demo-events-title">
-		<div class="section-heading"><div><p class="section-label">SIMULACIÓN</p><h2 id="demo-events-title">Eventos de demostración</h2></div><span class="badge badge-demo">{count(events.length)} {events.length === 1 ? 'evento' : 'eventos'}</span></div>
+		<div class="section-heading"><div><h2 id="demo-events-title">Eventos de demostración</h2><p class="protection-events-copy">Registros ficticios guardados por Pulse dentro de esta simulación.</p></div><span class="badge badge-demo">{count(events.length)} {events.length === 1 ? 'evento' : 'eventos'}</span></div>
 		{#if events.length === 0}
 			<div class="empty-state"><span class="empty-mark"><Glyph name="protection" /></span><h3>No hay eventos de demostración</h3><p>Al añadir un evento ficticio aparecerá aquí con la hora recibida del servidor.</p></div>
 		{:else}
@@ -100,12 +99,20 @@
 		{/if}
 	</section>
 {/if}
+</section>
+</section>
 
 <style>
-	.protection-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(270px, .8fr); gap: 16px; }
-	/* Keep the lower cards from flashing above a history that is still arriving. */
-	:global(.observed-section[data-initial-loading="true"]) + .protection-layout { visibility: hidden; }
-	.protection-feature, .protection-boundaries { padding: 22px; }
+	.page-intro h2 { margin: 0; font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing: -.035em; }
+	.protection-stage { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(270px, .8fr); align-items: start; gap: 22px; }
+	:global(.protection-stage > .observed-section) { grid-column: 1; grid-row: 1; min-width: 0; margin-top: 0; }
+	:global(.protection-stage > .observed-section .section-label) { display: none; }
+	.protection-stage:has(:global(.observed-section[data-initial-loading="true"])) .protection-layout { visibility: hidden; }
+	.protection-layout { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; grid-column: 2; gap: 16px; min-width: 0; }
+	.protection-stage-demo { grid-template-columns: minmax(0, 1fr); }
+	.protection-stage-demo .protection-layout { grid-column: 1; grid-template-columns: minmax(0, 1.4fr) minmax(270px, .8fr); }
+	.protection-feature, .protection-boundaries { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+	.protection-boundaries { padding-top: 18px; border-top: 1px solid var(--line); }
 	.protection-feature-heading { display: flex; align-items: center; gap: 14px; }
 	.protection-large-icon { display: grid; width: 50px; height: 50px; flex: 0 0 50px; place-items: center; border-radius: 15px; background: var(--forest-soft); color: var(--forest); }
 	.protection-feature-heading h2, .protection-boundaries h2 { margin: 6px 0 0; font-size: 1.1875rem; font-weight: 620; letter-spacing: -.035em; }
@@ -120,7 +127,8 @@
 	.switch-control[aria-checked="true"]::before { border-color: var(--forest); background: var(--forest); }
 	.switch-control:disabled { opacity: .55; }
 	.switch-control > span { position: relative; width: 22px; height: 22px; border-radius: 50%; background: var(--surface-raised); box-shadow: 0 1px 3px rgb(0 0 0 / 18%); }
-	.protection-boundaries h2 { margin-bottom: 16px; }
+	.protection-boundaries h2 { margin: 0 0 10px; }
+	.protection-boundaries-intro { margin: 0 0 17px; color: var(--muted); font-size: .875rem; line-height: 1.5; }
 	.protection-boundaries ul { display: grid; gap: 15px; margin: 0; padding: 0; list-style: none; }
 	.protection-boundaries li { display: flex; align-items: flex-start; gap: 9px; }
 	.boundary-check { display: grid; width: 24px; height: 24px; flex: 0 0 24px; place-items: center; border-radius: 8px; background: var(--forest-soft); color: var(--forest); }
@@ -128,17 +136,20 @@
 	.protection-boundaries li strong { font-size: .875rem; }
 	.protection-boundaries li small { margin-top: 4px; color: var(--muted); font-size: .875rem; line-height: 1.5; }
 	.protection-boundaries .fine-print { margin: 18px 0 0; }
-	.protection-events-section { margin-top: 29px; }
+	.protection-stage-demo .protection-boundaries { padding: 0 0 0 22px; border-top: 0; border-left: 1px solid var(--line); }
+	.protection-events-section { grid-column: 1 / -1; margin-top: 8px; }
 	.protection-events-section .section-heading { margin-top: 0; }
-	.event-list { overflow: hidden; }
+	.protection-events-copy { margin: 6px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
+	.event-list { overflow: visible; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 	.event-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto auto; align-items: center; gap: 11px; min-height: 68px; padding: 10px 15px; border-bottom: 1px solid var(--line); }
+	.event-row:first-child { border-top: 1px solid var(--line); }
 	.event-row:last-child { border-bottom: 0; }
 	.event-mark { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 9px; background: var(--surface-soft); color: var(--forest); }
 	.event-row > div { display: grid; min-width: 0; gap: 4px; }
 	.event-row strong { font-size: .875rem; font-weight: 630; }
 	.event-row > div span { color: var(--muted); font-size: .75rem; text-transform: capitalize; }
 	.event-row time { color: var(--muted); font-size: .75rem; white-space: nowrap; }
-	@media (max-width: 850px) { .protection-layout { grid-template-columns: 1fr; } }
-	@media (max-width: 700px) { .protection-feature, .protection-boundaries { padding: 17px; } .event-row { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; padding-inline: 10px; } .event-row time { grid-column: 2; grid-row: 2; } .event-row > .badge { grid-column: 3; grid-row: 1 / span 2; } }
+	@media (max-width: 850px) { .protection-stage { grid-template-columns: minmax(0, 1fr); } .protection-layout, .protection-stage-demo .protection-layout { grid-column: 1; grid-template-columns: minmax(0, 1fr); } .protection-stage-demo .protection-boundaries { padding: 18px 0 0; border-top: 1px solid var(--line); border-left: 0; } }
+	@media (max-width: 700px) { .protection-feature, .protection-boundaries { padding: 0; } .protection-boundaries { padding-top: 17px; } .event-row { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; padding-inline: 10px; } .event-row time { grid-column: 2; grid-row: 2; } .event-row > .badge { grid-column: 3; grid-row: 1 / span 2; } }
 	@media (max-width: 360px) { .protection-feature-heading { align-items: flex-start; } .protection-control-row { align-items: flex-start; flex-wrap: wrap; } .event-row { grid-template-columns: 28px minmax(0, 1fr); } .event-row time, .event-row > .badge { grid-column: 2; grid-row: auto; justify-self: start; } }
 </style>
