@@ -4686,6 +4686,81 @@
         "type": "object",
         "title": "SettingsPayload"
       },
+      "SetupStatus": {
+        "properties": {
+          "evidence_scope": {
+            "type": "string",
+            "const": "configuration_only",
+            "title": "Evidence Scope"
+          },
+          "auth_mode": {
+            "type": "string",
+            "enum": [
+              "local",
+              "oidc"
+            ],
+            "title": "Auth Mode"
+          },
+          "vehicle_reader_enabled": {
+            "type": "boolean",
+            "title": "Vehicle Reader Enabled"
+          },
+          "charger_enabled": {
+            "type": "boolean",
+            "title": "Charger Enabled"
+          },
+          "interval_energy_enabled": {
+            "type": "boolean",
+            "title": "Interval Energy Enabled"
+          },
+          "native_app_enabled": {
+            "type": "boolean",
+            "title": "Native App Enabled"
+          },
+          "native_widgets_enabled": {
+            "type": "boolean",
+            "title": "Native Widgets Enabled"
+          },
+          "web_push_enabled": {
+            "type": "boolean",
+            "title": "Web Push Enabled"
+          },
+          "home_assistant_enabled": {
+            "type": "boolean",
+            "title": "Home Assistant Enabled"
+          },
+          "abrp_enabled": {
+            "type": "boolean",
+            "title": "Abrp Enabled"
+          },
+          "navigation_enabled": {
+            "type": "boolean",
+            "title": "Navigation Enabled"
+          },
+          "physical_commands_enabled": {
+            "type": "boolean",
+            "const": false,
+            "title": "Physical Commands Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evidence_scope",
+          "auth_mode",
+          "vehicle_reader_enabled",
+          "charger_enabled",
+          "interval_energy_enabled",
+          "native_app_enabled",
+          "native_widgets_enabled",
+          "web_push_enabled",
+          "home_assistant_enabled",
+          "abrp_enabled",
+          "navigation_enabled",
+          "physical_commands_enabled"
+        ],
+        "title": "SetupStatus",
+        "description": "Public shape of server activation, never proof of physical qualification."
+      },
       "Sources": {
         "properties": {
           "manual": {
@@ -4782,6 +4857,9 @@
           },
           "integrations": {
             "$ref": "#/components/schemas/IntegrationsStatus"
+          },
+          "setup": {
+            "$ref": "#/components/schemas/SetupStatus"
           }
         },
         "type": "object",
@@ -4798,7 +4876,8 @@
           "commands",
           "command_history",
           "connection",
-          "integrations"
+          "integrations",
+          "setup"
         ],
         "title": "StateResponse"
       },
