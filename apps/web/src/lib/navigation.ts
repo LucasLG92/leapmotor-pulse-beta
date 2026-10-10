@@ -25,8 +25,8 @@ export function isPublicPoint(value: unknown): value is PublicPoint {
 
 export function parsePublicCoordinate(value: string, minimum: number, maximum: number): number | null {
 	const clean = value.trim();
-	if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(clean)) return null;
-	const number = Number(clean);
+	if (!/^[+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+)$/.test(clean)) return null;
+	const number = Number(clean.replace(',', '.'));
 	return Number.isFinite(number) && number >= minimum && number <= maximum ? number : null;
 }
 
