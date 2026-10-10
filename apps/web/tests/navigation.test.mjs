@@ -37,12 +37,25 @@ test('valida coordenadas públicas finitas y acota sus rangos', () => {
 	assert.equal(isPublicPoint({ latitude: 91, longitude: 0 }), false);
 	assert.equal(parsePublicCoordinate(' 40.4168 ', -90, 90), 40.4168);
 	assert.equal(parsePublicCoordinate('', -90, 90), null);
-	assert.equal(parsePublicCoordinate('40,4168', -90, 90), null);
+	assert.equal(parsePublicCoordinate('40,4168', -90, 90), 40.4168);
 	assert.equal(parsePublicCoordinate('91', -90, 90), null);
 	assert.deepEqual(makeManualPlace('40.4168', '-3.7038'), {
 		id: 'manual:40.416800,-3.703800', name: 'Punto público', latitude: 40.4168, longitude: -3.7038
 	});
 	assert.equal(makeManualPlace('40.4168', 'https://example.com'), null);
+});
+
+test('admite un solo separador decimal sin aceptar exponentes ni coordenadas adicionales', () => {
+	assert.deepEqual(makeManualPlace(' 40,4168 ', '-3,7038'), makeManualPlace('40.4168', '-3.7038'));
+	assert.equal(parsePublicCoordinate(',5', -90, 90), 0.5);
+	assert.equal(parsePublicCoordinate('-,5', -90, 90), -0.5);
+	assert.deepEqual(makeManualPlace('-90', '180'), {
+		id: 'manual:-90.000000,180.000000', name: 'Punto público', latitude: -90, longitude: 180
+	});
+	for (const value of ['40,4.168', '40.4,168', '40,,4168', '40,4168,-3,7038', '4e1', 'Infinity', 'NaN', '40 4168', ',', '90,0001']) {
+		assert.equal(parsePublicCoordinate(value, -90, 90), null, value);
+	}
+	assert.equal(makeManualPlace('40,4168', '180,0001'), null);
 });
 
 test('acepta búsquedas explícitas dentro del límite y rechaza consultas cortas o largas', () => {
