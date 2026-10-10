@@ -2,7 +2,6 @@ package com.lucas.pulse.widget
 
 import android.content.ComponentName
 import android.content.Context
-import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
@@ -22,6 +21,7 @@ import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight as GlanceFontWeight
@@ -49,25 +49,17 @@ class PulseWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val display = withContext(Dispatchers.IO) { WidgetSnapshotCache(context).display() }
-        val systemDark = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
-            Configuration.UI_MODE_NIGHT_YES
         val mainActivity = ComponentName(context, MainActivity::class.java)
-        provideContent { PulseWidgetContent(display, systemDark, mainActivity) }
+        provideContent { PulseWidgetContent(display, mainActivity) }
     }
 }
 
 @Composable
 private fun PulseWidgetContent(
     display: WidgetDisplay,
-    systemDark: Boolean,
     mainActivity: ComponentName,
 ) {
-    val dark = when (display.appearance) {
-        "dark" -> true
-        "light" -> false
-        else -> systemDark
-    }
-    val palette = widgetPalette(dark)
+    val palette = widgetPalette(display.appearance)
     val size = LocalSize.current
     val compact = size.width < 240.dp || size.height < 132.dp
     val sourceLabel = when {
@@ -75,23 +67,23 @@ private fun PulseWidgetContent(
         display.demo -> "DEMO"
         display.source == "telemetry" -> "TELEMETRÍA"
         display.source == "unavailable" -> "SIN DATOS"
-        else -> "PULSE"
+        else -> null
     }
 
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(ColorProvider(palette.background))
+            .background(palette.background)
             .clickable(actionStartActivity(mainActivity))
             .padding(horizontal = if (compact) 14.dp else 18.dp, vertical = 12.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = GlanceModifier.defaultWeight()) {
                 Text(
                     text = "PULSE",
                     style = TextStyle(
-                        color = ColorProvider(palette.primary),
+                        color = palette.primary,
                         fontSize = 13.sp,
                         fontWeight = GlanceFontWeight.Bold,
                     ),
@@ -100,20 +92,22 @@ private fun PulseWidgetContent(
                     Text(
                         text = name,
                         style = TextStyle(
-                            color = ColorProvider(palette.secondary),
+                            color = palette.secondary,
                             fontSize = 11.sp,
                         ),
                     )
                 }
             }
-            Text(
-                text = sourceLabel,
-                style = TextStyle(
-                    color = ColorProvider(if (display.demo) palette.accent else palette.secondary),
-                    fontSize = 10.sp,
-                    fontWeight = GlanceFontWeight.Bold,
-                ),
-            )
+            sourceLabel?.let { label ->
+                Text(
+                    text = label,
+                    style = TextStyle(
+                        color = if (display.demo) palette.accent else palette.secondary,
+                        fontSize = 10.sp,
+                        fontWeight = GlanceFontWeight.Bold,
+                    ),
+                )
+            }
         }
 
         Spacer(modifier = GlanceModifier.height(if (compact) 8.dp else 14.dp))
@@ -137,7 +131,7 @@ private fun PulseWidgetContent(
                 display.observedAtMillis?.let { calculatedAt ->
                     Text(
                         text = "Calculado · ${formatUtcDateTime(calculatedAt)}",
-                        style = TextStyle(color = ColorProvider(palette.secondary), fontSize = 10.sp),
+                        style = TextStyle(color = palette.secondary, fontSize = 10.sp),
                     )
                 }
                 val start = display.energyWindowStartMillis
@@ -145,7 +139,7 @@ private fun PulseWidgetContent(
                 if (start != null && end != null) {
                     Text(
                         text = "Periodo UTC · ${formatUtcDate(start)} – ${formatUtcDate(end)}",
-                        style = TextStyle(color = ColorProvider(palette.secondary), fontSize = 10.sp),
+                        style = TextStyle(color = palette.secondary, fontSize = 10.sp),
                     )
                 }
             } else {
@@ -160,7 +154,7 @@ private fun PulseWidgetContent(
                         "Datos recientes · frescura física desconocida"
                     },
                     style = TextStyle(
-                        color = ColorProvider(palette.secondary),
+                        color = palette.secondary,
                         fontSize = 10.sp,
                     ),
                 )
@@ -173,7 +167,7 @@ private fun PulseWidgetContent(
                     Text(
                         text = "Observado $observedText",
                         style = TextStyle(
-                            color = ColorProvider(palette.secondary),
+                            color = palette.secondary,
                             fontSize = 10.sp,
                         ),
                     )
@@ -273,14 +267,14 @@ private fun Metric(
         Text(
             text = label,
             style = TextStyle(
-                color = ColorProvider(palette.secondary),
+                color = palette.secondary,
                 fontSize = 10.sp,
             ),
         )
         Text(
             text = value,
             style = TextStyle(
-                color = ColorProvider(palette.primary),
+                color = palette.primary,
                 fontSize = when {
                     value.length > 14 -> 11.sp
                     value.length > 11 -> 13.sp
@@ -295,31 +289,31 @@ private fun Metric(
 
 @Composable
 private fun bodyStyle(palette: WidgetPalette) = TextStyle(
-    color = ColorProvider(palette.primary),
+    color = palette.primary,
     fontSize = 13.sp,
     fontWeight = GlanceFontWeight.Bold,
 )
 
 private data class WidgetPalette(
-    val background: Color,
-    val primary: Color,
-    val secondary: Color,
-    val accent: Color,
+    val background: ColorProvider,
+    val primary: ColorProvider,
+    val secondary: ColorProvider,
+    val accent: ColorProvider,
 )
 
-private fun widgetPalette(dark: Boolean) = if (dark) {
-    WidgetPalette(
-        background = Color(0xFF17211D),
-        primary = Color(0xFFF1F5EF),
-        secondary = Color(0xFFB9C8BF),
-        accent = Color(0xFF95D1AA),
-    )
-} else {
-    WidgetPalette(
-        background = Color(0xFFF6F7F2),
-        primary = Color(0xFF18352B),
-        secondary = Color(0xFF53665C),
-        accent = Color(0xFF245841),
+private fun widgetPalette(appearance: String): WidgetPalette {
+    // API31+ keeps day/night alternatives in RemoteViews for host theme changes.
+    // Older Android resolves a color when the widget is rendered again.
+    fun adaptiveColor(day: Color, night: Color): ColorProvider = when (appearance) {
+        "light" -> ColorProvider(day)
+        "dark" -> ColorProvider(night)
+        else -> androidx.glance.color.ColorProvider(day, night)
+    }
+    return WidgetPalette(
+        background = adaptiveColor(Color(0xFFF6F7F2), Color(0xFF17211D)),
+        primary = adaptiveColor(Color(0xFF18352B), Color(0xFFF1F5EF)),
+        secondary = adaptiveColor(Color(0xFF53665C), Color(0xFFB9C8BF)),
+        accent = adaptiveColor(Color(0xFF245841), Color(0xFF95D1AA)),
     )
 }
 
