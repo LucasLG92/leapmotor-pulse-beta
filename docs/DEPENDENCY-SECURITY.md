@@ -54,40 +54,63 @@ La comprobación de locks no cubre todos los componentes de la imagen. Una
 auditoría adicional con OSV-Scanner 2.6.0 sobre un archivo de `docker image save`
 revisa el filesystem final, sin ejecutar la imagen ni exportar contenedores,
 volúmenes o configuración del operador. Se incluyen todos los avisos, también
-los que Debian clasifica como `unimportant` o `ignored`; los IDs y las entradas
-de paquetes no equivalen a escenarios de explotación independientes.
+los clasificados como `unimportant` o `ignored`; los IDs y las entradas de
+paquetes no equivalen a escenarios de explotación independientes.
 
-El runtime conserva Python 3.12.14 y Bookworm. El Dockerfile actualiza únicamente
-`libssl3` y `openssl` a `3.0.22-1~deb12u1` desde el snapshot Debian firmado
-`20261010T000000Z`; no cambia a otra ABI ni desactiva la validación TLS. Esta
-versión corrige seis IDs presentes en la base anterior: CVE-2026-42767, 54874,
-63072, 63074, 63076 y 75803. El
-[tracker de Debian](https://security-tracker.debian.org/tracker/source-package/openssl)
-mantiene otros seis IDs abiertos para Bookworm, incluido CVE-2026-35189 sobre
-certificados manipulados. Este parche no permite declarar la imagen libre de
-vulnerabilidades; cualificar una base con correcciones adicionales sigue pendiente.
+El runtime conserva Python 3.12.14 y pasa a la imagen oficial slim Trixie,
+fijada por digest. Los builders y la SQLite propia permanecen en sus etapas
+anteriores: no se copian paquetes Trixie dentro de una base Bookworm. El
+Dockerfile actualiza `libssl3t64`, `openssl` y `openssl-provider-legacy` a
+`3.5.7-1~deb13u3` desde el snapshot Debian firmado `20261010T000000Z`.
+Es la revisión de Debian con sus parches, distinta de la release upstream 3.5.9.
+El [tracker de Debian](https://security-tracker.debian.org/tracker/source-package/openssl)
+marca corregidos los seis avisos que seguían abiertos en OpenSSL 3.0.22 de
+Bookworm. OpenSSL 3.5 tiene soporte LTS hasta abril de 2030 según su
+[política de soporte](https://openssl-library.org/policies/releasestrat/).
+Los snapshots requieren futuras actualizaciones deliberadas; no se actualizan
+solos ni garantizan que nunca aparezcan nuevos avisos.
 
-Después de comprobar las dependencias con `pip check`, la etapa final retira
-`pip` y `ensurepip`. Los instaladores siguen disponibles en las etapas de build;
-los extras opcionales deben incorporarse allí, antes del runtime. Esto reduce la
-superficie disponible en ejecución, pero no elimina sus bytes de las capas base
-ni garantiza una descarga menor. No se eliminan bibliotecas del sistema para
-ocultar resultados del scanner.
+El candidato amd64 conserva las 49 fuentes Python y 47 recursos web de su
+baseline. En pruebas aisladas se comprobaron arranque, esquema 14 y 24 tablas,
+TLS 1.3 y rechazo de hostname incorrecto; 251 pruebas existentes pasaron y una
+prueba del SDK B10 opcional se omitió porque ese SDK no está instalado. También
+se comprobó TLS del shell público y del descubrimiento OIDC, sin sesión o
+credenciales. Esta evidencia no sustituye login humano, avisos físicos,
+servicios del coche ni cualificación de otras arquitecturas.
 
-`scripts/build-container.sh` comprueba UID 10001, ausencia de Node, setuptools,
-pip y ensurepip, imports y los assets gzip. También comprueba por separado
-OpenSSL 3.0.22 cargado por el módulo `ssl` de Python y OpenSSL 4.0.3 embebido en
+El análisis de la imagen pasa de 132 a 70 IDs registrados: 63 se retiran y uno
+se añade. Cambian distribución e inventario, por lo que no se presenta como
+63 vulnerabilidades reparadas. Se mantienen los 70 avisos y la salida 1 del
+scanner, sin filtros ni excepciones; su alcance y la seguridad integral siguen
+pendientes de revisión.
+
+El ID añadido, CVE-2026-39113 de SQLite Debian, muestra una discrepancia:
+OSV contiene un rango abierto para Debian 13, mientras que el
+[tracker primario](https://security-tracker.debian.org/tracker/CVE-2026-39113)
+marca el paquete no afectado/corregido e indica que el código vulnerable no
+apareció en una versión Debian publicada. La SQLite activa conserva su
+binario original 3.53.4; no expone las funciones SQLar ni el símbolo de esa
+extensión en la sonda ejecutada. El aviso permanece visible: esa comprobación
+acotada no elimina todos los avisos de SQLite ni acredita parches por el número
+de versión.
+
+Después de `pip check`, la etapa final retira `pip` y `ensurepip`. Los
+instaladores siguen en build; los extras opcionales deben incorporarse allí.
+Esto reduce la superficie disponible en ejecución, sin eliminar los bytes de
+capas base ni prometer una descarga menor. No se eliminan bibliotecas del
+sistema para ocultar resultados del scanner.
+
+`scripts/build-container.sh` comprueba UID 10001, Trixie, las tres revisiones
+exactas de OpenSSL, ausencia de Node/setuptools/pip/ensurepip, imports y gzip.
+Comprueba por separado OpenSSL 3.5.7 del módulo `ssl` y OpenSSL 4.0.3 embebido en
 cryptography 50.0.2: son bibliotecas distintas.
 
-SQLite activo se compila desde la fuente oficial 3.53.4 y se carga desde
-`/usr/local/lib`. Su configuración actual no incluye Session ni FTS5; la ausencia
-de sus símbolos se comprobó en la imagen anterior. El inventario Debian aún
-contiene SQLite 3.40.1, por lo que sus avisos no se descartan automáticamente.
-En particular, observar la versión 3.53.4 por sí solo no demuestra que incorpore
-el parche adicional de
+SQLite activo sigue compilado desde la fuente oficial 3.53.4 y cargado desde
+`/usr/local/lib`; no incluye Session ni FTS5 en esta compilación. El inventario
+Debian contiene otra SQLite 3.46.1, cuyos avisos no se descartan automáticamente.
+En particular, ver 3.53.4 por sí solo no prueba el parche adicional de
 [CVE-2026-50813](https://security-tracker.debian.org/tracker/CVE-2026-50813).
 
-Las correcciones y bibliotecas realmente cargadas deben comprobarse en cada
-imagen construida. El resultado de locks, un build correcto o una sonda de
-versión no sustituyen una auditoría de rutas alcanzables, bibliotecas embebidas,
-compatibilidad ni seguridad integral. Pulse continúa en beta.
+Un build correcto o una sonda de versión no sustituyen la auditoría de rutas
+alcanzables, bibliotecas embebidas, compatibilidad, licencias y seguridad
+integral. Pulse continúa en beta.
