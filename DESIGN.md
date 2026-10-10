@@ -1,67 +1,65 @@
 ---
 name: Leapmotor Pulse
-description: Cuadro personal claro y charcoal para el perfil Leapmotor B10 Pro Max, con procedencia visible.
+description: Cuadro personal mineral y charcoal para movilidad B10, con procedencia visible.
 colors:
-  canvas: "#f5f6f8"
+  canvas: "#f5f6f4"
   surface: "#ffffff"
-  surface-soft: "#edf0f3"
+  surface-soft: "#edf0ec"
   surface-raised: "#ffffff"
-  ink: "#202429"
-  muted: "#5d6570"
-  muted-strong: "#454c56"
-  line: "#dfe3e8"
-  line-strong: "#7b8794"
-  forest: "#17634a"
-  forest-hover: "#104e3a"
-  forest-soft: "#e5f1eb"
+  ink: "#202722"
+  muted: "#606961"
+  muted-strong: "#48554b"
+  line: "#dfe4df"
+  line-strong: "#89968c"
+  forest: "#246c4b"
+  forest-hover: "#1c543b"
+  forest-soft: "#e8f2eb"
   mint: "#b8ddc8"
   accent: "#945b20"
   accent-soft: "#f4ecdc"
   danger: "#a54034"
   danger-soft: "#f8e9e5"
-  focus: "#237658"
+  focus: "#246c4b"
   on-primary: "#ffffff"
   on-accent: "#ffffff"
   on-danger: "#ffffff"
-  selection-ink: "#202b25"
-  charcoal-canvas: "#202226"
-  charcoal-surface: "#282b30"
-  charcoal-surface-soft: "#32363c"
-  charcoal-surface-raised: "#2d3036"
-  charcoal-ink: "#f0f2f5"
-  charcoal-muted: "#b7bec8"
-  charcoal-muted-strong: "#dce1e7"
-  charcoal-line: "#41464e"
-  charcoal-line-strong: "#808b9b"
-  charcoal-forest: "#a2d6bd"
+  charcoal-canvas: "#1c1f21"
+  charcoal-surface: "#24282a"
+  charcoal-surface-soft: "#2c3133"
+  charcoal-surface-raised: "#24282a"
+  charcoal-ink: "#f0f3f0"
+  charcoal-muted: "#b5bdb7"
+  charcoal-muted-strong: "#d8e1da"
+  charcoal-line: "#3b4240"
+  charcoal-line-strong: "#7e8b82"
+  charcoal-forest: "#9cddba"
   charcoal-forest-hover: "#bee7d3"
-  charcoal-forest-soft: "#2a3e35"
-  charcoal-mint: "#a2d6bd"
+  charcoal-forest-soft: "#2c3d33"
   charcoal-accent: "#f0bd78"
   charcoal-accent-soft: "#413423"
   charcoal-danger: "#f09a8d"
   charcoal-danger-soft: "#442a27"
   charcoal-focus: "#f0bd78"
-  charcoal-on-primary: "#202b25"
-  charcoal-on-accent: "#282b30"
-  charcoal-on-danger: "#282b30"
+  charcoal-on-primary: "#17271c"
+  charcoal-on-accent: "#24282a"
+  charcoal-on-danger: "#24282a"
 typography:
   display:
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
-    fontSize: "2rem"
-    fontWeight: 620
-    lineHeight: 1.1
+    fontSize: "2.25rem"
+    fontWeight: 650
+    lineHeight: 1.08
     letterSpacing: "-.035em"
   headline:
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
-    fontSize: "1.5rem"
-    fontWeight: 600
-    lineHeight: 1.5
+    fontSize: "1.75rem"
+    fontWeight: 590
+    lineHeight: 1.12
     letterSpacing: "-.035em"
   title:
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
     fontSize: "1.125rem"
-    fontWeight: 590
+    fontWeight: 650
     lineHeight: 1.5
     letterSpacing: "-.025em"
   body:
@@ -79,19 +77,11 @@ typography:
     fontSize: ".75rem"
     fontWeight: 400
     lineHeight: 1.5
-  mono:
-    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace"
-    fontSize: "1rem"
-    fontWeight: 400
-    lineHeight: 1.5
-    letterSpacing: ".04em"
 rounded:
-  compact: "8px"
   field: "9px"
   control: "10px"
   panel: "12px"
   card: "16px"
-  vehicle-hero: "20px"
   pill: "99px"
 components:
   button-primary:
@@ -112,8 +102,14 @@ components:
     typography: "{typography.label}"
     rounded: "{rounded.control}"
     padding: "10px 16px"
+  button-danger:
+    backgroundColor: "{colors.danger}"
+    textColor: "{colors.on-danger}"
+    typography: "{typography.label}"
+    rounded: "{rounded.control}"
+    padding: "10px 16px"
   input:
-    backgroundColor: "{colors.surface-raised}"
+    backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
     typography: "{typography.body}"
     rounded: "{rounded.field}"
@@ -134,12 +130,6 @@ components:
     typography: "{typography.caption}"
     rounded: "{rounded.pill}"
     padding: "0 10px"
-  vehicle-color-option:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
-    typography: "{typography.label}"
-    rounded: "{rounded.control}"
-    padding: "9px 12px"
 ---
 
 # Design System: Leapmotor Pulse
@@ -148,105 +138,118 @@ components:
 
 **Creative North Star: "Cabina clara de movilidad"**
 
-Pulse presenta el B10 Pro Max con una lectura serena: jerarquía y precisión de un cuadro de movilidad, aire y tipografía del sistema al estilo de las referencias Apple y Google, y datos de carga fáciles de localizar como en Tesla. La interfaz traduce esas referencias en componentes propios, con superficies claras y carbón y acentos verdes limitados a acciones y selección.
+Pulse combina claridad funcional, precisión y legibilidad con una identidad propia: fondo mineral o charcoal, texto nítido y verde bosque como acento funcional en acciones, selección e indicadores de estado. La jerarquía compacta organiza lecturas y tareas sin convertir cada dato en una tarjeta uniforme. Las seis superficies mantienen ritmos distintos según su trabajo: el resumen se ancla en el B10 ilustrado; energía prioriza la sesión y su coste; navegación centra la búsqueda y el mapa; actividad ordena registros; protección explica límites y cambios; ajustes agrupa perfil e integraciones con separadores.
 
-La ilustración lateral del B10 y sus seis acabados seleccionables dan identidad al perfil. La preparación sin vehículo y la demo se distinguen con texto y estado persistente; una lectura ausente no se sustituye por cifras estimadas.
+La representación original CGI del B10 acompaña al perfil en seis acabados elegibles y conserva una aclaración visible de que el aspecto es orientativo. La interfaz distingue preparación, demo y lecturas mediante etiquetas, fechas y fuente. Los detalles plegables guardan información ampliada y alternativas sin ocultar el estado principal.
 
 **Key Characteristics:**
-- Jerarquía compacta, neutral y legible en superficies claras y charcoal.
-- El modelo B10 Pro Max y sus seis acabados orientan la personalización visual.
-- Los estados de preparación y demo conservan su procedencia visible.
+- Neutros minerales y charcoal con acentos verdes de uso funcional.
+- Jerarquía tipográfica del sistema y superficies con separadores finos.
+- Identidad visual del B10 acompañada por estado, fecha y procedencia.
 
 ## Colors
 
-La paleta parte de grises fríos y carbón; el jade guía acciones y selección, el ámbar identifica demo y estados de atención, y el rojo queda reservado a errores.
+La paleta clara usa blanco mineral, superficies blancas y tinta verde-gris; charcoal invierte las superficies y aclara el texto. Jade bosque comunica acción, menta acompaña selección, ámbar marca atención y rojo indica error.
 
 ### Primary
-- **Jade de acción** (`colors.forest`): botones primarios, selección activa e iconos de estado. `forest-soft` crea su superficie tenue; el tema charcoal emplea los valores propios de la familia definidos en los tokens.
+- **Verde bosque:** `colors.forest` guía acciones, enlaces, selección y foco en el tema claro; el tema oscuro cambia a la variante verde clara definida para charcoal.
+- **Verde tenue:** `colors.forest-soft` suaviza estados activos y superficies de apoyo sin teñir toda la pantalla.
 
 ### Secondary
-- **Ámbar de atención** (`colors.accent`): demo y estados que requieren distinguirse; siempre acompaña una etiqueta textual.
+- **Ámbar de atención:** `colors.accent` y `colors.accent-soft` distinguen demo y avisos junto a una etiqueta legible.
+- **Menta de selección:** `colors.mint` acompaña la selección de texto y estados suaves.
 
 ### Tertiary
-- **Rojo de error** (`colors.danger`): validación y errores. Sus fondos siguen el tema activo.
+- **Rojo de error:** `colors.danger` y `colors.danger-soft` identifican errores y acciones destructivas.
 
 ### Neutral
-- **Canvas y superficies** (`colors.canvas`, `colors.surface`, `colors.surface-soft`, `colors.surface-raised`): fondo de página, tarjetas, agrupaciones tenues y controles.
-- **Tinta y texto secundario** (`colors.ink`, `colors.muted`, `colors.muted-strong`): lectura principal, metadatos y énfasis secundario.
-- **Divisores** (`colors.line`, `colors.line-strong`): separación ligera y contornos de controles. La segunda escala tiene valores propios por tema, definidos en los tokens.
-- **Selección de texto**: `selection-ink` se mantiene sobre `mint`, según la regla CSS global.
+- **Blanco mineral:** `colors.canvas`, `colors.surface` y `colors.surface-soft` separan el lienzo, las superficies principales y los grupos secundarios.
+- **Tinta verde-gris:** `colors.ink`, `colors.muted` y `colors.muted-strong` jerarquizan contenido, metadatos y texto secundario.
+- **Líneas de salvia:** `colors.line` y `colors.line-strong` separan listas y delimitan controles.
+- **Carbón profundo:** `colors.charcoal-canvas`, `colors.charcoal-surface` y `colors.charcoal-surface-soft` forman el tema oscuro; la familia charcoal equivalente aporta tinta, líneas y acentos propios.
 
-**The Labelled State Rule.** Color acompaña al texto de estado; nunca comunica por sí solo demo, conexión, éxito o error.
+**The Labelled State Rule.** El color acompaña una etiqueta textual para demo, conexión, éxito o error; no lleva el estado por sí solo.
 
 ## Typography
 
 **Display Font:** Sistema (`-apple-system`, `BlinkMacSystemFont`, `Segoe UI`, sans-serif).
 **Body Font:** La misma pila del sistema.
-**Label/Mono Font:** La pila de sistema para etiquetas; `ui-monospace`, `SFMono-Regular`, `Menlo`, monospace solo para códigos.
+**Label/Mono Font:** La pila de sistema en controles; el navegador aporta la fuente monoespaciada propia de elementos `code`.
 
-**Character:** Sobria y funcional. Tamaños, pesos, cifras tabulares y tracking crean jerarquía sin descargar fuentes.
+**Character:** Sobria y práctica. Los pesos, el tracking moderado y las cifras tabulares crean jerarquía sin descargar fuentes.
 
 ### Hierarchy
-- **Display** (620, `2rem`, `1.1`): cifras principales de batería y autonomía.
-- **Headline** (600, `1.5rem`, `1.5`): título de página; se compacta en móvil.
-- **Title** (590, `1.125rem`, `1.5`): encabezados de secciones.
-- **Body** (400, `1rem`, `1.5`): texto principal y explicación.
-- **Label** (650, `.875rem`, `1.2` en botones): controles; metadatos y captions bajan a `.75rem`.
+- **Display** (650, `2.25rem`, `1.08`): lectura destacada de autonomía.
+- **Headline** (590–600, `1.75rem` en las vistas principales): títulos de pantalla, con tamaño adaptado por ruta y ancho.
+- **Title** (620–660, `1.125rem`): encabezados de sección y panel.
+- **Body** (400, `1rem`, `1.5`): texto y explicación.
+- **Label** (560–700, `.875rem`): controles y metadatos; captions bajan a `.75rem`.
 
 ## Layout
 
-En escritorio, un rail fijo de `14rem` acompaña el espacio de trabajo, cuyo contenido llega hasta `1360px`. El rail pasa a `13rem` hasta `860px`; bajo `700px` desaparece y la navegación usa barra inferior con área segura. En móvil hay cinco elementos: cuatro destinos directos y «Más», que agrupa Protección y Ajustes.
-
-La barra inferior cambia a un menú compacto cuando su contenedor mide menos de `23em`. La consulta es relativa al contenedor, cuyo `font-size` es `.75rem`; no es un breakpoint de viewport. Resumen adapta la tarjeta B10 a una columna bajo `700px`; Ajustes coloca ilustración y selector en una columna bajo `1100px`. El ritmo observado usa huecos de `16px` entre tarjetas y padding de `18–28px` en la vista del vehículo.
+El espacio de trabajo limita el contenido a `1360px` y usa un rail lateral fijo en escritorio. Bajo `700px`, el rail se reemplaza por cuatro accesos inferiores: Coche, Energía, Mapa y Actividad. Estados y Ajustes quedan accesibles desde los iconos de la cabecera. Si el contenedor de navegación mide menos de `18em`, los cuatro accesos pasan a un selector compacto que permite llegar a las seis secciones. Se respetan las áreas seguras del dispositivo. Los formularios a dos columnas se apilan bajo `430px`, y cada ruta ajusta sus propios grids: resumen pasa de escena y tarea en paralelo a una columna; energía separa cargador, coste, registros y formulario; navegación apila resultados y mapa; actividad distingue diario y mantenimiento; protección prioriza observaciones y límites; ajustes reordena grupos e integraciones. El ritmo reutiliza separadores y espacios de `8–24px`; las tarjetas conservan padding cercano a `20px` cuando el patrón de ruta usa tarjetas.
 
 ## Elevation & Depth
 
-La profundidad viene de superficies tonales y bordes finos; las tarjetas llevan una sombra muy tenue y los menús elevan con la sombra compartida, distinta en charcoal. La barra inferior tiene una sombra superior sutil. No aparecen blur ni gradientes en estas superficies.
+La profundidad es principalmente tonal y estructural: superficies claras/charcoal y bordes finos agrupan contenido. Menús, avisos flotantes y diálogos usan una sombra suave; la navegación inferior tiene una sombra superior discreta. La sombra no sustituye a los separadores ni crea elevación uniforme en todas las secciones.
+
+### Shadow Vocabulary
+- **Menú y diálogo:** `0 14px 42px rgb(25 30 38 / 7%)` en claro y `0 16px 44px rgb(0 0 0 / 24%)` en charcoal.
+- **Navegación inferior:** `0 -8px 24px rgb(25 30 38 / 5%)`.
 
 ## Shapes
 
-Tarjetas de `16px` y hero del vehículo de `20px`; controles y selector de color de `10px`, campos de `9px`, paneles compactos de `12px` y estados en píldora. El selector usa muestras circulares de `24px`. Los contornos son de `1px`; el foco general dibuja `3px` con desplazamiento de `3px` y el selector `2px` con desplazamiento de `3px`.
+Los radios distinguen escala y función: campos de `9px`, controles de `10px`, paneles compactos de `12px`, tarjetas de `16px` y estados en píldora. Líneas de `1px` y foco visible de `3px` con desplazamiento de `3px` definen el borde; el selector de acabado usa muestras circulares de `21px` dentro de objetivos de `44px`.
 
 ## Components
 
 ### Buttons
-- **Shape:** esquinas moderadas (`10px`), altura base `48px`; variantes compactas mantienen `44px` mínimo.
-- **Primary:** jade de acción, texto de contraste, padding `10px 16px`.
-- **Secondary / Quiet:** superficie y borde para la secundaria; fondo transparente para quiet. Hover de la secundaria y quiet usa superficie jade tenue.
-- **Hover / Focus:** transición de color de `140ms`; hover y active ajustan brillo. Foco visible con contorno del tema.
+- **Shape:** esquinas suaves (`10px`) y altura mínima de `48px`; variantes pequeñas conservan `44px`.
+- **Primary:** fondo verde bosque, texto claro y padding `10px 16px`.
+- **Secondary / Quiet:** superficie con contorno o fondo transparente; hover usa superficie verde tenue.
+- **Danger:** rojo y texto claro para acciones destructivas, con el estado nombrado.
+- **Hover / Focus:** transición de color y borde de `140ms`; active reduce brillo; foco con contorno visible y desplazamiento.
 
 ### Chips
-- **Style:** la demo usa texto ámbar sobre su fondo tenue, borde y punto de estado.
-- **State:** conexión, demo y preparación se nombran explícitamente; el color acompaña la etiqueta.
+- **Style:** etiquetas compactas y redondeadas; demo usa texto ámbar, fondo tenue, borde y punto.
+- **State:** el texto nombra preparación, conexión, demo o resultado y conserva el significado cuando se usa charcoal.
 
 ### Cards / Containers
-- **Corner Style:** `16px`, con padding habitual `20–22px`.
-- **Background:** superficie del tema activo; secciones relacionadas pueden usar la superficie tenue.
-- **Shadow Strategy:** elevación corta en reposo y sombra compartida en menús.
-- **Border:** divisor de `1px`.
-- **Internal Padding:** `20px` global; la tarjeta del vehículo ajusta entre `18px` y `28px`.
+- **Corner Style:** `16px` en tarjetas; el patrón varía por pantalla.
+- **Background:** superficie del tema activo, separada con línea fina.
+- **Shadow Strategy:** casi plana; profundidad adicional en menús y diálogos.
+- **Border:** línea de `1px` cuando el componente es una tarjeta; otras secciones usan reglas horizontales o verticales.
+- **Internal Padding:** alrededor de `20px` en tarjetas comunes; algunas superficies de ruta se presentan abiertas y sin contenedor.
 
 ### Inputs / Fields
-- **Style:** control de `48px`, borde fuerte, fondo raised y radio `9px`; texto de entrada usa tamaño de cuerpo.
-- **Focus:** contorno visible del tema; el selector B10 mantiene su propio contorno al recibir foco interno.
+- **Style:** fondo de control, borde fuerte, radio `9px` y altura mínima de `48px`.
+- **Focus:** contorno del tema de `3px` con separación de `3px`; el error se etiqueta junto al campo.
 
 ### Navigation
-- Rail vertical en escritorio; barra de cuatro destinos directos y menú «Más» en móvil. El activo combina fondo jade tenue y texto jade.
-- Con contenedor estrecho, `details` expone las seis secciones con etiquetas completas.
+- En escritorio, rail lateral vertical con el destino activo en verde tenue. En móvil, la barra inferior ofrece cuatro destinos con iconos SVG lineales; Estados y Ajustes se abren desde los iconos de cabecera. Si el contenedor mide menos de `18em`, un selector compacto `details` da acceso a las seis rutas.
 
 ### B10 Pro Max
-La vista principal usa la ilustración lateral del B10 con relación `627 / 280` y un pie que aclara que el acabado es orientativo. Ajustes permite elegir seis colores de carrocería o «Sin elegir»; cada opción muestra muestra cromática, nombre y selección. Las seis imágenes WebP y las muestras representan acabados, no lecturas ni fotografía oficial.
+El resumen centra lecturas, procedencia y fecha junto a una ilustración lateral CGI de fondo transparente. El nombre del color y el selector mantienen la personalización en contexto; el cargador aparece como resumen enlazado, y acciones secundarias y ajustes de acabado se despliegan bajo demanda. Los seis acabados se muestran como guía visual, no como imagen o identificación oficial del fabricante.
+
+### Registros de energía
+El cargador y el criterio del coste se presentan como bloques informativos abiertos. Los registros distinguen origen manual y demo con etiquetas y señales de color; el gráfico por sesión y la analítica mensual acompañan a una lista editable. El desglose PVPC y las alternativas de fechas se consultan en detalles o selecciones del formulario.
+
+### Mapa y diario
+La navegación combina búsqueda y destino con una superficie de mapa, resultados y tarjetas de estación; en pantallas estrechas pasa a una sola columna. Actividad separa trayectos, historial de acciones y mantenimiento en listas con fechas y acciones de edición claras.
+
+### Historial de estados
+La pantalla de protección ordena observaciones, límites y eventos; las horas y fuentes quedan asociadas a cada cambio. Los estados y avisos conservan etiquetas explícitas para distinguir lecturas de registros ficticios.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** use las variables semánticas del tema para canvas, superficies, texto, líneas y acentos.
-- **Do** conservar etiquetas visibles para preparación, demo y conexión, y mostrar solo lecturas entregadas.
-- **Do** presentar el B10 Pro Max con su ilustración y selector de seis acabados; mantener el acabado como orientativo.
-- **Do** conservar foco visible, áreas de control de al menos `44px` y el comportamiento `prefers-reduced-motion` presente en CSS.
+- **Do** usar las variables semánticas existentes para canvas, superficies, tinta, líneas, acentos y temas.
+- **Do** mantener fechas, fuente y estado junto a las lecturas, con los detalles ampliados accesibles bajo demanda.
+- **Do** presentar el CGI original del B10 con sus seis acabados y la nota de representación orientativa.
+- **Do** mantener visibles el foco, los controles táctiles de al menos `44px` y el ajuste `prefers-reduced-motion` ya presentes.
 
 ### Don't:
-- **Don't** convertir jade o mint en el fondo dominante; la base actual es neutra clara o charcoal.
-- **Don't** sustituir la ilustración B10 por un SUV genérico, logos o fotografía oficial.
-- **Don't** presentar valores de preparación como telemetría, ni acciones de demo como controles físicos.
-- **Don't** añadir blur, cristal o gradientes decorativos a tarjetas y navegación.
+- **Don't** convertir verde o menta en el fondo dominante; son acentos funcionales sobre base mineral o charcoal.
+- **Don't** sustituir la ilustración propia por logotipos o fotografía oficial del fabricante.
+- **Don't** tratar el perfil como telemetría ni una etiqueta de demo como conexión o control físico.
+- **Don't** aplanar las seis rutas en un patrón idéntico de tarjetas; conserva la composición específica de cada tarea.
