@@ -31,15 +31,15 @@ export default defineConfig(({ mode }) => {
 					scope: '/',
 					display: 'standalone',
 					orientation: 'any',
-					background_color: '#f6f7f2',
-					theme_color: '#18352b',
+					background_color: '#f5f6f8',
+					theme_color: '#202429',
 					icons: [
 						{ src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
 						{ src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
 					]
 				},
 				injectManifest: {
-					globPatterns: ['**/*.{html,js,css,svg,png,webmanifest}'],
+					globPatterns: ['**/*.{html,js,css,svg,png,webp,webmanifest}'],
 					globIgnores: ['**/*.map', 'sw.js', 'service-worker.js'],
 					maximumFileSizeToCacheInBytes: 300_000
 				},
