@@ -130,3 +130,6 @@ for configuration in Debug Release; do
 done
 
 printf '%s\n' 'Comprobación iOS de Apple completada para Debug y Release.'
+printf '%s\n' 'Instalando y arrancando la app genérica en un simulador propio.'
+"$python_bin" scripts/ios-simulator-smoke.py \
+    "$derived_data/Build/Products/Debug-iphonesimulator/App.app"
