@@ -1,0 +1,9 @@
+# Valores públicos. Copiar a native.properties tras configurar el cliente real.
+# Nunca incluir contraseñas, tokens ni client_secret.
+# Dejar vacío mantiene el acceso cerrado en el APK.
+pulse.apiOrigin=
+pulse.issuer=
+pulse.authorizationEndpoint=
+pulse.tokenEndpoint=
+pulse.clientId=
+pulse.audience=
