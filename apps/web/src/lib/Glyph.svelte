@@ -3,7 +3,17 @@
 </script>
 
 <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-	{#if name === 'overview'}
+	{#if name === 'car'}
+		<path d="m5 9 2-5h10l2 5M3 10h18v8H3zM5 18v2m14-2v2M6 13h2m8 0h2M8 16h8" />
+	{:else if name === 'clock'}
+		<circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+	{:else if name === 'chevron'}
+		<path d="m9 5 7 7-7 7" />
+	{:else if name === 'search'}
+		<circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" />
+	{:else if name === 'battery'}
+		<rect x="3" y="7" width="17" height="10" rx="2" /><path d="M22 10v4M7 10v4m4-4v4m4-4v4" />
+	{:else if name === 'overview'}
 		<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />
 	{:else if name === 'energy'}
 		<path d="M13 2 4 14h7l-1 8 10-13h-7z" />
