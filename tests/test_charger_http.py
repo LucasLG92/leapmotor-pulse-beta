@@ -74,7 +74,7 @@ def test_one_reader_ui_and_quote_never_poll_upstream_or_count_manual_twice(tmp_p
         assert quote.status_code==200 and quote.json()["cost_eur"]==1
         assert calls==["/api/state","/api/sessions"]
         exported=client.get("/api/export").json()
-        assert exported["schema_version"]==12 and len(exported["charger"])==1
+        assert exported["schema_version"]==13 and len(exported["charger"])==1
         assert "127.0.0.1:7070" not in str(exported)
     assert app.state.charger.task is None
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Glyph from '../lib/Glyph.svelte';
+	import VehicleArtwork from '../lib/VehicleArtwork.svelte';
 	import { count, dateTime, euros, number, relativeAge } from '../lib/format';
 	import type { Command, PageProps } from '../lib/types';
 
@@ -24,7 +25,6 @@
 	let telemetryValuesAvailable = $derived(hasLatestTelemetry && pulseState.telemetry?.quality.temporal_status !== 'unavailable');
 	let displayedVehicle = $derived(pulseState.mode === 'telemetry_read_only' ? telemetryValuesAvailable ? pulseState.vehicle : null : pulseState.vehicle);
 	let batteryPercent = $derived(displayedVehicle?.battery_pct ?? null);
-	let batteryOffset = $derived(batteryPercent === null ? 301.6 : 301.6 * (1 - Math.max(0, Math.min(100, batteryPercent)) / 100));
 	let observedAt = $derived(pulseState.mode === 'telemetry_read_only' ? hasLatestTelemetry ? pulseState.telemetry?.quality.observed_at ?? null : null : displayedVehicle?.observed_at ?? null);
 	let availableCommands = $derived(pulseState.mode === 'demo' ? pulseState.commands.filter((command) => command.enabled) : []);
 	let observedCount = $derived(pulseState.protection.observed_count);
@@ -67,74 +67,40 @@
 	}
 </script>
 
-<section class="page-intro">
-	<div>
-		<p class="eyebrow">TU MOVILIDAD, A SIMPLE VISTA</p>
-		<h2>Un estado claro, sin ruido.</h2>
-		<p>Pulse muestra lo que el servidor conoce y deja claro cuándo un dato no está disponible.</p>
-	</div>
-	<span class="status-pill" class:status-demo={pulseState.mode === 'demo'}><span class="status-dot"></span>{pulseState.mode === 'demo' ? 'Datos simulados' : hasLatestTelemetry ? 'Lectura sin controles' : 'Preparación'}</span>
-</section>
-
 <section class="overview-hero card" aria-labelledby="vehicle-status-title">
-	<div class="overview-hero-copy">
-		<div class="hero-topline">
-			<div>
-				<p class="section-label">ESTADO DEL VEHÍCULO</p>
-				<h3 id="vehicle-status-title">{displayedVehicle?.name ?? pulseState.settings.vehicle_name}</h3>
-			</div>
-			{#if pulseState.mode === 'demo'}<span class="badge badge-demo">Simulación</span>{:else if hasLatestTelemetry}<span class="badge">Lectura sin controles</span>{:else}<span class="badge">Preparación</span>{/if}
+	<header class="vehicle-heading">
+		<div><h2 id="vehicle-status-title">{pulseState.settings.vehicle_name}</h2><p>{pulseState.settings.model || 'Modelo sin indicar'}</p></div>
+		<span class="status-pill" class:status-demo={pulseState.mode === 'demo'}><span class="status-dot"></span>{pulseState.mode === 'demo' ? 'Datos simulados' : hasLatestTelemetry ? 'Lectura sin controles' : 'Preparación'}</span>
+	</header>
+	<div class="vehicle-overview">
+		<VehicleArtwork color={pulseState.settings.vehicle_color} />
+		<div class="vehicle-reading">
+			{#if displayedVehicle}
+				<div class="vehicle-charge-status"><Glyph name="charge" size={19} /><strong>{displayedVehicle.charging === null ? 'Estado de carga sin dato' : displayedVehicle.charging ? 'Carga en curso' : 'Carga detenida'}</strong></div>
+				<dl class="vehicle-energy">
+					<div><dt>Batería</dt><dd>{batteryPercent === null ? '—' : number(batteryPercent)}<span>{batteryPercent === null ? '' : '%'}</span></dd></div>
+					<div><dt>Autonomía estimada</dt><dd>{number(displayedVehicle.range_km)}<span>{displayedVehicle.range_km === null ? '' : 'km'}</span></dd></div>
+				</dl>
+				{#if batteryPercent !== null}<div class="battery-track" role="meter" aria-label="Batería" aria-valuemin="0" aria-valuemax="100" aria-valuenow={batteryPercent}><span style:transform={`scaleX(${Math.max(0, Math.min(100, batteryPercent)) / 100})`}></span></div>{/if}
+				<dl class="vehicle-observation"><div><dt>Última observación</dt><dd>{observationAgeLabel()}</dd></div><div><dt>Odómetro</dt><dd>{number(displayedVehicle.odometer_km)}{displayedVehicle.odometer_km === null ? '' : ' km'}</dd></div></dl>
+			{:else}
+				<h3>{hasLatestTelemetry ? 'Lectura sin valores disponibles' : pulseState.mode === 'telemetry_read_only' ? 'Esperando una lectura' : 'Tu B10, cuando esté conectado'}</h3>
+				<p class="preparation-copy">{hasLatestTelemetry ? `La fuente requiere validación. ${pulseState.connection.reason || 'Esta integración solo permite lecturas.'}` : pulseState.mode === 'telemetry_read_only' ? 'La lectura del proveedor está pendiente. La batería y la autonomía aparecerán cuando haya una observación disponible.' : 'Mientras llega tu coche, puedes personalizar su perfil, registrar cargas y preparar Pulse.'}</p>
+				<a class="button button-primary" href="/settings">Personalizar mi B10 <Glyph name="arrow" size={17} /></a>
+				{#if pulseState.mode === 'unconfigured'}<button class="text-button" type="button" disabled={busy || !online} onclick={enableDemo}>Explorar la demo</button>{/if}
+			{/if}
 		</div>
-
-		{#if displayedVehicle}
-			<div class="hero-battery-row">
-				<div class="battery-gauge" aria-label={batteryPercent === null ? 'Nivel de batería no disponible' : `Batería ${number(batteryPercent)} por ciento`}>
-					<svg viewBox="0 0 120 120" role="img" aria-hidden="true" focusable="false">
-						<circle class="gauge-track" cx="60" cy="60" r="48" />
-						<circle class="gauge-value" cx="60" cy="60" r="48" stroke-dasharray="301.6" stroke-dashoffset={batteryOffset} />
-					</svg>
-					<div class="gauge-center">
-						<strong>{batteryPercent === null ? '—' : number(batteryPercent)}<small>{batteryPercent === null ? '' : '%'}</small></strong>
-						<span>Batería</span>
-					</div>
-				</div>
-				<div class="range-summary">
-					<p class="section-label">AUTONOMÍA ESTIMADA</p>
-					<strong>{number(displayedVehicle.range_km)}<small>{displayedVehicle.range_km === null ? '' : 'km'}</small></strong>
-					<p>Valor recibido del estado del servidor.</p>
-				</div>
-			</div>
-			<div class="hero-data-row">
-				<div><span>Odómetro</span><strong>{number(displayedVehicle.odometer_km)}{displayedVehicle.odometer_km === null ? '' : ' km'}</strong></div>
-				<div><span>Vehículo</span><strong>{displayedVehicle.model || 'Modelo no indicado'}</strong></div>
-				<div><span>Última observación</span><strong>{observationAgeLabel()}</strong></div>
-			</div>
-			<p class="hero-footnote">{pulseState.mode === 'demo' ? 'Los valores de este vehículo son ficticios y no representan una lectura real.' : hasLatestTelemetry ? 'Lectura sin controles. La frescura física no está cualificada y esta fuente aún requiere validación.' : 'La lectura puede quedar desactualizada. Comprueba la hora antes de actuar.'} {observedAt ? `Observado: ${dateTime(observedAt)}.` : ''}</p>
-		{:else}
-			<div class="vehicle-unconfigured">
-				<div class="vehicle-line-art" aria-hidden="true">
-					<svg viewBox="0 0 240 100" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M25 67h190l-8-21c-4-10-12-15-24-17l-24-4H92L65 31c-10 3-17 8-22 17l-7 12H25v7Z" />
-						<path d="m67 31 13-2 19-1v21H57l10-18Zm38-3h42l23 5 13 16h-78V28Z" />
-						<path d="M41 66v13m158-13v13" /><circle cx="69" cy="69" r="11" fill="var(--surface)" /><circle cx="170" cy="69" r="11" fill="var(--surface)" />
-					</svg>
-				</div>
-				<div>
-					<h4>{hasLatestTelemetry ? 'Lectura recibida sin valores disponibles' : pulseState.mode === 'telemetry_read_only' ? 'Aún no hay una lectura disponible' : 'Aún no hay un coche conectado'}</h4>
-					<p>{hasLatestTelemetry ? `Lectura sin controles. La frescura física no está cualificada y esta fuente aún requiere validación. ${pulseState.connection.reason || 'Esta integración no habilita controles del vehículo.'}` : pulseState.mode === 'telemetry_read_only' ? 'La lectura del proveedor está pendiente. No se mostrarán valores hasta recibir una observación.' : `${pulseState.connection.reason || 'La integración con el vehículo está pendiente.'} No introduzcas aquí contraseñas del fabricante.`}</p>
-					{#if pulseState.mode === 'unconfigured'}
-						<button class="button button-primary" type="button" disabled={busy} onclick={enableDemo}>Explorar una demo <Glyph name="arrow" size={17} /></button>
-					{/if}
-				</div>
-			</div>
-		{/if}
+	</div>
+	<div class="vehicle-summary-footer">
+		<p>{pulseState.mode === 'demo' ? 'Batería, autonomía y acciones son ficticias. No hay conexión física con el coche.' : hasLatestTelemetry ? `Solo lectura. Frescura física pendiente de validación.${observedAt ? ` Observado: ${dateTime(observedAt)}.` : ''}` : pulseState.mode === 'telemetry_read_only' ? 'Lectura pendiente. Los controles físicos siguen bloqueados.' : 'Aún sin conexión al vehículo. No se muestran lecturas estimadas.'}</p>
+		<a class="text-button" href="/energy">Energía y cargas <Glyph name="arrow" size={16} /></a>
 	</div>
 </section>
 
 {#if displayedVehicle}
 	<section class="overview-grid" aria-label="Estado y acciones">
 		<article class="card overview-status-card">
-			<div class="section-heading compact-heading"><div><p class="section-label">ESTADO</p><h2>Lo que sabemos</h2></div></div>
+			<div class="section-heading compact-heading"><div><h2>Lo que sabemos</h2></div></div>
 			<div class="state-rows">
 				<div><span><i class="state-icon"><Glyph name={displayedVehicle.locked === true ? 'lock' : 'unlock'} size={16} /></i> Cierre</span><strong>{displayedVehicle.locked === null ? 'Sin dato' : displayedVehicle.locked ? 'Cerrado' : 'Abierto'}</strong></div>
 				<div><span><i class="state-icon"><Glyph name="climate" size={16} /></i> Climatización</span><strong>{displayedVehicle.climate_on === null ? 'Sin dato' : displayedVehicle.climate_on ? 'Activa' : 'Inactiva'}</strong></div>
@@ -145,10 +111,10 @@
 
 		<article class="card overview-controls-card">
 			{#if hasLatestTelemetry}
-				<div class="section-heading compact-heading"><div><p class="section-label">ACCIONES</p><h2>Lectura sin controles</h2></div><span class="badge">Solo lectura</span></div>
+				<div class="section-heading compact-heading"><div><h2>Lectura sin controles</h2></div><span class="badge">Solo lectura</span></div>
 				<div class="empty-state compact-empty"><h3>No se envían comandos</h3><p>Esta integración presenta datos del vehículo en modo de solo lectura.</p></div>
 			{:else}
-				<div class="section-heading compact-heading"><div><p class="section-label">ACCIONES</p><h2>Controles disponibles</h2></div><span class="badge badge-demo">Solo simulación</span></div>
+				<div class="section-heading compact-heading"><div><h2>Controles disponibles</h2></div><span class="badge badge-demo">Solo simulación</span></div>
 			{/if}
 			{#if !hasLatestTelemetry && availableCommands.length}
 				<div class="command-grid">
@@ -174,17 +140,17 @@
 {:else}
 	<section class="overview-grid overview-prep-grid" aria-label="Preparación de Pulse">
 		<article class="card prep-card">
-			<span class="prep-step">01</span><div><h3>Perfil del vehículo</h3><p>Define un nombre y un modelo para organizar la información que añadas.</p><a class="text-button" href="/settings">Revisar ajustes <Glyph name="arrow" size={16} /></a></div>
+			<span class="prep-step"><Glyph name="settings" size={17} /></span><div><h3>Perfil del vehículo</h3><p>Define un nombre y un modelo para organizar la información que añadas.</p><a class="text-button" href="/settings">Revisar ajustes <Glyph name="arrow" size={16} /></a></div>
 		</article>
 		<article class="card prep-card">
-			<span class="prep-step">02</span><div><h3>Registro personal</h3><p>Guarda cargas manuales y mantenimientos; aparecerán aquí sin inventar lecturas del coche.</p><a class="text-button" href="/energy">Abrir energía <Glyph name="arrow" size={16} /></a></div>
+			<span class="prep-step"><Glyph name="charge" size={17} /></span><div><h3>Registro personal</h3><p>Guarda cargas manuales y mantenimientos; aparecerán aquí sin inventar lecturas del coche.</p><a class="text-button" href="/energy">Abrir energía <Glyph name="arrow" size={16} /></a></div>
 		</article>
 	</section>
 {/if}
 
 <section class="overview-bottom-grid">
 	<article class="card overview-summary-card">
-		<div class="section-heading compact-heading"><div><p class="section-label">ENERGÍA</p><h2>Resumen de cargas</h2></div><a class="text-button" href="/energy">Ver detalle <Glyph name="arrow" size={16} /></a></div>
+		<div class="section-heading compact-heading"><div><h2>Resumen de cargas</h2></div><a class="text-button" href="/energy">Ver detalle <Glyph name="arrow" size={16} /></a></div>
 		<div class="summary-metrics">
 			<div><span>Energía registrada</span><strong>{number(pulseState.energy.totals.kwh)} <small>kWh</small></strong></div>
 			<div><span>Coste registrado</span><strong>{euros(pulseState.energy.totals.cost_eur)}</strong></div>
@@ -192,7 +158,7 @@
 		<p class="fine-print">Incluye registros que el servidor entrega actualmente, sin estimar cargas ausentes.</p>
 	</article>
 	<article class="card overview-summary-card">
-		<div class="section-heading compact-heading"><div><p class="section-label">PROTECCIÓN</p><h2>Historial de estados</h2></div><a class="text-button" href="/protection">Ver detalle <Glyph name="arrow" size={16} /></a></div>
+		<div class="section-heading compact-heading"><div><h2>Historial de estados</h2></div><a class="text-button" href="/protection">Ver detalle <Glyph name="arrow" size={16} /></a></div>
 		<div class="protection-summary"><span class="protection-mark"><Glyph name="protection" size={21} /></span><div><strong>{count(protectionCount)} {protectionKind}</strong><span>{pulseState.mode === 'demo' ? 'Eventos de demostración' : observedCount ? 'Cambios entre lecturas recibidas' : 'Aún no hay cambios recibidos'}</span></div></div>
 		<p class="fine-print">Pulse no graba cámaras ni ofrece modo centinela.</p>
 	</article>
@@ -202,93 +168,77 @@
 
 <style>
 	.overview-hero { overflow: hidden; border-radius: 20px; }
-	.overview-hero-copy { padding: clamp(21px, 4vw, 36px); }
-	.hero-topline { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-	.hero-topline h3 { margin: 7px 0 0; font-size: 1.1875rem; font-weight: 610; letter-spacing: -.025em; }
-	.hero-battery-row { display: flex; align-items: center; gap: clamp(22px, 5vw, 48px); padding: 23px 0 17px; }
-	.battery-gauge { position: relative; display: grid; width: 145px; height: 145px; flex: 0 0 145px; place-items: center; }
-	.battery-gauge svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
-	.battery-gauge circle { fill: none; stroke-width: 8; }
-	.gauge-track { stroke: var(--surface-soft); }
-	.gauge-value { stroke: var(--forest); stroke-linecap: round; transition: stroke-dashoffset 280ms ease; }
-	.gauge-center { display: grid; justify-items: center; gap: 1px; }
-	.gauge-center strong { font-variant-numeric: tabular-nums; font-size: 2.0625rem; font-weight: 570; letter-spacing: -.065em; }
-	.gauge-center strong small { margin-left: 2px; font-size: 0.875rem; font-weight: 520; }
-	.gauge-center span { color: var(--muted); font-size: .75rem; }
-	.range-summary { display: grid; gap: 5px; }
-	.range-summary strong { margin-top: 2px; font-size: 2.75rem; font-weight: 560; letter-spacing: -.07em; line-height: 1; }
-	.range-summary strong small { margin-left: 5px; color: var(--muted); font-size: 1.0625rem; font-weight: 470; letter-spacing: -.02em; }
-	.range-summary p:last-child { margin: 0; color: var(--muted); font-size: .875rem; }
-	.hero-data-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; padding: 16px 0; border-top: 1px solid var(--line); }
-	.hero-data-row > div { display: grid; gap: 5px; }
-	.hero-data-row span { color: var(--muted); font-size: .875rem; }
-	.hero-data-row strong { overflow-wrap: anywhere; font-size: .875rem; font-weight: 630; }
-	.hero-footnote { margin: 0; color: var(--muted); font-size: .75rem; line-height: 1.6; }
-	.vehicle-unconfigured { display: grid; grid-template-columns: minmax(180px, 1fr) 1.15fr; align-items: center; gap: 22px; padding: 22px 0 4px; }
-	.vehicle-line-art { display: grid; min-height: 125px; place-items: center; border-radius: 14px; background: var(--surface-soft); color: var(--forest); }
-	.vehicle-line-art svg { width: min(88%, 250px); }
-	.vehicle-unconfigured h4 { margin: 0; font-size: 1rem; font-weight: 620; letter-spacing: -.025em; }
-	.vehicle-unconfigured p { max-width: 480px; margin: 8px 0 15px; color: var(--muted); font-size: 1rem; line-height: 1.65; }
+	.vehicle-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 26px 28px 0; }
+	.vehicle-heading h2 { margin: 0; font-size: 1.5rem; font-weight: 650; letter-spacing: -.025em; overflow-wrap: anywhere; }
+	.vehicle-heading p { margin: 5px 0 0; color: var(--muted); font-size: .875rem; }
+	.vehicle-overview { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: center; gap: 32px; padding: 26px 28px; }
+	.vehicle-reading { min-width: 0; }
+	.vehicle-reading h3 { margin: 0; font-size: 1.25rem; line-height: 1.3; letter-spacing: -.02em; }
+	.preparation-copy { margin: 12px 0 22px; max-width: 42ch; color: var(--muted); font-size: 1rem; line-height: 1.65; }
+	.vehicle-reading > .text-button { display: flex; margin-top: 6px; }
+	.vehicle-charge-status { display: flex; align-items: center; gap: 8px; color: var(--forest); font-size: .875rem; }
+	.vehicle-energy { display: grid; grid-template-columns: 1fr 1.25fr; gap: 18px; margin: 24px 0 16px; }
+	dt { color: var(--muted); font-size: .875rem; }
+	dd { margin: 0; }
+	.vehicle-energy dd { margin-top: 7px; font-size: 2rem; font-weight: 620; line-height: 1.1; letter-spacing: -.035em; }
+	.vehicle-energy dd span { margin-left: 4px; color: var(--muted-strong); font-size: .875rem; font-weight: 500; letter-spacing: 0; }
+	.battery-track { overflow: hidden; height: 6px; border-radius: 4px; background: var(--line); }
+	.battery-track span { display: block; width: 100%; height: 100%; background: var(--forest); transform-origin: left center; transition: transform var(--motion-state) ease-out; }
+	.vehicle-observation { display: grid; gap: 12px; margin: 20px 0 0; }
+	.vehicle-observation > div { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+	.vehicle-observation dd { font-size: .875rem; font-weight: 600; }
+	.vehicle-summary-footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 14px 28px; border-top: 1px solid var(--line); }
+	.vehicle-summary-footer p { max-width: 75ch; margin: 0; color: var(--muted); font-size: .8125rem; line-height: 1.55; }
+	.vehicle-summary-footer .text-button { flex: 0 0 auto; }
 	.overview-grid, .overview-bottom-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
-	.overview-status-card, .overview-controls-card, .overview-summary-card { min-width: 0; padding: 19px; }
+	.overview-status-card, .overview-controls-card, .overview-summary-card { min-width: 0; padding: 22px; }
 	.compact-heading { margin: 0 0 15px; }
-	.compact-heading h2 { margin-top: 6px; font-size: 1rem; }
-	.compact-heading .text-button { min-height: 44px; }
+	.compact-heading h2 { margin: 0; font-size: 1rem; }
+	.compact-heading .text-button { min-height: 48px; }
 	.state-rows { display: grid; }
-	.state-rows > div { display: flex; min-height: 47px; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--line); font-size: .875rem; }
+	.state-rows > div { display: flex; min-height: 48px; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--line); font-size: .875rem; }
 	.state-rows > div:last-child { border-bottom: 0; }
 	.state-rows > div > span { display: flex; align-items: center; gap: 8px; color: var(--muted-strong); }
 	.state-rows strong { font-size: .875rem; font-weight: 650; }
-	.state-icon { display: inline-grid; width: 28px; height: 28px; place-items: center; border-radius: 8px; background: var(--surface-soft); color: var(--forest); font-style: normal; }
+	.state-icon { display: inline-grid; width: 28px; height: 28px; place-items: center; color: var(--muted-strong); font-style: normal; }
 	.overview-status-card .fine-print, .overview-controls-card .fine-print, .overview-summary-card .fine-print { margin: 12px 0 0; }
 	.overview-controls-card .section-heading { flex-direction: row; align-items: center; }
 	.command-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-	.command-button { display: flex; min-height: 52px; align-items: center; gap: 9px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-raised); color: var(--ink); cursor: pointer; font-size: .875rem; font-weight: 620; text-align: left; }
-	.command-button:hover:not(:disabled) { border-color: var(--line-strong); background: var(--surface-soft); }
-	.command-icon { display: grid; width: 31px; height: 31px; flex: 0 0 31px; place-items: center; border-radius: 9px; background: var(--forest-soft); color: var(--forest); }
+	.command-button { display: flex; min-height: 52px; align-items: center; gap: 9px; padding: 9px 11px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface-raised); color: var(--ink); cursor: pointer; font-size: .875rem; font-weight: 620; text-align: left; }
+	.command-button:hover:not(:disabled) { background: var(--surface-soft); }
+	.command-icon { display: grid; width: 24px; flex: 0 0 24px; place-items: center; color: var(--forest); }
 	.compact-empty { padding: 14px; }
 	.compact-empty h3 { font-size: .875rem; }
-	.prep-card { display: flex; gap: 13px; padding: 20px; }
-	.prep-step { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border-radius: 10px; background: var(--forest-soft); color: var(--forest); font-size: .75rem; font-weight: 750; }
-	.prep-card h3 { margin: 2px 0 0; font-size: 0.875rem; }
-	.prep-card p { margin: 7px 0 3px; color: var(--muted); font-size: 1rem; line-height: 1.6; }
-	.prep-card .text-button { min-height: 44px; }
-	.summary-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-	.summary-metrics > div { display: grid; gap: 6px; padding: 12px; border-radius: 10px; background: var(--surface-soft); }
+	.prep-card { display: flex; gap: 14px; padding: 22px; }
+	.prep-step { display: grid; width: 24px; height: 30px; flex: 0 0 24px; place-items: center; color: var(--forest); }
+	.prep-card h3 { margin: 2px 0 0; font-size: 1rem; }
+	.prep-card p { margin: 8px 0 4px; color: var(--muted); font-size: 1rem; line-height: 1.6; }
+	.prep-card .text-button { min-height: 48px; }
+	.summary-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+	.summary-metrics > div { display: grid; gap: 7px; padding: 12px 0; }
 	.summary-metrics span { color: var(--muted); font-size: .875rem; }
-	.summary-metrics strong { font-size: 1rem; font-variant-numeric: tabular-nums; }
+	.summary-metrics strong { font-size: 1.125rem; }
 	.summary-metrics small { color: var(--muted); font-size: .75rem; font-weight: 520; }
 	.protection-summary { display: flex; align-items: center; gap: 11px; min-height: 58px; }
-	.protection-mark { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 11px; background: var(--forest-soft); color: var(--forest); }
+	.protection-mark { display: grid; width: 28px; height: 38px; place-items: center; color: var(--forest); }
 	.protection-summary div { display: grid; gap: 4px; }
 	.protection-summary strong { font-size: .875rem; }
-	.protection-summary span:last-child { color: var(--muted); font-size: .75rem; }
+	.protection-summary span:last-child { color: var(--muted); font-size: .8125rem; }
 	.overview-footer { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 22px; color: var(--muted); font-size: .75rem; }
-	@media (max-width: 980px) {
+	@media (max-width: 1050px) {
+		.vehicle-overview { gap: 22px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 		.overview-grid, .overview-bottom-grid { grid-template-columns: 1fr; }
 	}
 	@media (max-width: 700px) {
-		.overview-hero-copy { padding: 19px; }
-		.hero-battery-row { gap: 20px; }
-		.battery-gauge { width: 126px; height: 126px; flex-basis: 126px; }
-		.range-summary strong { font-size: 2.25rem; }
-		.range-summary strong small { font-size: 0.875rem; }
-		.hero-data-row { gap: 8px; }
-		.vehicle-unconfigured { grid-template-columns: 1fr; gap: 15px; }
-		.vehicle-line-art { min-height: 105px; }
+		.vehicle-heading { padding: 20px 18px 0; gap: 12px; flex-wrap: wrap; }
+		.vehicle-heading h2 { font-size: 1.25rem; }
+		.vehicle-overview { grid-template-columns: 1fr; padding: 18px; gap: 24px; }
+		.vehicle-summary-footer { padding: 14px 18px; flex-direction: column; align-items: flex-start; gap: 5px; }
+		.vehicle-reading h3 { font-size: 1.125rem; }
+		.preparation-copy { margin-bottom: 16px; }
+		.vehicle-energy { margin-top: 20px; }
+		.vehicle-energy dd { font-size: 1.875rem; }
+		.overview-status-card, .overview-controls-card, .overview-summary-card, .prep-card { padding: 18px; }
 	}
-	@media (max-width: 370px) {
-		.battery-gauge { width: 108px; height: 108px; flex-basis: 108px; }
-		.gauge-center strong { font-size: 1.6875rem; }
-		.range-summary strong { font-size: 1.9375rem; }
-		.hero-data-row { grid-template-columns: 1fr 1fr; }
-	}
-
-
-	@media (max-width: 360px) {
-		.overview-hero-copy { padding: 15px; }
-		.hero-battery-row { flex-wrap: wrap; gap: 14px; }
-		.range-summary { min-width: 0; }
-		.range-summary strong { font-size: 1.75rem; }
-	}
+	@media (max-width: 370px) { .vehicle-energy, .command-grid, .summary-metrics { grid-template-columns: 1fr; } }
 </style>

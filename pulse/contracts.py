@@ -74,6 +74,14 @@ class Settings(BaseModel):
     tariff_eur_kwh: float
     home_label: str
     pricing_method: Literal["manual", "pvpc"]
+    vehicle_color: Literal[
+        "starry_night_blue",
+        "midnight_purple",
+        "tundra_grey",
+        "metallic_black",
+        "stellar_silver",
+        "lunar_white",
+    ] | None
 
 
 class Vehicle(BaseModel):

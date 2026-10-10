@@ -1,0 +1,772 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-10T22:19:58Z",
+  "title": "Design System: Leapmotor Pulse",
+  "extensions": {
+    "colorMeta": {
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Canvas gris frío",
+        "tonalRamp": [
+          "oklch(15.0% 0.0029 264.5)",
+          "oklch(26.4% 0.0029 264.5)",
+          "oklch(37.9% 0.0029 264.5)",
+          "oklch(49.3% 0.0029 264.5)",
+          "oklch(60.7% 0.0029 264.5)",
+          "oklch(72.1% 0.0029 264.5)",
+          "oklch(83.6% 0.0029 264.5)",
+          "oklch(95.0% 0.0029 264.5)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Superficie clara",
+        "tonalRamp": [
+          "oklch(15.0% 0.0000 89.9)",
+          "oklch(26.4% 0.0000 89.9)",
+          "oklch(37.9% 0.0000 89.9)",
+          "oklch(49.3% 0.0000 89.9)",
+          "oklch(60.7% 0.0000 89.9)",
+          "oklch(72.1% 0.0000 89.9)",
+          "oklch(83.6% 0.0000 89.9)",
+          "oklch(95.0% 0.0000 89.9)"
+        ]
+      },
+      "surface-soft": {
+        "role": "neutral",
+        "displayName": "Superficie suave",
+        "tonalRamp": [
+          "oklch(15.0% 0.0052 247.9)",
+          "oklch(26.4% 0.0052 247.9)",
+          "oklch(37.9% 0.0052 247.9)",
+          "oklch(49.3% 0.0052 247.9)",
+          "oklch(60.7% 0.0052 247.9)",
+          "oklch(72.1% 0.0052 247.9)",
+          "oklch(83.6% 0.0052 247.9)",
+          "oklch(95.0% 0.0052 247.9)"
+        ]
+      },
+      "surface-raised": {
+        "role": "neutral",
+        "displayName": "Superficie de control",
+        "tonalRamp": [
+          "oklch(15.0% 0.0000 89.9)",
+          "oklch(26.4% 0.0000 89.9)",
+          "oklch(37.9% 0.0000 89.9)",
+          "oklch(49.3% 0.0000 89.9)",
+          "oklch(60.7% 0.0000 89.9)",
+          "oklch(72.1% 0.0000 89.9)",
+          "oklch(83.6% 0.0000 89.9)",
+          "oklch(95.0% 0.0000 89.9)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Tinta grafito",
+        "tonalRamp": [
+          "oklch(15.0% 0.0111 254.0)",
+          "oklch(26.4% 0.0111 254.0)",
+          "oklch(37.9% 0.0111 254.0)",
+          "oklch(49.3% 0.0111 254.0)",
+          "oklch(60.7% 0.0111 254.0)",
+          "oklch(72.1% 0.0111 254.0)",
+          "oklch(83.6% 0.0111 254.0)",
+          "oklch(95.0% 0.0111 254.0)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Texto secundario",
+        "tonalRamp": [
+          "oklch(15.0% 0.0201 256.3)",
+          "oklch(26.4% 0.0201 256.3)",
+          "oklch(37.9% 0.0201 256.3)",
+          "oklch(49.3% 0.0201 256.3)",
+          "oklch(60.7% 0.0201 256.3)",
+          "oklch(72.1% 0.0201 256.3)",
+          "oklch(83.6% 0.0201 256.3)",
+          "oklch(95.0% 0.0201 256.3)"
+        ]
+      },
+      "muted-strong": {
+        "role": "neutral",
+        "displayName": "Texto secundario fuerte",
+        "tonalRamp": [
+          "oklch(15.0% 0.0190 257.3)",
+          "oklch(26.4% 0.0190 257.3)",
+          "oklch(37.9% 0.0190 257.3)",
+          "oklch(49.3% 0.0190 257.3)",
+          "oklch(60.7% 0.0190 257.3)",
+          "oklch(72.1% 0.0190 257.3)",
+          "oklch(83.6% 0.0190 257.3)",
+          "oklch(95.0% 0.0190 257.3)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Divisor suave",
+        "tonalRamp": [
+          "oklch(15.0% 0.0081 253.9)",
+          "oklch(26.4% 0.0081 253.9)",
+          "oklch(37.9% 0.0081 253.9)",
+          "oklch(49.3% 0.0081 253.9)",
+          "oklch(60.7% 0.0081 253.9)",
+          "oklch(72.1% 0.0081 253.9)",
+          "oklch(83.6% 0.0081 253.9)",
+          "oklch(95.0% 0.0081 253.9)"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Contorno fuerte",
+        "tonalRamp": [
+          "oklch(15.0% 0.0242 250.3)",
+          "oklch(26.4% 0.0242 250.3)",
+          "oklch(37.9% 0.0242 250.3)",
+          "oklch(49.3% 0.0242 250.3)",
+          "oklch(60.7% 0.0242 250.3)",
+          "oklch(72.1% 0.0242 250.3)",
+          "oklch(83.6% 0.0242 250.3)",
+          "oklch(95.0% 0.0242 250.3)"
+        ]
+      },
+      "forest": {
+        "role": "primary",
+        "displayName": "Jade de acción",
+        "tonalRamp": [
+          "oklch(15.0% 0.0833 166.2)",
+          "oklch(26.4% 0.0833 166.2)",
+          "oklch(37.9% 0.0833 166.2)",
+          "oklch(49.3% 0.0833 166.2)",
+          "oklch(60.7% 0.0833 166.2)",
+          "oklch(72.1% 0.0833 166.2)",
+          "oklch(83.6% 0.0833 166.2)",
+          "oklch(95.0% 0.0833 166.2)"
+        ]
+      },
+      "forest-hover": {
+        "role": "primary",
+        "displayName": "Jade de hover",
+        "tonalRamp": [
+          "oklch(15.0% 0.0704 166.6)",
+          "oklch(26.4% 0.0704 166.6)",
+          "oklch(37.9% 0.0704 166.6)",
+          "oklch(49.3% 0.0704 166.6)",
+          "oklch(60.7% 0.0704 166.6)",
+          "oklch(72.1% 0.0704 166.6)",
+          "oklch(83.6% 0.0704 166.6)",
+          "oklch(95.0% 0.0704 166.6)"
+        ]
+      },
+      "forest-soft": {
+        "role": "primary",
+        "displayName": "Jade tenue",
+        "tonalRamp": [
+          "oklch(15.0% 0.0150 164.7)",
+          "oklch(26.4% 0.0150 164.7)",
+          "oklch(37.9% 0.0150 164.7)",
+          "oklch(49.3% 0.0150 164.7)",
+          "oklch(60.7% 0.0150 164.7)",
+          "oklch(72.1% 0.0150 164.7)",
+          "oklch(83.6% 0.0150 164.7)",
+          "oklch(95.0% 0.0150 164.7)"
+        ]
+      },
+      "mint": {
+        "role": "secondary",
+        "displayName": "Menta de selección",
+        "tonalRamp": [
+          "oklch(15.0% 0.0485 160.3)",
+          "oklch(26.4% 0.0485 160.3)",
+          "oklch(37.9% 0.0485 160.3)",
+          "oklch(49.3% 0.0485 160.3)",
+          "oklch(60.7% 0.0485 160.3)",
+          "oklch(72.1% 0.0485 160.3)",
+          "oklch(83.6% 0.0485 160.3)",
+          "oklch(95.0% 0.0485 160.3)"
+        ]
+      },
+      "accent": {
+        "role": "secondary",
+        "displayName": "Ámbar de atención",
+        "tonalRamp": [
+          "oklch(15.0% 0.1038 62.4)",
+          "oklch(26.4% 0.1038 62.4)",
+          "oklch(37.9% 0.1038 62.4)",
+          "oklch(49.3% 0.1038 62.4)",
+          "oklch(60.7% 0.1038 62.4)",
+          "oklch(72.1% 0.1038 62.4)",
+          "oklch(83.6% 0.1038 62.4)",
+          "oklch(95.0% 0.1038 62.4)"
+        ]
+      },
+      "accent-soft": {
+        "role": "secondary",
+        "displayName": "Ámbar tenue",
+        "tonalRamp": [
+          "oklch(15.0% 0.0229 84.6)",
+          "oklch(26.4% 0.0229 84.6)",
+          "oklch(37.9% 0.0229 84.6)",
+          "oklch(49.3% 0.0229 84.6)",
+          "oklch(60.7% 0.0229 84.6)",
+          "oklch(72.1% 0.0229 84.6)",
+          "oklch(83.6% 0.0229 84.6)",
+          "oklch(95.0% 0.0229 84.6)"
+        ]
+      },
+      "danger": {
+        "role": "tertiary",
+        "displayName": "Rojo de error",
+        "tonalRamp": [
+          "oklch(15.0% 0.1361 29.4)",
+          "oklch(26.4% 0.1361 29.4)",
+          "oklch(37.9% 0.1361 29.4)",
+          "oklch(49.3% 0.1361 29.4)",
+          "oklch(60.7% 0.1361 29.4)",
+          "oklch(72.1% 0.1361 29.4)",
+          "oklch(83.6% 0.1361 29.4)",
+          "oklch(95.0% 0.1361 29.4)"
+        ]
+      },
+      "danger-soft": {
+        "role": "tertiary",
+        "displayName": "Rojo tenue",
+        "tonalRamp": [
+          "oklch(15.0% 0.0173 35.3)",
+          "oklch(26.4% 0.0173 35.3)",
+          "oklch(37.9% 0.0173 35.3)",
+          "oklch(49.3% 0.0173 35.3)",
+          "oklch(60.7% 0.0173 35.3)",
+          "oklch(72.1% 0.0173 35.3)",
+          "oklch(83.6% 0.0173 35.3)",
+          "oklch(95.0% 0.0173 35.3)"
+        ]
+      },
+      "focus": {
+        "role": "primary",
+        "displayName": "Foco jade",
+        "tonalRamp": [
+          "oklch(15.0% 0.0926 164.9)",
+          "oklch(26.4% 0.0926 164.9)",
+          "oklch(37.9% 0.0926 164.9)",
+          "oklch(49.3% 0.0926 164.9)",
+          "oklch(60.7% 0.0926 164.9)",
+          "oklch(72.1% 0.0926 164.9)",
+          "oklch(83.6% 0.0926 164.9)",
+          "oklch(95.0% 0.0926 164.9)"
+        ]
+      },
+      "on-primary": {
+        "role": "neutral",
+        "displayName": "Texto sobre acción",
+        "tonalRamp": [
+          "oklch(15.0% 0.0000 89.9)",
+          "oklch(26.4% 0.0000 89.9)",
+          "oklch(37.9% 0.0000 89.9)",
+          "oklch(49.3% 0.0000 89.9)",
+          "oklch(60.7% 0.0000 89.9)",
+          "oklch(72.1% 0.0000 89.9)",
+          "oklch(83.6% 0.0000 89.9)",
+          "oklch(95.0% 0.0000 89.9)"
+        ]
+      },
+      "on-accent": {
+        "role": "neutral",
+        "displayName": "Texto sobre ámbar",
+        "tonalRamp": [
+          "oklch(15.0% 0.0000 89.9)",
+          "oklch(26.4% 0.0000 89.9)",
+          "oklch(37.9% 0.0000 89.9)",
+          "oklch(49.3% 0.0000 89.9)",
+          "oklch(60.7% 0.0000 89.9)",
+          "oklch(72.1% 0.0000 89.9)",
+          "oklch(83.6% 0.0000 89.9)",
+          "oklch(95.0% 0.0000 89.9)"
+        ]
+      },
+      "on-danger": {
+        "role": "neutral",
+        "displayName": "Texto sobre error",
+        "tonalRamp": [
+          "oklch(15.0% 0.0000 89.9)",
+          "oklch(26.4% 0.0000 89.9)",
+          "oklch(37.9% 0.0000 89.9)",
+          "oklch(49.3% 0.0000 89.9)",
+          "oklch(60.7% 0.0000 89.9)",
+          "oklch(72.1% 0.0000 89.9)",
+          "oklch(83.6% 0.0000 89.9)",
+          "oklch(95.0% 0.0000 89.9)"
+        ]
+      },
+      "selection-ink": {
+        "role": "neutral",
+        "displayName": "Tinta de selección",
+        "tonalRamp": [
+          "oklch(15.0% 0.0188 161.0)",
+          "oklch(26.4% 0.0188 161.0)",
+          "oklch(37.9% 0.0188 161.0)",
+          "oklch(49.3% 0.0188 161.0)",
+          "oklch(60.7% 0.0188 161.0)",
+          "oklch(72.1% 0.0188 161.0)",
+          "oklch(83.6% 0.0188 161.0)",
+          "oklch(95.0% 0.0188 161.0)"
+        ]
+      },
+      "charcoal-canvas": {
+        "role": "neutral",
+        "displayName": "Canvas charcoal",
+        "tonalRamp": [
+          "oklch(15.0% 0.0081 264.4)",
+          "oklch(26.4% 0.0081 264.4)",
+          "oklch(37.9% 0.0081 264.4)",
+          "oklch(49.3% 0.0081 264.4)",
+          "oklch(60.7% 0.0081 264.4)",
+          "oklch(72.1% 0.0081 264.4)",
+          "oklch(83.6% 0.0081 264.4)",
+          "oklch(95.0% 0.0081 264.4)"
+        ]
+      },
+      "charcoal-surface": {
+        "role": "neutral",
+        "displayName": "Superficie charcoal",
+        "tonalRamp": [
+          "oklch(15.0% 0.0101 260.7)",
+          "oklch(26.4% 0.0101 260.7)",
+          "oklch(37.9% 0.0101 260.7)",
+          "oklch(49.3% 0.0101 260.7)",
+          "oklch(60.7% 0.0101 260.7)",
+          "oklch(72.1% 0.0101 260.7)",
+          "oklch(83.6% 0.0101 260.7)",
+          "oklch(95.0% 0.0101 260.7)"
+        ]
+      },
+      "charcoal-surface-soft": {
+        "role": "neutral",
+        "displayName": "Superficie suave charcoal",
+        "tonalRamp": [
+          "oklch(15.0% 0.0119 258.4)",
+          "oklch(26.4% 0.0119 258.4)",
+          "oklch(37.9% 0.0119 258.4)",
+          "oklch(49.3% 0.0119 258.4)",
+          "oklch(60.7% 0.0119 258.4)",
+          "oklch(72.1% 0.0119 258.4)",
+          "oklch(83.6% 0.0119 258.4)",
+          "oklch(95.0% 0.0119 258.4)"
+        ]
+      },
+      "charcoal-surface-raised": {
+        "role": "neutral",
+        "displayName": "Control charcoal elevado",
+        "tonalRamp": [
+          "oklch(15.0% 0.0116 264.4)",
+          "oklch(26.4% 0.0116 264.4)",
+          "oklch(37.9% 0.0116 264.4)",
+          "oklch(49.3% 0.0116 264.4)",
+          "oklch(60.7% 0.0116 264.4)",
+          "oklch(72.1% 0.0116 264.4)",
+          "oklch(83.6% 0.0116 264.4)",
+          "oklch(95.0% 0.0116 264.4)"
+        ]
+      },
+      "charcoal-ink": {
+        "role": "neutral",
+        "displayName": "Tinta clara charcoal",
+        "tonalRamp": [
+          "oklch(15.0% 0.0046 258.3)",
+          "oklch(26.4% 0.0046 258.3)",
+          "oklch(37.9% 0.0046 258.3)",
+          "oklch(49.3% 0.0046 258.3)",
+          "oklch(60.7% 0.0046 258.3)",
+          "oklch(72.1% 0.0046 258.3)",
+          "oklch(83.6% 0.0046 258.3)",
+          "oklch(95.0% 0.0046 258.3)"
+        ]
+      },
+      "charcoal-muted": {
+        "role": "neutral",
+        "displayName": "Texto secundario charcoal",
+        "tonalRamp": [
+          "oklch(15.0% 0.0161 257.2)",
+          "oklch(26.4% 0.0161 257.2)",
+          "oklch(37.9% 0.0161 257.2)",
+          "oklch(49.3% 0.0161 257.2)",
+          "oklch(60.7% 0.0161 257.2)",
+          "oklch(72.1% 0.0161 257.2)",
+          "oklch(83.6% 0.0161 257.2)",
+          "oklch(95.0% 0.0161 257.2)"
+        ]
+      },
+      "charcoal-muted-strong": {
+        "role": "neutral",
+        "displayName": "Texto secundario fuerte charcoal",
+        "tonalRamp": [
+          "oklch(15.0% 0.0098 252.8)",
+          "oklch(26.4% 0.0098 252.8)",
+          "oklch(37.9% 0.0098 252.8)",
+          "oklch(49.3% 0.0098 252.8)",
+          "oklch(60.7% 0.0098 252.8)",
+          "oklch(72.1% 0.0098 252.8)",
+          "oklch(83.6% 0.0098 252.8)",
+          "oklch(95.0% 0.0098 252.8)"
+        ]
+      },
+      "charcoal-line": {
+        "role": "neutral",
+        "displayName": "Divisor charcoal",
+        "tonalRamp": [
+          "oklch(15.0% 0.0151 259.8)",
+          "oklch(26.4% 0.0151 259.8)",
+          "oklch(37.9% 0.0151 259.8)",
+          "oklch(49.3% 0.0151 259.8)",
+          "oklch(60.7% 0.0151 259.8)",
+          "oklch(72.1% 0.0151 259.8)",
+          "oklch(83.6% 0.0151 259.8)",
+          "oklch(95.0% 0.0151 259.8)"
+        ]
+      },
+      "charcoal-line-strong": {
+        "role": "neutral",
+        "displayName": "Contorno fuerte charcoal",
+        "tonalRamp": [
+          "oklch(15.0% 0.0273 257.7)",
+          "oklch(26.4% 0.0273 257.7)",
+          "oklch(37.9% 0.0273 257.7)",
+          "oklch(49.3% 0.0273 257.7)",
+          "oklch(60.7% 0.0273 257.7)",
+          "oklch(72.1% 0.0273 257.7)",
+          "oklch(83.6% 0.0273 257.7)",
+          "oklch(95.0% 0.0273 257.7)"
+        ]
+      },
+      "charcoal-forest": {
+        "role": "primary",
+        "displayName": "Jade de acción charcoal",
+        "tonalRamp": [
+          "oklch(15.0% 0.0643 163.9)",
+          "oklch(26.4% 0.0643 163.9)",
+          "oklch(37.9% 0.0643 163.9)",
+          "oklch(49.3% 0.0643 163.9)",
+          "oklch(60.7% 0.0643 163.9)",
+          "oklch(72.1% 0.0643 163.9)",
+          "oklch(83.6% 0.0643 163.9)",
+          "oklch(95.0% 0.0643 163.9)"
+        ]
+      },
+      "charcoal-forest-hover": {
+        "role": "primary",
+        "displayName": "Jade hover charcoal",
+        "tonalRamp": [
+          "oklch(15.0% 0.0507 164.2)",
+          "oklch(26.4% 0.0507 164.2)",
+          "oklch(37.9% 0.0507 164.2)",
+          "oklch(49.3% 0.0507 164.2)",
+          "oklch(60.7% 0.0507 164.2)",
+          "oklch(72.1% 0.0507 164.2)",
+          "oklch(83.6% 0.0507 164.2)",
+          "oklch(95.0% 0.0507 164.2)"
+        ]
+      },
+      "charcoal-forest-soft": {
+        "role": "primary",
+        "displayName": "Jade tenue charcoal",
+        "tonalRamp": [
+          "oklch(15.0% 0.0301 165.1)",
+          "oklch(26.4% 0.0301 165.1)",
+          "oklch(37.9% 0.0301 165.1)",
+          "oklch(49.3% 0.0301 165.1)",
+          "oklch(60.7% 0.0301 165.1)",
+          "oklch(72.1% 0.0301 165.1)",
+          "oklch(83.6% 0.0301 165.1)",
+          "oklch(95.0% 0.0301 165.1)"
+        ]
+      },
+      "charcoal-mint": {
+        "role": "secondary",
+        "displayName": "Menta de selección charcoal",
+        "tonalRamp": [
+          "oklch(15.0% 0.0643 163.9)",
+          "oklch(26.4% 0.0643 163.9)",
+          "oklch(37.9% 0.0643 163.9)",
+          "oklch(49.3% 0.0643 163.9)",
+          "oklch(60.7% 0.0643 163.9)",
+          "oklch(72.1% 0.0643 163.9)",
+          "oklch(83.6% 0.0643 163.9)",
+          "oklch(95.0% 0.0643 163.9)"
+        ]
+      },
+      "charcoal-accent": {
+        "role": "secondary",
+        "displayName": "Ámbar charcoal",
+        "tonalRamp": [
+          "oklch(15.0% 0.1046 73.9)",
+          "oklch(26.4% 0.1046 73.9)",
+          "oklch(37.9% 0.1046 73.9)",
+          "oklch(49.3% 0.1046 73.9)",
+          "oklch(60.7% 0.1046 73.9)",
+          "oklch(72.1% 0.1046 73.9)",
+          "oklch(83.6% 0.1046 73.9)",
+          "oklch(95.0% 0.1046 73.9)"
+        ]
+      },
+      "charcoal-accent-soft": {
+        "role": "secondary",
+        "displayName": "Ámbar tenue charcoal",
+        "tonalRamp": [
+          "oklch(15.0% 0.0334 73.7)",
+          "oklch(26.4% 0.0334 73.7)",
+          "oklch(37.9% 0.0334 73.7)",
+          "oklch(49.3% 0.0334 73.7)",
+          "oklch(60.7% 0.0334 73.7)",
+          "oklch(72.1% 0.0334 73.7)",
+          "oklch(83.6% 0.0334 73.7)",
+          "oklch(95.0% 0.0334 73.7)"
+        ]
+      },
+      "charcoal-danger": {
+        "role": "tertiary",
+        "displayName": "Rojo de error charcoal",
+        "tonalRamp": [
+          "oklch(15.0% 0.1058 29.1)",
+          "oklch(26.4% 0.1058 29.1)",
+          "oklch(37.9% 0.1058 29.1)",
+          "oklch(49.3% 0.1058 29.1)",
+          "oklch(60.7% 0.1058 29.1)",
+          "oklch(72.1% 0.1058 29.1)",
+          "oklch(83.6% 0.1058 29.1)",
+          "oklch(95.0% 0.1058 29.1)"
+        ]
+      },
+      "charcoal-danger-soft": {
+        "role": "tertiary",
+        "displayName": "Rojo tenue charcoal",
+        "tonalRamp": [
+          "oklch(15.0% 0.0396 26.7)",
+          "oklch(26.4% 0.0396 26.7)",
+          "oklch(37.9% 0.0396 26.7)",
+          "oklch(49.3% 0.0396 26.7)",
+          "oklch(60.7% 0.0396 26.7)",
+          "oklch(72.1% 0.0396 26.7)",
+          "oklch(83.6% 0.0396 26.7)",
+          "oklch(95.0% 0.0396 26.7)"
+        ]
+      },
+      "charcoal-focus": {
+        "role": "secondary",
+        "displayName": "Foco charcoal",
+        "tonalRamp": [
+          "oklch(15.0% 0.1046 73.9)",
+          "oklch(26.4% 0.1046 73.9)",
+          "oklch(37.9% 0.1046 73.9)",
+          "oklch(49.3% 0.1046 73.9)",
+          "oklch(60.7% 0.1046 73.9)",
+          "oklch(72.1% 0.1046 73.9)",
+          "oklch(83.6% 0.1046 73.9)",
+          "oklch(95.0% 0.1046 73.9)"
+        ]
+      },
+      "charcoal-on-primary": {
+        "role": "neutral",
+        "displayName": "Texto de acción charcoal",
+        "tonalRamp": [
+          "oklch(15.0% 0.0188 161.0)",
+          "oklch(26.4% 0.0188 161.0)",
+          "oklch(37.9% 0.0188 161.0)",
+          "oklch(49.3% 0.0188 161.0)",
+          "oklch(60.7% 0.0188 161.0)",
+          "oklch(72.1% 0.0188 161.0)",
+          "oklch(83.6% 0.0188 161.0)",
+          "oklch(95.0% 0.0188 161.0)"
+        ]
+      },
+      "charcoal-on-accent": {
+        "role": "neutral",
+        "displayName": "Texto sobre ámbar charcoal",
+        "tonalRamp": [
+          "oklch(15.0% 0.0101 260.7)",
+          "oklch(26.4% 0.0101 260.7)",
+          "oklch(37.9% 0.0101 260.7)",
+          "oklch(49.3% 0.0101 260.7)",
+          "oklch(60.7% 0.0101 260.7)",
+          "oklch(72.1% 0.0101 260.7)",
+          "oklch(83.6% 0.0101 260.7)",
+          "oklch(95.0% 0.0101 260.7)"
+        ]
+      },
+      "charcoal-on-danger": {
+        "role": "neutral",
+        "displayName": "Texto sobre error charcoal",
+        "tonalRamp": [
+          "oklch(15.0% 0.0101 260.7)",
+          "oklch(26.4% 0.0101 260.7)",
+          "oklch(37.9% 0.0101 260.7)",
+          "oklch(49.3% 0.0101 260.7)",
+          "oklch(60.7% 0.0101 260.7)",
+          "oklch(72.1% 0.0101 260.7)",
+          "oklch(83.6% 0.0101 260.7)",
+          "oklch(95.0% 0.0101 260.7)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Cifras principales de batería y autonomía."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Título de página."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Encabezados de sección."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Lectura y explicación."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Controles y etiquetas."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Metadatos y texto auxiliar."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Códigos de enlace."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card-rest",
+        "value": "0 2px 10px rgb(25 30 38 / 2%)",
+        "purpose": "Separación apenas elevada de las tarjetas."
+      },
+      {
+        "name": "menu-light",
+        "value": "0 14px 42px rgb(25 30 38 / 7%)",
+        "purpose": "Menús flotantes en tema claro."
+      },
+      {
+        "name": "menu-charcoal",
+        "value": "0 16px 44px rgb(0 0 0 / 24%)",
+        "purpose": "Menús flotantes en tema charcoal."
+      },
+      {
+        "name": "mobile-navigation",
+        "value": "0 -8px 24px rgb(25 30 38 / 5%)",
+        "purpose": "Separación superior de la navegación inferior."
+      }
+    ],
+    "motion": [
+      {
+        "name": "control-state",
+        "value": "140ms ease",
+        "purpose": "Transición de color y borde en controles y navegación."
+      },
+      {
+        "name": "battery-reading",
+        "value": "220ms ease-out",
+        "purpose": "Cambio visual de la barra de batería."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: reduce; transition-duration: .01ms; scroll-behavior: auto",
+        "purpose": "Reduce transiciones y desactiva scroll suave cuando se solicita menos movimiento."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "overview-layout",
+        "value": "1050px"
+      },
+      {
+        "name": "settings-layout",
+        "value": "950px"
+      },
+      {
+        "name": "tablet-rail",
+        "value": "860px"
+      },
+      {
+        "name": "mobile-shell",
+        "value": "700px"
+      },
+      {
+        "name": "compact-navigation",
+        "value": "23em relative to container font-size 0.75rem"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botón primario",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Acción principal de una pantalla.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Guardar ajustes</button>",
+      "css": ".ds-btn-primary { display:inline-flex; min-height:48px; align-items:center; justify-content:center; gap:8px; padding:10px 16px; border:1px solid transparent; border-radius:10px; background:var(--forest); color:var(--on-primary); cursor:pointer; font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; font-size:.875rem; font-weight:650; line-height:1.2; transition:background-color 140ms ease, border-color 140ms ease, color 140ms ease, opacity 140ms ease; }\n.ds-btn-primary:hover:not(:disabled) { background:var(--forest-hover); filter:brightness(.97); }\n.ds-btn-primary:active:not(:disabled) { filter:brightness(.91); }\n.ds-btn-primary:focus-visible { outline:3px solid var(--focus); outline-offset:3px; }\n.ds-btn-primary:disabled { cursor:not-allowed; opacity:.55; }"
+    },
+    {
+      "name": "Campo de formulario",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo de modelo o acabado del vehículo.",
+      "html": "<label class=\"ds-field\"><span>Modelo o acabado</span><input class=\"ds-input\" type=\"text\" value=\"Leapmotor B10 Pro Max\" /></label>",
+      "css": ".ds-field { display:grid; min-width:0; gap:7px; }\n.ds-field > span { color:var(--muted-strong); font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; font-size:.875rem; font-weight:650; }\n.ds-input { min-width:0; max-width:100%; width:100%; min-height:48px; padding:0 12px; border:1px solid var(--line-strong); border-radius:9px; background:var(--surface-raised); color:var(--ink); font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; font-size:1rem; }\n.ds-input:focus-visible { outline:3px solid var(--focus); outline-offset:3px; }\n.ds-input::placeholder { color:var(--muted); }"
+    },
+    {
+      "name": "Tarjeta",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Superficie para agrupar una lectura o ajuste relacionado.",
+      "html": "<article class=\"ds-card\"><h2>Resumen de cargas</h2><p>Energía registrada</p><strong>— kWh</strong></article>",
+      "css": ".ds-card { padding:20px; border:1px solid var(--line); border-radius:16px; background:var(--surface); box-shadow:0 2px 10px rgb(25 30 38 / 2%); color:var(--ink); font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; }\n.ds-card h2 { margin:0; font-size:1rem; font-weight:650; }\n.ds-card p { margin:12px 0 4px; color:var(--muted); font-size:.875rem; }\n.ds-card strong { font-size:1.125rem; font-variant-numeric:tabular-nums; }"
+    },
+    {
+      "name": "Navegación activa",
+      "kind": "nav",
+      "refersTo": "nav-active",
+      "description": "Enlace de sección actual en el rail o navegación.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Navegación principal\"><a href=\"/\" aria-current=\"page\"><svg width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z\" /></svg><span>Resumen</span></a></nav>",
+      "css": ".ds-nav { display:grid; gap:5px; font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; }\n.ds-nav > a { display:flex; min-height:48px; align-items:center; gap:12px; padding:0 13px; border:1px solid var(--line); border-radius:10px; background:var(--forest-soft); color:var(--forest); font-size:.875rem; font-weight:560; text-decoration:none; transition:background-color 140ms ease, color 140ms ease, border-color 140ms ease; }\n.ds-nav > a:hover { background:var(--surface-soft); }\n.ds-nav > a:focus-visible { outline:3px solid var(--focus); outline-offset:3px; }\n.ds-nav svg { flex:0 0 19px; }"
+    },
+    {
+      "name": "Estado de demo",
+      "kind": "chip",
+      "refersTo": "status-demo",
+      "description": "Etiqueta persistente que identifica datos simulados.",
+      "html": "<span class=\"ds-status-demo\" role=\"status\"><span class=\"ds-status-dot\"></span>Datos simulados</span>",
+      "css": ".ds-status-demo { display:inline-flex; min-height:30px; max-width:100%; align-items:center; gap:7px; padding:0 10px; border:1px solid var(--accent); border-radius:99px; background:var(--accent-soft); color:var(--accent); font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; font-size:.75rem; font-weight:620; }\n.ds-status-dot { display:inline-block; width:7px; height:7px; flex:0 0 7px; border-radius:99px; background:var(--accent); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Cabina clara de movilidad",
+    "overview": "Pulse presenta el B10 Pro Max con una lectura serena: jerarquía y precisión de un cuadro de movilidad, aire y tipografía del sistema al estilo de las referencias Apple y Google, y datos de carga fáciles de localizar como en Tesla. La interfaz traduce esas referencias en componentes propios, con superficies claras y carbón y acentos verdes limitados a acciones y selección.\n\nLa ilustración lateral del B10 y sus seis acabados seleccionables dan identidad al perfil. La preparación sin vehículo y la demo se distinguen con texto y estado persistente; una lectura ausente no se sustituye por cifras estimadas.",
+    "keyCharacteristics": [
+      "Jerarquía compacta, neutral y legible en superficies claras y charcoal.",
+      "El modelo B10 Pro Max y sus seis acabados orientan la personalización visual.",
+      "Los estados de preparación y demo conservan su procedencia visible."
+    ],
+    "rules": [
+      {
+        "name": "The Labelled State Rule",
+        "body": "Color acompaña al texto de estado; nunca comunica por sí solo demo, conexión, éxito o error.",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "**Do** use las variables semánticas del tema para canvas, superficies, texto, líneas y acentos.",
+      "**Do** conservar etiquetas visibles para preparación, demo y conexión, y mostrar solo lecturas entregadas.",
+      "**Do** presentar el B10 Pro Max con su ilustración y selector de seis acabados; mantener el acabado como orientativo.",
+      "**Do** conservar foco visible, áreas de control de al menos `44px` y el comportamiento `prefers-reduced-motion` presente en CSS."
+    ],
+    "donts": [
+      "**Don't** convertir jade o mint en el fondo dominante; la base actual es neutra clara o charcoal.",
+      "**Don't** sustituir la ilustración B10 por un SUV genérico, logos o fotografía oficial.",
+      "**Don't** presentar valores de preparación como telemetría, ni acciones de demo como controles físicos.",
+      "**Don't** añadir blur, cristal o gradientes decorativos a tarjetas y navegación."
+    ]
+  }
+}

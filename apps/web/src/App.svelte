@@ -132,7 +132,7 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 
 	function updateThemeColor(preference: ThemePreference) {
 		const dark = preference === 'dark' || (preference === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-		document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#121b16' : '#f6f7f2');
+		document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#202226' : '#f5f6f8');
 	}
 
 	function setTheme(preference: ThemePreference) {
@@ -946,7 +946,7 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 				<span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
 				<span><strong>{appName}</strong><small>Tu espacio de movilidad</small></span>
 			</a>
-			<div class="rail-section-label">Espacio personal</div>
+			<div class="rail-section-label">Tu movilidad</div>
 			<nav class="primary-nav" aria-label="Secciones de Pulse">
 				{#each navigation as item (item.route)}
 					<a class:active={route === item.route} href={item.path} aria-current={route === item.route ? 'page' : undefined} onclick={(event) => navigate(event, item.path)}>
@@ -967,12 +967,16 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 		<div class="workspace">
 			<header class="topbar">
 				<div class="topbar-context">
-					<p class="eyebrow">{pulseState.settings.vehicle_name || 'Tu espacio Pulse'}</p>
+					<p class="topbar-vehicle">{pulseState.settings.vehicle_name || 'Tu espacio Pulse'}</p>
 					<h1 id="page-title" tabindex="-1" bind:this={pageTitle}>{titles[route]}</h1>
 				</div>
+				<div class="topbar-actions">
+					{#if !online}<span class="status-pill status-neutral mobile-network-status">Sin conexión</span>{/if}
+					<label class="theme-control"><span class="sr-only">Apariencia de Pulse</span><select value={theme} onchange={(event) => setTheme(event.currentTarget.value as ThemePreference)}><option value="system">Sistema</option><option value="light">Claro</option><option value="dark">Charcoal</option></select></label>
 				<div class="topbar-meta">
 					{#if isDemo}<span class="status-pill status-demo"><span class="status-dot"></span> Demo</span>{/if}
 					<span class="status-pill" class:status-good={online} class:status-neutral={!online}><span class="status-dot"></span>{online ? 'Red disponible' : 'Sin conexión'}</span>
+				</div>
 				</div>
 			</header>
 
@@ -1031,7 +1035,7 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 		<nav class="mobile-nav" aria-label="Navegación principal">
 			{#each navigation.filter((item) => !['protection', 'settings'].includes(item.route)) as item (item.route)}
 				<a class:active={route === item.route} href={item.path} aria-current={route === item.route ? 'page' : undefined} onclick={(event) => navigate(event, item.path)}>
-					<Glyph name={item.icon} size={20} /><span>{item.label}</span>
+					<Glyph name={item.icon} size={20} /><span>{item.route === 'navigation' ? 'Mapa' : item.label}</span>
 				</a>
 			{/each}
 			<details class="mobile-more" bind:open={moreNavigationOpen}>

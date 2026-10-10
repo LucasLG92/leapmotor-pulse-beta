@@ -47,6 +47,7 @@ class Payload(BaseModel):
 class SettingsPayload(Payload):
     vehicle_name: str | None = Field(default=None, max_length=120)
     model: str | None = Field(default=None, max_length=120)
+    vehicle_color: Literal["starry_night_blue", "midnight_purple", "tundra_grey", "metallic_black", "stellar_silver", "lunar_white"] | None = None
     tariff_eur_kwh: float | None = Field(default=None, ge=0, le=5)
     home_label: str | None = Field(default=None, max_length=120)
     pricing_method: Literal["manual", "pvpc"] | None = None

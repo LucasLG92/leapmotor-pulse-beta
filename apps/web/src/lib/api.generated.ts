@@ -1790,6 +1790,8 @@ export interface components {
              * @enum {string}
              */
             pricing_method: "manual" | "pvpc";
+            /** Vehicle Color */
+            vehicle_color: ("starry_night_blue" | "midnight_purple" | "tundra_grey" | "metallic_black" | "stellar_silver" | "lunar_white") | null;
         };
         /** SettingsPayload */
         SettingsPayload: {
@@ -1797,6 +1799,8 @@ export interface components {
             vehicle_name?: string | null;
             /** Model */
             model?: string | null;
+            /** Vehicle Color */
+            vehicle_color?: ("starry_night_blue" | "midnight_purple" | "tundra_grey" | "metallic_black" | "stellar_silver" | "lunar_white") | null;
             /** Tariff Eur Kwh */
             tariff_eur_kwh?: number | null;
             /** Home Label */
