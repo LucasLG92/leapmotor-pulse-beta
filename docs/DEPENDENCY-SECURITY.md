@@ -151,3 +151,27 @@ se retira CVE-2026-103111 y no se añaden IDs. Los 69 avisos restantes siguen
 visibles, sin excepciones y con salida 1 del scanner. La seguridad integral
 continúa pendiente. Estos resultados no acreditan otras arquitecturas,
 servicios reales, login humano ni dispositivos físicos.
+
+## Regresión de respuestas HTTP comprimidas
+
+`tests/test_upstream_compression.py` ejercita los lectores de PVPC, evcc,
+lugares de navegación, cuerpo HTTP de tiles e introspección nativa. Usa
+`AsyncByteStream` y `MockTransport` del cliente fijado `httpx2==2.13.1`, sin
+conexiones de red, cuentas ni credenciales. El cliente realiza la
+descompresión; las pruebas no sustituyen el decoder por una implementación
+simulada.
+
+Los 80 casos comprueban respuestas sin compresión, gzip, deflate, deflate crudo
+y la cadena `gzip, deflate`, con tamaños decodificados un byte por debajo,
+exactamente en el límite y un byte por encima. Otros casos declaran el pequeño
+tamaño comprimido mientras el cuerpo expandido supera el límite. Se verifica
+aceptación o rechazo según el límite de cada lector y cierre del stream,
+también al rechazar la respuesta. Los límites actuales son 512 KiB para PVPC,
+1 MiB para evcc, 256 KiB para lugares, 128 KiB para tiles y 64 KiB para la
+respuesta nativa.
+
+Los 80 casos pasan localmente; el conjunto con las pruebas existentes de esos
+lectores suma 271 casos correctos, incluyendo los nuevos. Esta evidencia cubre
+el control del cuerpo HTTP: no acredita PNG válidos, OAuth completo, límites de
+memoria/RSS, todos los codecs opcionales, servicios reales ni ausencia de CVE.
+No requiere cambiar el código de ejecución, dependencias o configuración.
