@@ -101,7 +101,7 @@ capas base ni prometer una descarga menor. No se eliminan bibliotecas del
 sistema para ocultar resultados del scanner.
 
 `scripts/build-container.sh` comprueba UID 10001, Trixie, las tres revisiones
-exactas de OpenSSL, ausencia de Node/setuptools/pip/ensurepip, imports y gzip.
+exactas de OpenSSL y PCRE2, ausencia de Node/setuptools/pip/ensurepip, imports y gzip.
 Comprueba por separado OpenSSL 3.5.7 del módulo `ssl` y OpenSSL 4.0.3 embebido en
 cryptography 50.0.2: son bibliotecas distintas.
 
@@ -114,3 +114,40 @@ En particular, ver 3.53.4 por sí solo no prueba el parche adicional de
 Un build correcto o una sonda de versión no sustituyen la auditoría de rutas
 alcanzables, bibliotecas embebidas, compatibilidad, licencias y seguridad
 integral. Pulse continúa en beta.
+
+## Parche PCRE2 y alcance de la revisión de codecs
+
+El runtime exige `libpcre2-8-0=10.46-1~deb13u3` desde el mismo snapshot
+firmado. El [tracker de Debian](https://security-tracker.debian.org/tracker/CVE-2026-103111)
+identifica esta revisión como corregida para CVE-2026-103111. Mantiene la base
+Trixie y no añade dependencias, excepciones al scanner ni cambios de aplicación.
+El checker del build comprueba la revisión instalada; la cifra de 70 IDs de la
+sección anterior corresponde al baseline previo a este parche.
+
+La revisión de las 49 fuentes Python identifica uso directo de zlib para
+validar PNG de navegación y descompresión HTTP transitiva en navegación, PVPC,
+evcc e introspección OIDC. Las lecturas acotan los bytes decodificados;
+`Content-Length` no acredita una cota sobre su expansión. Los usos directos
+de expresiones regulares emplean Python `re` y las validaciones de Pydantic.
+Esto no demuestra ausencia de todas las llamadas transitivas a PCRE2.
+
+El aviso de bzip2 CVE-2026-42250 se refiere al ejecutable `bzip2recover`;
+no se descarta por la presencia de una biblioteca ni por un mapa de proceso.
+El aviso zlib CVE-2026-85091 presenta una discrepancia entre el tracker y el
+[BTS de Debian](https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1146895).
+Esos avisos y CVE-2026-27171 se mantienen visibles mientras no haya evidencia
+suficiente. Mapas de bibliotecas y roundtrips benignos no acreditan todas las
+rutas del programa ni equivalen a pruebas de explotación o seguridad integral.
+
+El candidato amd64 con este parche pasa las 251 pruebas de runtime existentes
+y conserva una omisión por el SDK opcional ausente. Mantiene las 49 fuentes
+Python, 47 recursos web, binario SQLite, configuración de imagen y restricciones
+comprobadas del baseline. La sonda de un consumidor PCRE2 (`grep -P`) pasa;
+no es una prueba de explotación. El inventario de paquetes del scan cambia
+únicamente pcre2 de u2 a u3.
+
+El nuevo scan de la imagen registra 69 IDs, uno menos que el baseline de 70:
+se retira CVE-2026-103111 y no se añaden IDs. Los 69 avisos restantes siguen
+visibles, sin excepciones y con salida 1 del scanner. La seguridad integral
+continúa pendiente. Estos resultados no acreditan otras arquitecturas,
+servicios reales, login humano ni dispositivos físicos.
