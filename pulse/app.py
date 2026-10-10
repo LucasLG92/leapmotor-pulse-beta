@@ -283,6 +283,21 @@ def create_app(db_path: str | Path | None = None, *, name: str | None = None,
         context = await coordinator.call("state_context", brand, __version__)
         result = context["state"]
         result["integrations"] = {"mqtt": mqtt.status(), "abrp": abrp.status()}
+        # Configuration is not qualification. This deliberately exposes only
+        # flags: no provider reads, destinations, material or extra store calls.
+        result["setup"] = {
+            "evidence_scope": "configuration_only", "auth_mode": config.auth_mode,
+            "vehicle_reader_enabled": collector is not None and not isinstance(vehicle_provider, UnconfiguredProvider),
+            "charger_enabled": config.evcc.enabled,
+            "interval_energy_enabled": config.evcc.energy_history_enabled,
+            "native_app_enabled": config.native_app_enabled,
+            "native_widgets_enabled": config.native_enabled,
+            "web_push_enabled": config.push.enabled,
+            "home_assistant_enabled": config.mqtt.enabled,
+            "abrp_enabled": config.abrp.enabled,
+            "navigation_enabled": config.navigation.enabled,
+            "physical_commands_enabled": False,
+        }
         if result["mode"] == "demo":
             result["connection"] = {"status": "demo", "reason": "Datos simulados. El coche no está conectado."}
         else:

@@ -395,6 +395,23 @@ class IntegrationsStatus(BaseModel):
     abrp: AbrpStatus
 
 
+class SetupStatus(BaseModel):
+    """Public shape of server activation, never proof of physical qualification."""
+
+    evidence_scope: Literal["configuration_only"]
+    auth_mode: Literal["local", "oidc"]
+    vehicle_reader_enabled: bool
+    charger_enabled: bool
+    interval_energy_enabled: bool
+    native_app_enabled: bool
+    native_widgets_enabled: bool
+    web_push_enabled: bool
+    home_assistant_enabled: bool
+    abrp_enabled: bool
+    navigation_enabled: bool
+    physical_commands_enabled: Literal[False]
+
+
 class StateResponse(BaseModel):
     app: AppInfo
     mode: Literal["demo", "unconfigured", "telemetry_read_only"]
@@ -410,6 +427,7 @@ class StateResponse(BaseModel):
     connection: Connection
     telemetry: TelemetryResponse | None = None
     integrations: IntegrationsStatus
+    setup: SetupStatus
 
 
 class ChargePage(BaseModel):
