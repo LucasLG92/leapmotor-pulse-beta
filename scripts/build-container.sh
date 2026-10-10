@@ -28,11 +28,11 @@ assert ssl.OPENSSL_VERSION.startswith("OpenSSL 3.5.7 "), ssl.OPENSSL_VERSION
 assert "VERSION_CODENAME=trixie" in Path("/etc/os-release").read_text()
 packages = subprocess.check_output([
     "dpkg-query", "-W", "-f=${Package}|${Version}\n",
-    "libssl3t64", "openssl", "openssl-provider-legacy",
+    "libssl3t64", "openssl", "openssl-provider-legacy", "libpcre2-8-0",
 ], text=True).splitlines()
 assert set(packages) == {
     "libssl3t64|3.5.7-1~deb13u3", "openssl|3.5.7-1~deb13u3",
-    "openssl-provider-legacy|3.5.7-1~deb13u3",
+    "openssl-provider-legacy|3.5.7-1~deb13u3", "libpcre2-8-0|10.46-1~deb13u3",
 }, packages
 binding = Binding()
 embedded_ssl = binding.ffi.string(binding.lib.OpenSSL_version(0)).decode("ascii")
