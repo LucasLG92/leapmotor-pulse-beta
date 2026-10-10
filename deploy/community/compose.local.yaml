@@ -1,0 +1,7 @@
+services:
+  pulse:
+    # Keep the public beta image separate from operator/private deployments.
+    image: leapmotor-pulse-beta:0.1.0
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 64
