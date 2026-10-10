@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pulse_widget_description">Snapshot local de Pulse con datos que seleccionaste.</string>
+    <string name="pulse_widget_preview_title">Pulse</string>
+    <string name="pulse_widget_preview_message">Abre Pulse para configurar el widget.</string>
+</resources>
