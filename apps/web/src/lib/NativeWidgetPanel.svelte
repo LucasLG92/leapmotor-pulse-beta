@@ -189,6 +189,11 @@
 		{/if}
 		{#if !online}<p class="native-widget-status" role="status">Sin conexión. No se pueden enlazar ni cambiar las preferencias del widget.</p>{/if}
 		{#if error}<p class="native-widget-error" role="alert">{error}</p>{/if}
+		{#if error === statusError}
+			<div class="native-widget-actions">
+				<button class="button button-secondary button-small" type="button" disabled={!online || loading || busy} onclick={() => void refreshStatus()}>Reintentar consulta</button>
+			</div>
+		{/if}
 	</section>
 {/if}
 

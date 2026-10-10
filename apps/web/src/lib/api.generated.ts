@@ -1804,6 +1804,45 @@ export interface components {
             /** Pricing Method */
             pricing_method?: ("manual" | "pvpc") | null;
         };
+        /**
+         * SetupStatus
+         * @description Public shape of server activation, never proof of physical qualification.
+         */
+        SetupStatus: {
+            /**
+             * Evidence Scope
+             * @constant
+             */
+            evidence_scope: "configuration_only";
+            /**
+             * Auth Mode
+             * @enum {string}
+             */
+            auth_mode: "local" | "oidc";
+            /** Vehicle Reader Enabled */
+            vehicle_reader_enabled: boolean;
+            /** Charger Enabled */
+            charger_enabled: boolean;
+            /** Interval Energy Enabled */
+            interval_energy_enabled: boolean;
+            /** Native App Enabled */
+            native_app_enabled: boolean;
+            /** Native Widgets Enabled */
+            native_widgets_enabled: boolean;
+            /** Web Push Enabled */
+            web_push_enabled: boolean;
+            /** Home Assistant Enabled */
+            home_assistant_enabled: boolean;
+            /** Abrp Enabled */
+            abrp_enabled: boolean;
+            /** Navigation Enabled */
+            navigation_enabled: boolean;
+            /**
+             * Physical Commands Enabled
+             * @constant
+             */
+            physical_commands_enabled: false;
+        };
         /** Sources */
         Sources: {
             manual: components["schemas"]["Totals"];
@@ -1834,6 +1873,7 @@ export interface components {
             connection: components["schemas"]["Connection"];
             telemetry?: components["schemas"]["TelemetryResponse"] | null;
             integrations: components["schemas"]["IntegrationsStatus"];
+            setup: components["schemas"]["SetupStatus"];
         };
         /** TelemetryPage */
         TelemetryPage: {
