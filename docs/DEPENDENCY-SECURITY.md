@@ -47,3 +47,47 @@ toolchains/SDK, Swift Package Manager, el SDK B10 opcional fijado a Git ni error
 propios de Pulse. Tampoco prueba permisos, aislamiento, autenticación, dispositivo
 físico o servicios reales. Estas revisiones y las pruebas completas de seguridad
 y recuperación conservan sus criterios de aceptación separados.
+
+## Imagen de ejecución
+
+La comprobación de locks no cubre todos los componentes de la imagen. Una
+auditoría adicional con OSV-Scanner 2.6.0 sobre un archivo de `docker image save`
+revisa el filesystem final, sin ejecutar la imagen ni exportar contenedores,
+volúmenes o configuración del operador. Se incluyen todos los avisos, también
+los que Debian clasifica como `unimportant` o `ignored`; los IDs y las entradas
+de paquetes no equivalen a escenarios de explotación independientes.
+
+El runtime conserva Python 3.12.14 y Bookworm. El Dockerfile actualiza únicamente
+`libssl3` y `openssl` a `3.0.22-1~deb12u1` desde el snapshot Debian firmado
+`20261010T000000Z`; no cambia a otra ABI ni desactiva la validación TLS. Esta
+versión corrige seis IDs presentes en la base anterior: CVE-2026-42767, 54874,
+63072, 63074, 63076 y 75803. El
+[tracker de Debian](https://security-tracker.debian.org/tracker/source-package/openssl)
+mantiene otros seis IDs abiertos para Bookworm, incluido CVE-2026-35189 sobre
+certificados manipulados. Este parche no permite declarar la imagen libre de
+vulnerabilidades; cualificar una base con correcciones adicionales sigue pendiente.
+
+Después de comprobar las dependencias con `pip check`, la etapa final retira
+`pip` y `ensurepip`. Los instaladores siguen disponibles en las etapas de build;
+los extras opcionales deben incorporarse allí, antes del runtime. Esto reduce la
+superficie disponible en ejecución, pero no elimina sus bytes de las capas base
+ni garantiza una descarga menor. No se eliminan bibliotecas del sistema para
+ocultar resultados del scanner.
+
+`scripts/build-container.sh` comprueba UID 10001, ausencia de Node, setuptools,
+pip y ensurepip, imports y los assets gzip. También comprueba por separado
+OpenSSL 3.0.22 cargado por el módulo `ssl` de Python y OpenSSL 4.0.3 embebido en
+cryptography 50.0.2: son bibliotecas distintas.
+
+SQLite activo se compila desde la fuente oficial 3.53.4 y se carga desde
+`/usr/local/lib`. Su configuración actual no incluye Session ni FTS5; la ausencia
+de sus símbolos se comprobó en la imagen anterior. El inventario Debian aún
+contiene SQLite 3.40.1, por lo que sus avisos no se descartan automáticamente.
+En particular, observar la versión 3.53.4 por sí solo no demuestra que incorpore
+el parche adicional de
+[CVE-2026-50813](https://security-tracker.debian.org/tracker/CVE-2026-50813).
+
+Las correcciones y bibliotecas realmente cargadas deben comprobarse en cada
+imagen construida. El resultado de locks, un build correcto o una sonda de
+versión no sustituyen una auditoría de rutas alcanzables, bibliotecas embebidas,
+compatibilidad ni seguridad integral. Pulse continúa en beta.
