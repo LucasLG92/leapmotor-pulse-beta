@@ -57,6 +57,34 @@ def test_introspection_exact_destination_basic_auth_and_form():
     assert "fixture-owner" not in repr(identity)
 
 
+@pytest.mark.parametrize("app", [False, True], ids=["widget", "app"])
+@pytest.mark.parametrize("finished_at", [1999.999, 2000, 2000.001], ids=["before", "at", "after"])
+def test_access_token_must_remain_valid_after_userinfo(app, finished_at):
+    now = [1999.9]
+    calls = []
+
+    def handler(request):
+        calls.append(request.method)
+        if request.method == "POST":
+            scope = "openid profile pulse.app.access" if app else "openid pulse.widget.read"
+            return httpx.Response(200, json=active_claims(scope=scope))
+        now[0] = finished_at
+        return httpx.Response(200, json={"sub": "fixture-owner", "preferred_username": "fixture"})
+
+    validator = NativeAccessValidator(native_config(native_app_enabled=app),
+                                     transport=httpx.MockTransport(handler), clock=lambda: now[0])
+    validate = validator.app_identity if app else validator.identity
+    if finished_at < 2000:
+        assert asyncio.run(validate("synthetic-access-token")).subject == "fixture-owner"
+    else:
+        with pytest.raises(DomainError) as error:
+            asyncio.run(validate("synthetic-access-token"))
+        assert error.value.status == 401
+        assert str(error.value) == "El permiso de acceso no es válido o ha caducado."
+    assert calls == ["POST", "GET"]
+    assert validator.slots._value == 2
+
+
 @pytest.mark.parametrize("changes", [
     {"active": False}, {"active": "true"}, {"iss": None}, {"iss": "https://other.example.org"},
     {"sub": ""}, {"sub": True}, {"sub": "bad\nsubject"}, {"client_id": "pulse-web"},
