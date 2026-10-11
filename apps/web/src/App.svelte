@@ -4,6 +4,7 @@
 	import { getNativeBridge, isNativeApp, type NativeBridgeStatus } from './lib/native';
 	import { DraftGuard } from './lib/draft-guard';
 	import { observeServiceWorkerUpdate } from './lib/pwa-update';
+	import { createStartupAttempt } from './lib/startup-read';
 import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, PageProps, PulseState, Route, SessionState, ThemePreference, WebPushSubscriptionInput, WidgetPairingResult, PushDevice, PushTestResult } from './lib/types';
 	import Glyph from './lib/Glyph.svelte';
 
@@ -99,6 +100,7 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 	let updateTimeout: ReturnType<typeof setTimeout> | undefined;
 	let toastTimeout: ReturnType<typeof setTimeout> | undefined;
 	let bootMessage = $state('Estamos conectando con Pulse…');
+	let startupAttempt: ReturnType<typeof createStartupAttempt> | null = null;
 
 	const isBusy = $derived(busyCount > 0);
 	const appName = $derived(pulseState?.app?.name || 'Leapmotor Pulse');
@@ -168,7 +170,14 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 		resolvePendingEvent?.(false);
 	}
 
+	function cancelStartup() {
+		const attempt = startupAttempt;
+		startupAttempt = null;
+		attempt?.dispose();
+	}
+
 	function expireSession() {
+		cancelStartup();
 		navigationGeneration += 1;
 		navigationPending = false;
 		drafts.clear();
@@ -335,6 +344,7 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 			closeEventSource();
 			return;
 		}
+		if (bootStatus !== 'ready') return;
 		void openEventSource();
 		if (eventRefreshPending) scheduleEventRefresh();
 	}
@@ -344,9 +354,17 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 	}
 
 	async function startSession() {
-		if (updateBusy) return;
+		if (updateBusy || startupAttempt) return;
+		const attempt = createStartupAttempt();
+		startupAttempt = attempt;
+		closeEventSource();
+		if (eventRefreshTimer) clearTimeout(eventRefreshTimer);
+		eventRefreshTimer = undefined;
 		bootStatus = 'loading';
 		bootMessage = 'Estamos conectando con Pulse…';
+		session = null;
+		csrfToken = '';
+		pulseState = null;
 		latestEventRevision = null;
 		eventRefreshPending = false;
 		initialStateFetchStarted = false;
@@ -354,12 +372,15 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 		try {
 			if (nativeBridge) {
 				try {
-					nativeStatus = await nativeBridge.status();
-				} catch {
+					nativeStatus = await attempt.wait(nativeBridge.status());
+				} catch (error) {
+					if (attempt.signal.aborted) throw error;
 					throw new ApiError('No se pudo consultar el acceso de la app. Inténtalo de nuevo.', 0);
 				}
 			}
-			session = await getSession();
+			const currentSession = await attempt.wait(getSession(attempt.signal));
+			if (startupAttempt !== attempt) return;
+			session = currentSession;
 			csrfToken = session.csrf_token;
 			if (!session.authenticated) {
 				closeEventSource();
@@ -369,31 +390,39 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 				bootStatus = 'unauthenticated';
 				return;
 			}
-			const receivedInitialEvent = await openEventSource();
-			if (!session?.authenticated) return;
+			const receivedInitialEvent = await attempt.wait(openEventSource());
+			if (startupAttempt !== attempt || !session?.authenticated) return;
 			initialStateFetchStarted = true;
-			try {
-				await refreshState();
-			} finally {
-				initialStateReady = true;
-				if (eventRefreshPending) scheduleEventRefresh();
-			}
+			const currentState = await attempt.wait(getState(attempt.signal));
+			if (startupAttempt !== attempt || !session?.authenticated) return;
+			pulseState = currentState;
+			initialStateReady = true;
 			if (!receivedInitialEvent) {
 				eventSourceConnected = false;
 				startEventFallback();
 			}
 			bootStatus = 'ready';
+			if (!isDocumentHidden()) void openEventSource();
+			if (eventRefreshPending) scheduleEventRefresh();
 		} catch (error) {
+			if (startupAttempt !== attempt) return;
 			if (error instanceof ApiError && error.status === 401) {
 				expireSession();
 				return;
 			}
 			closeEventSource();
+			session = null;
+			csrfToken = '';
 			pulseState = null;
+			initialStateReady = false;
+			eventRefreshPending = false;
 			bootStatus = 'error';
 			bootMessage = !navigator.onLine
 				? 'Pulse está sin conexión. El contenido personal no se guarda en este dispositivo.'
 				: error instanceof Error ? error.message : 'No se pudo conectar con Pulse.';
+		} finally {
+			attempt.dispose();
+			if (startupAttempt === attempt) startupAttempt = null;
 		}
 	}
 
@@ -892,6 +921,7 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 			window.addEventListener('appinstalled', installed);
 		}
 		return () => {
+			cancelStartup();
 			stopServiceWorker();
 			drafts.clear();
 			if (confirmResolver) answerConfirmation(false);
