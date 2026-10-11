@@ -28,6 +28,10 @@
 	let preferencesSaving = $state(false);
 	let preferencesBaseline: PreferencesDraft | null = null;
 	let fileInput: HTMLInputElement;
+	let importPickerButton = $state<HTMLButtonElement | undefined>(undefined);
+	let importPickerRequest = 0;
+	let widgetProfilesHeading: HTMLHeadingElement | undefined;
+	let widgetProfileForm = $state<HTMLFormElement | undefined>(undefined);
 	let demoToggleBusy = $state(false);
 	let widgetProfiles = $state<WidgetProfile[]>([]);
 	let widgetProfilesLoaded = $state(false);
@@ -508,8 +512,25 @@
 		clearWidgetPairing();
 	});
 
-	async function openNewWidgetProfile() {
+	async function focusWidgetProfileName(request: number, trigger: HTMLElement | null) {
+		await tick();
+		if (settingsDisposed || !widgetProfileFormOpen || request !== widgetProfileSwitchRequest) return;
+		const active = document.activeElement;
+		if (active !== document.body && active !== trigger) return;
+		document.getElementById('widget-profile-name')?.focus();
+	}
+
+	async function returnWidgetProfileFocus(request: number, previousFocus: Element | null) {
+		await tick();
+		if (settingsDisposed || widgetProfileFormOpen || request !== widgetProfileSwitchRequest) return;
+		const active = document.activeElement;
+		if (active !== document.body && active !== previousFocus) return;
+		widgetProfilesHeading?.focus();
+	}
+
+	async function openNewWidgetProfile(event?: MouseEvent) {
 		const request = ++widgetProfileSwitchRequest;
+		const trigger = event ? event.currentTarget as HTMLElement : null;
 		if (settingsDisposed || busy || widgetProfileBusy) return;
 		if (widgetProfileFormOpen && widgetProfileEditingId === null) return;
 		if (widgetProfileFormOpen && isWidgetProfileDirty()) {
@@ -524,10 +545,12 @@
 		widgetProfileFormError = '';
 		widgetProfileFormErrorField = null;
 		widgetProfileFormOpen = true;
+		if (event) await focusWidgetProfileName(request, trigger);
 	}
 
-	async function editWidgetProfile(profile: WidgetProfile) {
+	async function editWidgetProfile(profile: WidgetProfile, event?: MouseEvent) {
 		const request = ++widgetProfileSwitchRequest;
+		const trigger = event ? event.currentTarget as HTMLElement : null;
 		if (settingsDisposed || busy || widgetProfileBusy) return;
 		if (widgetProfileFormOpen && widgetProfileEditingId === profile.id && isWidgetProfileDirty()) return;
 		if (widgetProfileFormOpen && isWidgetProfileDirty()) {
@@ -551,15 +574,19 @@
 		widgetProfileFormError = '';
 		widgetProfileFormErrorField = null;
 		widgetProfileFormOpen = true;
+		if (event) await focusWidgetProfileName(request, trigger);
 	}
 
-	function cancelWidgetProfileEdit() {
-		widgetProfileSwitchRequest += 1;
+	function cancelWidgetProfileEdit(event?: MouseEvent) {
+		const focusOrigin = event ? event.currentTarget as HTMLElement : document.activeElement;
+		const shouldReturnFocus = Boolean(event) || document.activeElement === document.body || Boolean(widgetProfileForm?.contains(document.activeElement));
+		const request = ++widgetProfileSwitchRequest;
 		widgetProfileFormOpen = false;
 		widgetProfileEditingId = null;
 		widgetProfileFormError = '';
 		widgetProfileFormErrorField = null;
 		widgetProfileBaseline = null;
+		if (shouldReturnFocus) void returnWidgetProfileFocus(request, focusOrigin);
 	}
 
 	async function showWidgetProfileError(field: 'name' | 'fields' | 'age', message: string) {
@@ -605,6 +632,7 @@
 	async function saveWidgetProfile(event: SubmitEvent) {
 		event.preventDefault();
 		widgetProfileSwitchRequest += 1;
+		const request = widgetProfileSwitchRequest;
 		widgetProfileFormError = '';
 		widgetProfileFormErrorField = null;
 		const name = widgetProfileDraft.name.trim();
@@ -626,6 +654,9 @@
 			return;
 		}
 		if (busy || widgetProfileBusy) return;
+		const formAtSubmit = widgetProfileForm;
+		const focusOrigin = document.activeElement as HTMLElement | null;
+		const focusWasInForm = Boolean(formAtSubmit?.contains(focusOrigin));
 		widgetProfileBusy = true;
 		const payload: WidgetProfileInput = { ...widgetProfileDraft, name, max_age_minutes: maxAge, fields: [...widgetProfileDraft.fields] };
 		const editingId = widgetProfileEditingId;
@@ -636,15 +667,40 @@
 			editingId ? 'El perfil del widget se ha actualizado.' : 'El perfil del widget se ha creado.'
 		);
 		if (settingsDisposed) return;
+		const sameEditor = request === widgetProfileSwitchRequest
+			&& widgetProfileFormOpen
+			&& widgetProfileForm === formAtSubmit
+			&& widgetProfileEditingId === editingId;
+		const activeAtResponse = document.activeElement;
+		const shouldReturnFocus = focusWasInForm
+			&& (activeAtResponse === document.body || Boolean(formAtSubmit?.contains(activeAtResponse)));
+		if (saved && editingId === widgetPairingProfileId) clearWidgetPairing();
+		widgetProfileBusy = false;
+		if (!sameEditor) return;
 		if (saved) {
-			if (editingId === widgetPairingProfileId) clearWidgetPairing();
 			widgetProfileFormOpen = false;
 			widgetProfileEditingId = null;
 			widgetProfileFormError = '';
 			widgetProfileFormErrorField = null;
 			widgetProfileBaseline = null;
+			if (shouldReturnFocus) void returnWidgetProfileFocus(request, focusOrigin);
+			return;
 		}
-		widgetProfileBusy = false;
+		if (!focusWasInForm || activeAtResponse !== document.body) return;
+		await tick();
+		if (
+			settingsDisposed
+			|| request !== widgetProfileSwitchRequest
+			|| !widgetProfileFormOpen
+			|| widgetProfileForm !== formAtSubmit
+			|| widgetProfileEditingId !== editingId
+			|| document.activeElement !== document.body
+		) return;
+		const namedTarget = document.getElementById('widget-profile-name');
+		const focusTarget = focusOrigin && formAtSubmit?.contains(focusOrigin) && !focusOrigin.matches(':disabled')
+			? focusOrigin
+			: namedTarget && !namedTarget.matches(':disabled') ? namedTarget : null;
+		focusTarget?.focus();
 	}
 
 	async function deleteWidgetProfile(profile: WidgetProfile) {
@@ -756,11 +812,38 @@
 		if (!settingsDisposed) demoToggleBusy = false;
 	}
 
+	function openImportPicker() {
+		if (busy || !fileInput) return;
+		importPickerRequest += 1;
+		fileInput.click();
+	}
+
+	async function returnImportFocus(request: number) {
+		await tick();
+		if (settingsDisposed || request !== importPickerRequest) return;
+		const button = importPickerButton;
+		if (!button?.isConnected || button.disabled) return;
+		const active = document.activeElement;
+		const activeInClosedDialog = Boolean(active?.closest('dialog:not([open])'));
+		if (active !== document.body && active !== fileInput && active !== button && !activeInClosedDialog) return;
+		button.focus();
+	}
+
+	function cancelImportPicker() {
+		const request = importPickerRequest;
+		void returnImportFocus(request);
+	}
+
 	async function chooseImport(event: Event) {
 		const input = event.currentTarget as HTMLInputElement;
 		const file = input.files?.[0];
-		if (file) await onImport(file);
-		input.value = '';
+		const request = importPickerRequest;
+		try {
+			if (file) await onImport(file);
+		} finally {
+			input.value = '';
+			await returnImportFocus(request);
+		}
 	}
 
 </script>
@@ -849,8 +932,8 @@
 			</div>
 			<div class="backup-actions backup-restore">
 				<div><strong>Restaurar una copia JSON</strong><span>Pulse valida el archivo y pide confirmación antes de sustituir los datos.</span></div>
-				<input class="sr-only" bind:this={fileInput} id="backup-file" type="file" accept="application/json,.json" disabled={busy} onchange={chooseImport} />
-				<button class="button button-secondary" type="button" disabled={busy} onclick={() => fileInput?.click()}><Glyph name="upload" size={16} /> Elegir archivo</button>
+				<input hidden bind:this={fileInput} id="backup-file" type="file" accept="application/json,.json" disabled={busy} onchange={chooseImport} oncancel={cancelImportPicker} />
+				<button bind:this={importPickerButton} class="button button-secondary" type="button" disabled={busy} onclick={openImportPicker}><Glyph name="upload" size={16} /> Elegir archivo</button>
 			</div>
 			<p class="fine-print">No cargues archivos que contengan claves, contraseñas o datos que no quieras importar. No es posible restaurar un archivo SQL.</p>
 		</section>
@@ -878,7 +961,7 @@
 		<PushNotificationsPanel {online} {revision} {busy} native={isNativeApp()} {notifications} {runNotificationAction} {confirmAction} {drafts} />
 
 		<section class="settings-card card" aria-labelledby="widgets-heading">
-			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="activity" size={18} /></span><div><h2 id="widgets-heading">Perfiles de widget</h2><p>{isNativeApp() ? 'Prepara vistas compactas para el widget de esta app.' : 'Prepara vistas compactas para una futura extensión móvil.'}</p></div></div>
+			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="activity" size={18} /></span><div><h2 id="widgets-heading" tabindex="-1" bind:this={widgetProfilesHeading}>Perfiles de widget</h2><p>{isNativeApp() ? 'Prepara vistas compactas para el widget de esta app.' : 'Prepara vistas compactas para una futura extensión móvil.'}</p></div></div>
 			<p class="muted-copy widget-intro">El editor guarda tus perfiles en el servidor. El widget consulta los campos que selecciones, sin conectar Pulse con el vehículo.</p>
 			{#if isNativeApp()}<NativeWidgetPanel {online} {revision} {confirmAction} {drafts} />{/if}
 			<div class="widget-count"><span>Perfiles guardados</span><strong>{widgetProfilesLoaded ? `${count(widgetProfiles.length)} / 5` : '— / 5'}</strong></div>
@@ -898,7 +981,7 @@
 								<button class="widget-profile-choice" class:widget-profile-active={selectedWidgetProfile?.id === profile.id} type="button" aria-pressed={selectedWidgetProfile?.id === profile.id} onclick={() => selectWidgetProfile(profile.id)}>
 									<strong>{profile.name}</strong><span>{widgetProfileSummary(profile)}</span>
 								</button>
-								<div class="widget-profile-actions"><button class="button button-small button-quiet" type="button" disabled={!online || busy || widgetProfileBusy} onclick={() => editWidgetProfile(profile)}>Editar</button><button class="button button-small button-quiet widget-delete" type="button" aria-label={`Eliminar perfil ${profile.name}`} disabled={!online || busy || widgetProfileBusy} onclick={() => void deleteWidgetProfile(profile)}>Eliminar</button></div>
+								<div class="widget-profile-actions"><button class="button button-small button-quiet" type="button" disabled={!online || busy || widgetProfileBusy} onclick={(event) => editWidgetProfile(profile, event)}>Editar</button><button class="button button-small button-quiet widget-delete" type="button" aria-label={`Eliminar perfil ${profile.name}`} disabled={!online || busy || widgetProfileBusy} onclick={() => void deleteWidgetProfile(profile)}>Eliminar</button></div>
 							</li>
 						{/each}
 					</ul>
@@ -907,7 +990,7 @@
 				{/if}
 
 				{#if widgetProfileFormOpen}
-					<form class="widget-profile-form" onsubmit={saveWidgetProfile}>
+					<form bind:this={widgetProfileForm} class="widget-profile-form" onsubmit={saveWidgetProfile}>
 						<div class="widget-form-title"><div><h3>{widgetProfileEditingId ? 'Ajusta esta vista' : 'Diseña una vista compacta'}</h3></div><button class="button button-small button-quiet" type="button" onclick={cancelWidgetProfileEdit} aria-label="Cerrar editor">Cerrar</button></div>
 						<div class="field"><label for="widget-profile-name">Nombre del perfil</label><input id="widget-profile-name" maxlength="60" autocomplete="off" bind:value={widgetProfileDraft.name} oninput={() => { if (widgetProfileFormErrorField === 'name') { widgetProfileFormError = ''; widgetProfileFormErrorField = null; } }} placeholder="Por ejemplo, Mi mañana" required disabled={busy || widgetProfileBusy} aria-invalid={widgetProfileFormErrorField === 'name' ? 'true' : undefined} aria-describedby={widgetProfileFormErrorField === 'name' ? 'widget-profile-name-error' : undefined} />{#if widgetProfileFormError && widgetProfileFormErrorField === 'name'}<p id="widget-profile-name-error" class="form-error" role="alert">{widgetProfileFormError}</p>{/if}</div>
 						<fieldset class="widget-templates"><legend>Empieza con una plantilla</legend>
@@ -1023,6 +1106,7 @@
 	.settings-card-heading { display: flex; align-items: flex-start; gap: 11px; }
 	.settings-icon { display: grid; width: 37px; height: 37px; flex: 0 0 37px; place-items: center; border-radius: 10px; background: var(--forest-soft); color: var(--forest); }
 	.settings-card-heading h2 { margin: 5px 0 0; font-size: 1rem; font-weight: 640; letter-spacing: -.025em; }
+	#widgets-heading:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; border-radius: 2px; }
 	.settings-card-heading p:not(.section-label) { margin: 5px 0 0; color: var(--muted); font-size: 1rem; line-height: 1.5; }
 	.settings-form { margin-top: 20px; }
 	.settings-form .field-hint { font-size: .875rem; }
