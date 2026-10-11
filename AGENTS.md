@@ -5,3 +5,7 @@ Proyecto original independiente. No copiar material propietario de otras aplicac
 Svelte 5/TypeScript/Vite, FastAPI y SQLite. Ejecutar scripts/check.py y las validaciones de imagen al cambiar runtime. Las integraciones opcionales se activan explícitamente; demo y pruebas sintéticas no prueban compatibilidad física. Los comandos reales permanecen bloqueados.
 
 No añadir credenciales, datos personales, bases de datos, claves/certificados, configuración de operadores, APK configurados para una instalación particular ni artefactos generados. Mantener ejemplos genéricos. No debilitar autenticación, TLS o privacidad para facilitar la instalación.
+
+## PWA public assets
+
+Offline storage is limited to the generic shell and exact public B10 artwork URLs used on demand. Never persist API responses, identity, profile settings or vehicle telemetry. Capacitor does not register the web service worker.

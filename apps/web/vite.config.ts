@@ -40,7 +40,17 @@ export default defineConfig(({ mode }) => {
 				},
 				injectManifest: {
 					globPatterns: ['**/*.{html,js,css,svg,png,webp,webmanifest}'],
-					globIgnores: ['**/*.map', 'sw.js', 'service-worker.js'],
+					globIgnores: [
+						'**/*.map',
+						'sw.js',
+						'service-worker.js',
+						'**/assets/b10-starry-night-blue-*.webp',
+						'**/assets/b10-midnight-purple-*.webp',
+						'**/assets/b10-tundra-grey-*.webp',
+						'**/assets/b10-metallic-black-*.webp',
+						'**/assets/b10-stellar-silver-*.webp',
+						'**/assets/b10-lunar-white-*.webp'
+					],
 					maximumFileSizeToCacheInBytes: 300_000
 				},
 				devOptions: { enabled: false }

@@ -18,6 +18,8 @@ export const vehicleColors = [
 	{ id: 'lunar_white', label: 'Blanco Lunar', swatch: '#f5f5f2', image: white }
 ] as const satisfies ReadonlyArray<{ id: NonNullable<VehicleColor>; label: string; swatch: string; image: string }>;
 
+export type VehicleColorId = (typeof vehicleColors)[number]['id'];
+
 export function vehicleArtwork(color: VehicleColor) {
 	return vehicleColors.find((option) => option.id === color) ?? vehicleColors[4];
 }
