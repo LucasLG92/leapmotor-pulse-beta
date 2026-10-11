@@ -213,7 +213,7 @@ cambio por escritura, importación o SQL externo invalida por datos leídos,
 sin depender de revision, timestamp de la tabla o unTTL. El proceso siguiente
 empezará con preparación vacía. No cambia SQLite10/JSON9, contratos ni UI.
 
-El perfil anterior del mismo producto V22 en CT107,0.5CPU/256MiB, midió
+El perfil anterior del mismo producto V22 en un contenedor de referencia,0.5CPU/256MiB, midió
 1000 conversiones por consulta y tiempos de esa etapa93.5251ms normal y
 88.4720ms demo en llamadas con wrappers; los tiempos incluyen sobrecoste y
 esperas de la cuota. La serialización Pydantic mediana fue0.0244/0.0232ms.
