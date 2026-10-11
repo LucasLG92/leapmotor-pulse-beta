@@ -99,6 +99,7 @@ printf '%s\n' 'Comprobando, probando y construyendo web y móvil.'
 printf '%s\n' 'Comprobando el proyecto Xcode y las pruebas de PulseCore.'
 "$python_bin" scripts/check_ios_project.py
 "$python_bin" -m unittest discover -s tests -p test_ios_spm_audit.py
+"$python_bin" -m unittest discover -s tests -p test_ios_simulator_smoke.py
 swift test --package-path apps/mobile/ios/PulseCore
 printf '%s\n' 'Comprobando mutaciones de consentimiento con Keychain falso.'
 credential_tests="$tmp_root/WidgetCredentialTests"
