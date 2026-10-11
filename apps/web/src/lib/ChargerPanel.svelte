@@ -435,9 +435,14 @@
 				<p>La lista de evcc se mantiene separada de los registros manuales y de demostración. Pulse no modifica ni elimina las sesiones importadas.</p>
 				{#if status?.energy_history?.enabled}
 					<p><strong>Energía por tramos.</strong> {status.energy_history.message}</p>
-					{#if status.energy_history.retained_intervals > 0}
-						<p>{number(status.energy_history.retained_intervals)} tramos de 15 minutos guardados del punto de carga. Se conservan como candidatos y no se suman a tus cargas ni a sus costes. Última recepción guardada: {dateTime(status.energy_history.last_received_at)}.</p>
-					{/if}
+					<dl class="energy-history-metrics" aria-label="Resumen de intervalos candidatos sin cualificar">
+						<div><dt>Tramos guardados</dt><dd>{number(status.energy_history.retained_intervals)}</dd></div>
+						<div><dt>Energía candidata</dt><dd>{number(status.energy_history.total_kwh)} kWh</dd></div>
+						<div><dt>Primer inicio de tramo</dt><dd>{status.energy_history.first_started_at ? dateTime(status.energy_history.first_started_at) : '—'}</dd></div>
+						<div><dt>Último fin de tramo</dt><dd>{status.energy_history.last_ended_at ? dateTime(status.energy_history.last_ended_at) : '—'}</dd></div>
+						<div><dt>Última recepción guardada</dt><dd>{status.energy_history.last_received_at ? dateTime(status.energy_history.last_received_at) : '—'}</dd></div>
+					</dl>
+					<p>Estos valores siguen siendo candidatos sin cualificar; no se suman a las sesiones de carga ni a sus costes.</p>
 				{/if}
 			</details>
 			{#if historyError}
@@ -563,6 +568,10 @@
 	.charger-details summary { display: flex; min-height: 44px; align-items: center; color: var(--forest); cursor: pointer; font-size: .875rem; font-weight: 650; overflow-wrap: anywhere; }
 	.charger-details summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
 	.charger-details > p { margin: 0 0 10px; color: var(--muted); font-size: .875rem; line-height: 1.5; overflow-wrap: anywhere; }
+	.energy-history-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 12px; min-width: 0; margin: 0 0 10px; padding: 0; }
+	.energy-history-metrics > div { display: grid; align-content: start; gap: 3px; min-width: 0; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+	.energy-history-metrics dt { color: var(--muted); font-size: .75rem; line-height: 1.35; overflow-wrap: anywhere; }
+	.energy-history-metrics dd { margin: 0; color: var(--ink); font-size: .8125rem; font-weight: 620; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 	.charger-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 	.charger-metrics > div { display: grid; gap: 5px; min-width: 0; }
 	.charger-metrics span { color: var(--muted); font-size: .875rem; }
