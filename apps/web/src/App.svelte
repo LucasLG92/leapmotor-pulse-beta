@@ -344,6 +344,7 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 	}
 
 	async function startSession() {
+		if (updateBusy) return;
 		bootStatus = 'loading';
 		bootMessage = 'Estamos conectando con Pulse…';
 		latestEventRevision = null;
@@ -827,10 +828,14 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 		};
 	}
 
+	function updateBlocked() {
+		return nativeApp || !updateAvailable || bootStatus === 'loading' || loginBusy || isBusy || updateBusy || navigationPending || confirmResolver !== null || restoringHistoryIndex !== null;
+	}
+
 	async function applyUpdate() {
-		if (isBusy || updateBusy || navigationPending || confirmResolver || restoringHistoryIndex !== null) return;
+		if (updateBlocked()) return;
 		const generation = navigationGeneration;
-		if (!await approveDraftExit('Actualizar con cambios sin guardar', 'Descartar y actualizar') || generation !== navigationGeneration || isBusy || !session?.authenticated) return;
+		if (!await approveDraftExit('Actualizar con cambios sin guardar', 'Descartar y actualizar') || generation !== navigationGeneration || updateBlocked()) return;
 		updateBusy = true;
 		approvedReload = true;
 		// Una respuesta SSE interceptada por el servicio anterior puede impedir su relevo.
@@ -908,6 +913,15 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 
 <svelte:window onpopstate={handlePopstate} ononline={handleOnlineChange} onoffline={handleOnlineChange} />
 
+{#snippet updateNotice()}
+	{#if updateAvailable}
+		<div class="update-ribbon" role="status">
+			<span><strong>Pulse tiene una actualización lista.</strong> Se aplicará solo cuando tú lo indiques.</span>
+			<button class="button button-small button-secondary" type="button" disabled={updateBlocked()} onclick={applyUpdate}>{updateBusy ? 'Actualizando…' : bootStatus === 'loading' ? 'Conectando…' : isBusy || loginBusy ? 'Termina la acción primero' : 'Actualizar ahora'}</button>
+		</div>
+	{/if}
+{/snippet}
+
 {#if bootStatus === 'loading'}
 	<main class="boot-screen" aria-live="polite">
 		<div class="boot-brand">
@@ -916,6 +930,7 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 		</div>
 		<h1>{bootMessage}</h1>
 		<span class="boot-progress" aria-hidden="true"></span>
+		{@render updateNotice()}
 	</main>
 {:else if bootStatus === 'error'}
 	<main class="boot-screen">
@@ -925,8 +940,9 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 		</div>
 		<h1>{bootMessage}</h1>
 		<p class="body-copy">La aplicación no almacena datos del vehículo en este dispositivo. Cuando vuelva la conexión, podrás cargar el estado más reciente del servidor.</p>
-		<button class="button button-primary" onclick={startSession}>Reintentar conexión</button>
+		<button class="button button-primary" disabled={updateBusy} onclick={startSession}>Reintentar conexión</button>
 		{#if !online}<span class="status-pill status-neutral"><span class="status-dot"></span> Sin conexión</span>{/if}
+		{@render updateNotice()}
 	</main>
 {:else if bootStatus === 'unauthenticated'}
 	<main class="boot-screen">
@@ -944,8 +960,13 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 				<button class="button button-primary" type="button" disabled>Iniciar sesión</button>
 			{/if}
 		{:else}
-			<a class="button button-primary" href={safeLoginUrl()}>Iniciar sesión <Glyph name="arrow" /></a>
+			{#if updateBusy}
+				<button class="button button-primary" type="button" disabled>Iniciar sesión <Glyph name="arrow" /></button>
+			{:else}
+				<a class="button button-primary" href={safeLoginUrl()}>Iniciar sesión <Glyph name="arrow" /></a>
+			{/if}
 		{/if}
+		{@render updateNotice()}
 	</main>
 {:else if pulseState}
 	<a class="skip-link" href="#pulse-content">Saltar al contenido</a>
@@ -993,12 +1014,7 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 				<div class="demo-ribbon" role="status"><span class="demo-symbol" aria-hidden="true">D</span><span><strong>Modo demostración.</strong> Todos los datos y controles de vehículo son simulados.</span></div>
 			{/if}
 
-			{#if updateAvailable}
-				<div class="update-ribbon" role="status">
-					<span><strong>Pulse tiene una actualización lista.</strong> Se aplicará solo cuando tú lo indiques.</span>
-					<button class="button button-small button-secondary" disabled={isBusy || updateBusy} onclick={applyUpdate}>{updateBusy ? 'Actualizando…' : isBusy ? 'Termina la acción primero' : 'Actualizar ahora'}</button>
-				</div>
-			{/if}
+			{@render updateNotice()}
 
 			<main id="pulse-content" class="page-content" tabindex="-1" aria-labelledby="page-title">
 				{#if View}
