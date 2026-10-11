@@ -48,6 +48,31 @@ propios de Pulse. Tampoco prueba permisos, aislamiento, autenticación, disposit
 físico o servicios reales. Estas revisiones y las pruebas completas de seguridad
 y recuperación conservan sus criterios de aceptación separados.
 
+## Resolución Swift de iOS
+
+El job manual `verify-ios` conserva el `Package.resolved` generado por Xcode
+y un inventario de la revisión efectivamente resuelta. La comprobación exige
+la dependencia externa declarada actualmente, `capacitor-swift-pm` 8.5.3,
+su URL pública oficial y un commit completo coincidente con el checkout
+utilizado. Verifica el hash del manifiesto oficial de esa versión y vuelve a
+comprobar resolución, revisión y manifiesto después de los builds Debug/Release.
+Si faltan archivos, hay pins inesperados o cambia la resolución, el job falla.
+
+`scripts/ios-spm-audit.py` consulta la API oficial OSV por esa revisión,
+sin credenciales y con TLS, destino fijo y límites de tiempo/tamaño. Falla
+ante avisos, errores o una respuesta incompleta. No añade dependencias de
+ejecución ni cambia el checker de seis locks. Una respuesta vacía significa
+que OSV no devuelve avisos conocidos para ese commit en esa consulta;
+no demuestra ausencia de vulnerabilidades ni cobertura completa del SDK.
+
+El paquete Swift incluye dos binary targets, Capacitor y Cordova, con sus
+checksums declarados. La integridad de la descarga gestionada por SwiftPM
+y la revisión del wrapper no certifican la seguridad del código binario.
+El artefacto `ios-spm-security`, retenido siete días, contiene únicamente
+el lock validado, inventario, consulta resumida y recibo; no configuración
+del operador, claves, credenciales ni datos del vehículo. Su presencia debe
+comprobarse en un job real antes de afirmar que se obtuvo esta evidencia.
+
 ## Imagen de ejecución
 
 La comprobación de locks no cubre todos los componentes de la imagen. Una
