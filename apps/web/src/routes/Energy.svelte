@@ -870,8 +870,22 @@
 					{#each analytics.months as month (month.month)}
 						<li class="month-chart-row">
 							<strong class="month-chart-label">{monthLabel(month.month)}</strong>
-							<div class="month-origin-row"><span>Manual</span><progress class="month-bar month-bar-manual" value={month.manual.kwh} max={analyticsMaxMonthlyKwh} aria-label={`Manual, ${monthLabel(month.month)}: ${number(month.manual.kwh)} kWh`}></progress><strong>{number(month.manual.kwh)} kWh</strong></div>
-							<div class="month-origin-row"><span>Demo</span><progress class="month-bar month-bar-demo" value={month.demo.kwh} max={analyticsMaxMonthlyKwh} aria-label={`Demo, ${monthLabel(month.month)}: ${number(month.demo.kwh)} kWh`}></progress><strong>{number(month.demo.kwh)} kWh</strong></div>
+							<div class="month-origin-group">
+								<div class="month-origin-row"><span>Manual</span><progress class="month-bar month-bar-manual" value={month.manual.kwh} max={analyticsMaxMonthlyKwh} aria-label={`Manual, ${monthLabel(month.month)}: ${number(month.manual.kwh)} kWh`}></progress><strong>{number(month.manual.kwh)} kWh</strong></div>
+								<dl class="month-origin-metrics" aria-label={`Agregados mensuales de Manual, ${monthLabel(month.month)}`}>
+									<div><dt>Sesiones</dt><dd>{count(month.manual.sessions)}</dd></div>
+									<div><dt>Coste</dt><dd>{euros(month.manual.cost_eur)}</dd></div>
+									<div><dt>Tarifa efectiva</dt><dd>{effectiveTariff(month.manual.effective_tariff_eur_kwh)}</dd></div>
+								</dl>
+							</div>
+							<div class="month-origin-group">
+								<div class="month-origin-row"><span>Demo</span><progress class="month-bar month-bar-demo" value={month.demo.kwh} max={analyticsMaxMonthlyKwh} aria-label={`Demo, ${monthLabel(month.month)}: ${number(month.demo.kwh)} kWh`}></progress><strong>{number(month.demo.kwh)} kWh</strong></div>
+								<dl class="month-origin-metrics" aria-label={`Agregados mensuales de Demo, ${monthLabel(month.month)}`}>
+									<div><dt>Sesiones</dt><dd>{count(month.demo.sessions)}</dd></div>
+									<div><dt>Coste</dt><dd>{euros(month.demo.cost_eur)}</dd></div>
+									<div><dt>Tarifa efectiva</dt><dd>{effectiveTariff(month.demo.effective_tariff_eur_kwh)}</dd></div>
+								</dl>
+							</div>
 						</li>
 					{/each}
 				</ol>
@@ -961,8 +975,13 @@
 	.month-chart { display: grid; gap: 0; margin: 0; padding: 0; border-bottom: 1px solid var(--line); list-style: none; }
 	.month-chart-row { display: grid; gap: 7px; padding: 12px 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; }
 	.month-chart-label { font-size: .875rem; font-weight: 680; text-transform: capitalize; }
+	.month-origin-group { display: grid; gap: 5px; min-width: 0; }
 	.month-origin-row { display: grid; grid-template-columns: 48px minmax(45px, 1fr) 83px; align-items: center; gap: 8px; color: var(--muted); font-size: .875rem; }
 	.month-origin-row > strong { color: var(--ink); font-size: .875rem; font-weight: 620; text-align: right; font-variant-numeric: tabular-nums; }
+	.month-origin-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 10px; min-width: 0; margin: 0; padding: 0 0 2px 56px; }
+	.month-origin-metrics > div { display: grid; align-content: start; gap: 2px; min-width: 0; }
+	.month-origin-metrics dt { color: var(--muted); font-size: .75rem; line-height: 1.3; }
+	.month-origin-metrics dd { margin: 0; color: var(--ink); font-size: .8125rem; font-weight: 620; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 	.month-bar { display: block; width: 100%; height: 7px; min-width: 0; appearance: none; border: 0; border-radius: 999px; background: var(--surface-soft); }
 	.month-bar::-webkit-progress-bar { border-radius: inherit; background: var(--surface-soft); }
 	.month-bar-manual::-webkit-progress-value { border-radius: inherit; background: var(--forest); }
