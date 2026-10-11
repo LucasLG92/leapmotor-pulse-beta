@@ -9,6 +9,8 @@ from functools import partial
 import http.client
 import json
 import math
+import os
+import socket
 import ssl
 import threading
 import time
@@ -30,6 +32,7 @@ ABRP_HOST = "api.iternio.com"
 ABRP_PATH = "/1/tlm/bulk"
 NETWORK_TIMEOUT_SECONDS = 8
 MAX_RESPONSE_BYTES = 64 * 1024
+ABORT_WAIT_SECONDS = 1.0
 _FIELDS = ["battery_pct", "observed_at"]
 
 
@@ -47,10 +50,13 @@ class AbrpTransport:
     `request_lock` inmediatamente antes de despachar el POST; después de ese
     punto una revocación no puede retirar la petición en vuelo. Retorna True
     solo con HTTP 200 y JSON inequívoco `{"status":"ok"}`. Fakes deben
-    preservar esta secuencia y cerrar la sesión al terminar `send`.
+    preservar esta secuencia y cerrar la sesión al terminar `send`. `close`
+    también aborta una lectura activa mediante el socket preservado.
     """
 
     def connect(self, timeout_seconds: float = NETWORK_TIMEOUT_SECONDS) -> http.client.HTTPSConnection:
+        if "SSLKEYLOGFILE" in os.environ:
+            raise AbrpTransportError("ABRP TLS no está disponible con key logging activo.")
         connection = http.client.HTTPSConnection(
             ABRP_HOST,
             timeout=timeout_seconds,
@@ -61,6 +67,11 @@ class AbrpTransport:
             connection.connect()
             if connection.sock is None:
                 raise AbrpTransportError
+            # HTTPResponse may take ownership of the socket and make
+            # HTTPSConnection.sock None before its body has finished reading.
+            # Keep the connected socket reachable so close() can interrupt a
+            # concurrent, slow response read.
+            connection._pulse_socket = connection.sock
             return connection
         except Exception:
             connection.close()
@@ -141,6 +152,18 @@ class AbrpTransport:
 
     @staticmethod
     def close(session: http.client.HTTPSConnection) -> None:
+        sock = getattr(session, "_pulse_socket", None)
+        if sock is None:
+            sock = getattr(session, "sock", None)
+        if sock is not None:
+            try:
+                sock.shutdown(socket.SHUT_RDWR)
+            except Exception:
+                pass
+            try:
+                sock.close()
+            except Exception:
+                pass
         try:
             session.close()
         except Exception:
@@ -192,6 +215,8 @@ class AbrpBridge:
         self._candidate_reason = "waiting_observation"
         self._send_permit: tuple[int, str, float] | None = None
         self._worker_future: asyncio.Future[Any] | None = None
+        self._active_send_session: Any = None
+        self._active_send_future: asyncio.Future[Any] | None = None
         self._inflight = False
         self._started = False
         self._closed = False
@@ -236,6 +261,12 @@ class AbrpBridge:
         self.invalidate()
         with self._lifecycle_lock:
             self._closed = True
+            active_send = self._active_send_future
+        if active_send is not None and not active_send.done():
+            self._abort_active_send(active_send)
+            # A socket shutdown should release a response read promptly. Keep
+            # shutdown bounded if a platform or custom transport cannot do so.
+            await asyncio.wait({active_send}, timeout=ABORT_WAIT_SECONDS)
         runner = self._runner
         self._runner = None
         if runner is not None:
@@ -512,6 +543,8 @@ class AbrpBridge:
 
         session: Any = None
         send_started = False
+        connect_future: asyncio.Future[Any] | None = None
+        connect_session_claimed = False
         try:
             remaining = network_deadline - loop.time()
             if remaining <= 0:
@@ -524,10 +557,10 @@ class AbrpBridge:
             self._track_worker(connect_future)
             done, _ = await asyncio.wait({connect_future}, timeout=remaining)
             if connect_future not in done:
-                connect_future.add_done_callback(self._close_late_session)
                 self._set_status("error", "send_failed")
                 return
             session = connect_future.result()
+            connect_session_claimed = True
 
             if not await self._preflight(
                 observation,
@@ -561,10 +594,20 @@ class AbrpBridge:
             )
             send_future = loop.run_in_executor(executor, send_call)
             send_started = True
+            with self._lifecycle_lock:
+                self._active_send_session = session
+                self._active_send_future = send_future
             session = None  # send() owns and closes it on every outcome.
             self._track_worker(send_future)
             done, _ = await asyncio.wait({send_future}, timeout=remaining)
             if send_future not in done:
+                self._clear_permit()
+                self._abort_active_send(send_future)
+                self._set_status("error", "send_failed")
+                return
+            if loop.time() >= network_deadline:
+                self._clear_permit()
+                self._abort_active_send(send_future)
                 self._set_status("error", "send_failed")
                 return
             acknowledged = send_future.result()
@@ -611,6 +654,11 @@ class AbrpBridge:
             self._clear_permit()
             self._set_status("error", "send_failed")
         finally:
+            if connect_future is not None and not connect_session_claimed:
+                # A close can cancel this coroutine while connect() is still
+                # running. Python cannot reliably interrupt DNS/connect, so
+                # close any session it returns after this task has left.
+                connect_future.add_done_callback(self._close_late_session)
             if session is not None and not send_started:
                 self.transport.close(session)
             if send_started:
@@ -722,6 +770,21 @@ class AbrpBridge:
         if self._worker_future is future:
             self._worker_future = None
             self._inflight = False
+        with self._lifecycle_lock:
+            if self._active_send_future is future:
+                self._active_send_future = None
+                self._active_send_session = None
+
+    def _abort_active_send(self, expected_future: asyncio.Future[Any]) -> None:
+        with self._lifecycle_lock:
+            if self._active_send_future is not expected_future:
+                return
+            session = self._active_send_session
+        if session is not None:
+            try:
+                self.transport.close(session)
+            except Exception:
+                pass
 
     def _close_late_session(self, future: asyncio.Future[Any]) -> None:
         if future.cancelled():

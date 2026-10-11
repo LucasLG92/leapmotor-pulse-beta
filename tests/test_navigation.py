@@ -2,6 +2,7 @@
 
 import asyncio
 import base64
+import hashlib
 import json
 import struct
 import zlib
@@ -12,6 +13,7 @@ import pytest
 
 from pulse.domain import DomainError
 from pulse.navigation import Navigation, _png_256
+from pulse.navigation_cache import TileDiskCache, TileEntry
 from pulse.navigation_config import NavigationConfig
 
 
@@ -24,8 +26,8 @@ def _chunk(kind, data):
     return struct.pack(">I", len(data)) + payload + struct.pack(">I", zlib.crc32(payload) & 0xFFFFFFFF)
 
 
-def _png(width=256, height=256):
-    rows = b"".join(b"\0" + b"\0" * width * 4 for _ in range(height))
+def _png(width=256, height=256, rgba=b"\0\0\0\0"):
+    rows = b"".join(b"\0" + rgba * width for _ in range(height))
     ihdr = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
     return (b"\x89PNG\r\n\x1a\n" + _chunk(b"IHDR", ihdr)
             + _chunk(b"IDAT", zlib.compress(rows)) + _chunk(b"IEND", b""))
@@ -410,6 +412,142 @@ def test_tile_fetches_contactable_png_preserves_only_referer_origin_and_caches(t
     assert len(tile_files[0].stem) == 64
     assert tile_files[0].stat().st_mode & 0o777 == 0o600
     assert cache_path.stat().st_mode & 0o777 == 0o700
+
+
+def test_tiles_cache_is_shared_only_by_the_same_normalized_provider(tmp_path):
+    requests = []
+    png_a, png_b = _png(), _png(rgba=b"\xff\x00\x00\xff")
+
+    async def handler(request):
+        requests.append(request)
+        if request.url.host == "tiles-a.example.invalid":
+            return httpx2.Response(200, content=png_a, headers={
+                "content-type": "image/png", "cache-control": "max-age=3600", "etag": '"provider-a"'
+            })
+        return httpx2.Response(200, content=png_b, headers={
+            "content-type": "image/png", "cache-control": "max-age=3600", "etag": '"provider-b"'
+        })
+
+    cache_dir = tmp_path / "map-cache"
+    provider_a = Navigation(_enabled_config(tiles_origin="https://tiles-a.example.invalid/"), cache_dir,
+                            transport=httpx2.MockTransport(handler))
+    provider_b = Navigation(_enabled_config(tiles_origin="https://tiles-b.example.invalid"), cache_dir,
+                            transport=httpx2.MockTransport(handler))
+    equivalent_a = Navigation(_enabled_config(tiles_origin="https://tiles-a.example.invalid"), cache_dir,
+                              transport=httpx2.MockTransport(handler))
+
+    async def run():
+        first_a = await provider_a.tile(4, 3, 5, True)
+        first_b = await provider_b.tile(4, 3, 5, True)
+        cached_b = await provider_b.tile(4, 3, 5, True)
+        cached_equivalent_a = await equivalent_a.tile(4, 3, 5, True)
+        await provider_a.close()
+        await provider_b.close()
+        await equivalent_a.close()
+        return first_a, first_b, cached_b, cached_equivalent_a
+
+    first_a, first_b, cached_b, cached_equivalent_a = asyncio.run(run())
+    assert len(requests) == 2
+    assert first_a["data_url"] != first_b["data_url"]
+    assert cached_b == {"data_url": first_b["data_url"], "cached": True}
+    assert cached_equivalent_a == {"data_url": first_a["data_url"], "cached": True}
+    tile_dir = cache_dir / "navigation-tiles"
+    assert len(list(tile_dir.glob("*.tile"))) == 2
+    assert not [path for path in tile_dir.iterdir() if path.is_dir()]
+
+
+@pytest.mark.parametrize("expires_at", [1001.0, 999.0], ids=["legacy-fresh", "legacy-stale"])
+def test_originless_legacy_tile_is_not_reused_or_purged(tmp_path, monkeypatch, expires_at):
+    now = 1000.0
+    monkeypatch.setattr("pulse.navigation.time.time", lambda: now)
+    coordinates = (4, 3, 5)
+    legacy_key = hashlib.sha256(b"4/3/5").hexdigest()
+    legacy = TileEntry(_png(rgba=b"\xff\x00\x00\xff"), expires_at,
+                       '"legacy-etag"', "Wed, 21 Oct 2030 07:28:00 GMT")
+    cache_dir = tmp_path / "map-cache"
+    disk_cache = TileDiskCache(cache_dir)
+    assert disk_cache.store(legacy_key, legacy, now=now)
+
+    requests = []
+    current_png = _png(rgba=b"\x00\x00\xff\xff")
+
+    async def handler(request):
+        requests.append(request)
+        return httpx2.Response(200, content=current_png, headers={
+            "content-type": "image/png", "cache-control": "no-store"
+        })
+
+    navigation = Navigation(_enabled_config(tiles_origin="https://tiles-new.example.invalid"), cache_dir,
+                            transport=httpx2.MockTransport(handler))
+
+    async def run():
+        result = await navigation.tile(*coordinates, True)
+        await navigation.close()
+        return result
+
+    result = asyncio.run(run())
+    assert result == {"data_url": "data:image/png;base64," + base64.b64encode(current_png).decode("ascii"),
+                      "cached": False}
+    assert len(requests) == 1
+    assert "if-none-match" not in requests[0].headers
+    assert "if-modified-since" not in requests[0].headers
+    # The new provider lookup must not trigger a migration or global cache purge.
+    assert disk_cache.load(legacy_key) == legacy
+    assert list((cache_dir / "navigation-tiles").glob("*.tile")) == [
+        cache_dir / "navigation-tiles" / (legacy_key + ".tile")
+    ]
+
+
+@pytest.mark.parametrize("validator,request_header,response_header", [
+    ('"provider-a-v1"', "if-none-match", "etag"),
+    ("Wed, 21 Oct 2030 07:28:00 GMT", "if-modified-since", "last-modified"),
+])
+def test_stale_tile_validators_stay_with_their_provider(tmp_path, monkeypatch, validator, request_header,
+                                                         response_header):
+    now = [1000.0]
+    monkeypatch.setattr("pulse.navigation.time.time", lambda: now[0])
+    requests = []
+    png_a, png_b = _png(), _png(rgba=b"\x00\x00\xff\xff")
+
+    async def handler(request):
+        requests.append(request)
+        headers = dict(request.headers)
+        if request.url.host == "tiles-a.example.invalid":
+            if request_header in headers:
+                assert headers[request_header] == validator
+                return httpx2.Response(304, headers={"cache-control": "max-age=30"})
+            return httpx2.Response(200, content=png_a, headers={
+                "content-type": "image/png", "cache-control": "max-age=1", response_header: validator
+            })
+        return httpx2.Response(200, content=png_b, headers={
+            "content-type": "image/png", "cache-control": "max-age=30", "etag": '"provider-b"'
+        })
+
+    cache_dir = tmp_path / "map-cache"
+    provider_a = Navigation(_enabled_config(tiles_origin="https://tiles-a.example.invalid"), cache_dir,
+                            transport=httpx2.MockTransport(handler))
+    provider_b = Navigation(_enabled_config(tiles_origin="https://tiles-b.example.invalid"), cache_dir,
+                            transport=httpx2.MockTransport(handler))
+
+    async def run():
+        first_a = await provider_a.tile(2, 1, 1, True)
+        now[0] = 1002.0
+        revalidated_a = await provider_a.tile(2, 1, 1, True)
+        first_b = await provider_b.tile(2, 1, 1, True)
+        cached_b = await provider_b.tile(2, 1, 1, True)
+        await provider_a.close()
+        await provider_b.close()
+        return first_a, revalidated_a, first_b, cached_b
+
+    first_a, revalidated_a, first_b, cached_b = asyncio.run(run())
+    assert first_a["data_url"] != first_b["data_url"]
+    assert revalidated_a == {"data_url": first_a["data_url"], "cached": True}
+    assert cached_b == {"data_url": first_b["data_url"], "cached": True}
+    assert len(requests) == 3
+    assert requests[1].headers.get(request_header) == validator
+    assert request_header not in requests[2].headers
+    assert "if-none-match" not in requests[2].headers
+    assert "if-modified-since" not in requests[2].headers
 
 
 def test_tile_revalidates_expired_etag_with_304_and_reuses_body(tmp_path, monkeypatch):

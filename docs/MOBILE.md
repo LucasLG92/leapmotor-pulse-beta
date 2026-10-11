@@ -6,6 +6,8 @@ El cliente móvil está implementado en el repositorio, pero la instalación sen
 
 El workflow `verify-ios` construye la app y el widget para el simulador; eso no prueba un iPhone físico. Las builds Android tampoco demuestran que un modelo de teléfono, su widget, permisos y servidor real funcionen juntos. Revisa las ejecuciones de CI del repositorio público y prueba cada dispositivo por separado antes de considerar esa compatibilidad validada. No publiques ni uses APKs configurados para una instalación particular.
 
+El almacén iOS distingue un registro inexistente (`errSecItemNotFound`) de una lectura bloqueada, fallida o inválida. Esos errores impiden confirmar cambios de consentimiento o sustituir permisos; los getters fallan cerrados y se mantiene `WhenUnlockedThisDeviceOnly`. `verify-ios` ejecuta las regresiones del almacén con un Keychain falso, sin leer ni escribir el almacén real del runner. No sustituye las pruebas de bloqueo, protección, widgets, firma o distribución en un teléfono.
+
 El workflow también instala y arranca una build genérica sin configuración en un iPhone 17 Pro Max con iOS 26.5 Simulator. Comprueba el proceso durante cinco segundos, retira únicamente el simulador que ha creado y conserva una captura inicial y un recibo durante siete días. La captura necesita revisión visual. Ese ensayo no autentica un usuario, no ejecuta el widget y no acredita firma, distribución, consumo o comportamiento en teléfonos físicos. No acepta configuración particular del operador ni publica apps compiladas.
 ## Caducidad al iniciar sesión o enlazar un widget
 

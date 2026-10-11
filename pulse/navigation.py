@@ -154,6 +154,14 @@ def _viewport_cache_key(latitude: float, longitude: float) -> str:
     return hashlib.sha256(key).hexdigest()
 
 
+def _tile_cache_key(origin: str, z: int, x: int, y: int) -> str:
+    # NavigationConfig has already validated and normalized the HTTPS origin.
+    # Keep entries in the existing flat, globally quota-limited directory while
+    # preventing cached bytes and validators from crossing provider boundaries.
+    key = f"{origin}\0{z}/{x}/{y}".encode("utf-8")
+    return hashlib.sha256(key).hexdigest()
+
+
 def _display_text(value: Any, *, maximum: int = 160) -> str | None:
     if not isinstance(value, str):
         return None
@@ -613,7 +621,7 @@ class Navigation:
         maximum = 1 << z
         if not 0 <= x < maximum or not 0 <= y < maximum:
             raise _fail("invalid", 400)
-        key = hashlib.sha256(f"{z}/{x}/{y}".encode("ascii")).hexdigest()
+        key = _tile_cache_key(self.config.tiles_origin, z, x, y)
         now = time.time()
         try:
             entry = self._tile_cache.load(key)

@@ -25,6 +25,8 @@ La API usa sesión y CSRF también en sus POST de lectura. Sus cuerpos están li
 
 El código original mantiene su licencia propia. Leaflet utiliza BSD-2-Clause, con aviso completo en la distribución. Los datos OSM conservan su atribución y condiciones independientes: [OpenStreetMap copyright](https://www.openstreetmap.org/copyright).
 
+La clave de cada imagen incluye el origen HTTPS normalizado del proveedor y sus coordenadas. Cambiar el proveedor conserva las cuotas del mismo directorio, pero no reutiliza imágenes ni validadores HTTP de otro origen o de la caché antigua sin origen. No se ejecuta un borrado global ni una migración destructiva; los archivos anteriores siguen sujetos a las reglas de cuota y caducidad existentes.
+
 La cola del servidor admite dos solicitudes de imagen activas y dos pendientes; el plazo de timeout abarca la espera y la descarga. Una respuesta 304 que solo trae un validador conserva la política de caché anterior. La cola de la vista comprueba que la imagen todavía pertenece al área visible antes de iniciarla. Un ajuste del centro de hasta diez metros debido a redondeo de píxeles o resize conserva los cargadores; un desplazamiento mayor invalida la consulta, que solo se repite por acción del usuario.
 
 ## Verificación V16

@@ -3,7 +3,11 @@ from datetime import datetime, timedelta, timezone
 import json
 import socket
 import threading
+from unittest.mock import Mock
 
+import pytest
+
+import pulse.mqtt_bridge as mqtt_bridge_module
 from pulse.mqtt_bridge import MqttBridge, _PahoTransport
 from pulse.mqtt_policy import MqttConfig
 
@@ -94,18 +98,42 @@ class FakeTransport:
         self.on_disconnect()
 
 
-def config(*, enabled=True, fields=("battery_pct", "charging"), max_age=900, poll=1):
+def config(*, enabled=True, fields=("battery_pct", "charging"), max_age=900, poll=1, tls=False):
     return MqttConfig(
         enabled=enabled,
         host="127.0.0.1",
         port=1883,
-        tls=False,
+        tls=tls,
         instance="garage",
         discovery_prefix="homeassistant",
         fields=tuple(fields),
         max_age_seconds=max_age,
         poll_seconds=poll,
     )
+
+
+def test_paho_transport_rejects_sslkeylogfile_before_client_tls_or_socket(monkeypatch, tmp_path):
+    import paho.mqtt.client as paho_client
+
+    keylog = tmp_path / "tls-keylog.log"
+    monkeypatch.setenv("SSLKEYLOGFILE", str(keylog))
+    make_client = Mock()
+    create_context = Mock()
+    create_socket = Mock()
+    monkeypatch.setattr(paho_client, "Client", make_client)
+    monkeypatch.setattr(mqtt_bridge_module.ssl, "create_default_context", create_context)
+    monkeypatch.setattr(mqtt_bridge_module.socket, "create_connection", create_socket)
+
+    transport = _PahoTransport(config(tls=True))
+    with pytest.raises(RuntimeError, match="mqtt_tls_key_logging_unsupported"):
+        asyncio.run(transport.start(lambda _accepted: None, lambda: None, lambda _topic, _payload: None))
+
+    make_client.assert_not_called()
+    create_context.assert_not_called()
+    create_socket.assert_not_called()
+    assert transport._client is None
+    assert transport._network_started is False
+    assert not keylog.exists()
 
 
 def context(*, observed_at=None, battery=74.5, charging=False, demo=False):

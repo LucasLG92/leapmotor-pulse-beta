@@ -1,6 +1,28 @@
 import Foundation
 import Security
 
+/// Narrow injectable boundary; tests never need a real Keychain record.
+protocol NativeWidgetKeychainAccess {
+    func copyMatching(_ query: CFDictionary) -> (OSStatus, CFTypeRef?)
+    func add(_ attributes: CFDictionary) -> OSStatus
+    func update(_ query: CFDictionary, attributes: CFDictionary) -> OSStatus
+    func delete(_ query: CFDictionary) -> OSStatus
+}
+
+struct SystemNativeWidgetKeychain: NativeWidgetKeychainAccess {
+    func copyMatching(_ query: CFDictionary) -> (OSStatus, CFTypeRef?) {
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query, &result)
+        return (status, result)
+    }
+
+    func add(_ attributes: CFDictionary) -> OSStatus { SecItemAdd(attributes, nil) }
+    func update(_ query: CFDictionary, attributes: CFDictionary) -> OSStatus {
+        SecItemUpdate(query, attributes)
+    }
+    func delete(_ query: CFDictionary) -> OSStatus { SecItemDelete(query) }
+}
+
 /// App-only Keychain state. The App Group receives snapshots, never this record.
 final class NativeWidgetCredentialStore {
     struct Credential {
@@ -27,16 +49,18 @@ final class NativeWidgetCredentialStore {
 
     private static let lock = NSLock()
     private let service: String
+    private let keychain: NativeWidgetKeychainAccess
     private let account = "widget-credentials"
 
-    init() {
+    init(keychain: NativeWidgetKeychainAccess = SystemNativeWidgetKeychain()) {
+        self.keychain = keychain
         service = "\(Bundle.main.bundleIdentifier ?? "com.lucas.pulse").native-widget.v1"
     }
 
     func installationID() throws -> String {
         Self.lock.lock()
         defer { Self.lock.unlock() }
-        if var record = readRecord(), Self.validInstallationID(record.installationID) {
+        if var record = try readRecord(), Self.validInstallationID(record.installationID) {
             if Self.hasGrant(record), Self.validCredentialRecord(record, now: Date()) {
                 return record.installationID
             }
@@ -54,7 +78,7 @@ final class NativeWidgetCredentialStore {
     func credential(apiOrigin: URL, now: Date = Date()) -> Credential? {
         Self.lock.lock()
         defer { Self.lock.unlock() }
-        guard var record = readRecord(), Self.validInstallationID(record.installationID) else { return nil }
+        guard var record = (try? readRecord()), Self.validInstallationID(record.installationID) else { return nil }
         guard Self.hasGrant(record), Self.validCredentialRecord(record, now: now),
               record.apiOrigin == apiOrigin.absoluteString,
               let grantID = record.grantID, let profileID = record.profileID,
@@ -74,7 +98,7 @@ final class NativeWidgetCredentialStore {
     func isCurrent(_ expected: Credential, apiOrigin: URL, now: Date = Date()) -> Bool {
         Self.lock.lock()
         defer { Self.lock.unlock() }
-        guard let record = readRecord() else { return false }
+        guard let record = (try? readRecord()) else { return false }
         return Self.matches(expected, record: record, apiOrigin: apiOrigin, now: now)
     }
 
@@ -84,7 +108,7 @@ final class NativeWidgetCredentialStore {
                      now: Date = Date(), perform: () throws -> Void) throws -> Bool {
         Self.lock.lock()
         defer { Self.lock.unlock() }
-        guard let record = readRecord(),
+        guard let record = try readRecord(),
               Self.matches(expected, record: record, apiOrigin: apiOrigin, now: now),
               !requireCacheEnabled || record.cacheEnabled else { return false }
         try perform()
@@ -96,7 +120,7 @@ final class NativeWidgetCredentialStore {
     func clearSnapshotIfUnavailable(apiOrigin: URL, perform: () throws -> Void) throws -> Bool {
         Self.lock.lock()
         defer { Self.lock.unlock() }
-        if let record = readRecord(), record.cacheEnabled,
+        if let record = try readRecord(), record.cacheEnabled,
            Self.validCredentialRecord(record, now: Date()),
            record.apiOrigin == apiOrigin.absoluteString { return false }
         try perform()
@@ -107,7 +131,7 @@ final class NativeWidgetCredentialStore {
     func advanceGeneration(apiOrigin: URL, now: Date = Date()) throws -> Credential? {
         Self.lock.lock()
         defer { Self.lock.unlock() }
-        guard var record = readRecord(), Self.hasGrant(record),
+        guard var record = try readRecord(), Self.hasGrant(record),
               Self.validCredentialRecord(record, now: now),
               record.apiOrigin == apiOrigin.absoluteString,
               let grantID = record.grantID, let profileID = record.profileID,
@@ -125,7 +149,7 @@ final class NativeWidgetCredentialStore {
                     afterClear: () throws -> Void = {}) throws -> Bool {
         Self.lock.lock()
         defer { Self.lock.unlock() }
-        guard var record = readRecord(),
+        guard var record = try readRecord(),
               Self.matches(expected, record: record, apiOrigin: apiOrigin, now: now) else { return false }
         Self.clearGrant(from: &record)
         try writeRecord(record)
@@ -136,7 +160,7 @@ final class NativeWidgetCredentialStore {
     func cacheEnabled(apiOrigin: URL, now: Date = Date()) -> Bool {
         Self.lock.lock()
         defer { Self.lock.unlock() }
-        guard var record = readRecord() else { return false }
+        guard var record = (try? readRecord()) else { return false }
         if Self.hasGrant(record), !Self.validCredentialRecord(record, now: now) {
             Self.clearGrant(from: &record)
             try? writeRecord(record)
@@ -173,7 +197,7 @@ final class NativeWidgetCredentialStore {
     func setCacheEnabled(_ enabled: Bool, apiOrigin: URL) throws {
         Self.lock.lock()
         defer { Self.lock.unlock() }
-        guard var record = readRecord() else {
+        guard var record = try readRecord() else {
             if enabled { throw NativeWidgetCredentialError.notLinked }
             return
         }
@@ -192,7 +216,7 @@ final class NativeWidgetCredentialStore {
     func disableCache() throws {
         Self.lock.lock()
         defer { Self.lock.unlock() }
-        guard var record = readRecord(), record.cacheEnabled else { return }
+        guard var record = try readRecord(), record.cacheEnabled else { return }
         record.cacheEnabled = false
         record.generation = Self.next(record.generation)
         try writeRecord(record)
@@ -202,7 +226,7 @@ final class NativeWidgetCredentialStore {
                       afterDisable: () throws -> Void = {}) throws -> Bool {
         Self.lock.lock()
         defer { Self.lock.unlock() }
-        guard var record = readRecord(),
+        guard var record = try readRecord(),
               Self.matches(expected, record: record, apiOrigin: apiOrigin, now: now) else { return false }
         if record.cacheEnabled {
             record.cacheEnabled = false
@@ -217,7 +241,7 @@ final class NativeWidgetCredentialStore {
     func clearGrant() throws {
         Self.lock.lock()
         defer { Self.lock.unlock() }
-        guard var record = readRecord() else { return }
+        guard var record = try readRecord() else { return }
         Self.clearGrant(from: &record)
         try writeRecord(record)
     }
@@ -226,7 +250,7 @@ final class NativeWidgetCredentialStore {
     func clearAll() throws {
         Self.lock.lock()
         defer { Self.lock.unlock() }
-        let status = SecItemDelete(baseQuery as CFDictionary)
+        let status = keychain.delete(baseQuery as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw NativeWidgetCredentialError.keychain(status)
         }
@@ -238,15 +262,18 @@ final class NativeWidgetCredentialStore {
          kSecAttrAccount as String: account]
     }
 
-    private func readRecord() -> Record? {
+    private func readRecord() throws -> Record? {
         var query = baseQuery
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
-        var result: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        guard status == errSecSuccess, let data = result as? Data,
+        let (status, result) = keychain.copyMatching(query as CFDictionary)
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess else { throw NativeWidgetCredentialError.keychain(status) }
+        guard let data = result as? Data,
               data.count <= 8_192, let record = try? JSONDecoder().decode(Record.self, from: data),
-              record.version == 1, Self.validInstallationID(record.installationID) else { return nil }
+              record.version == 1, Self.validInstallationID(record.installationID) else {
+            throw NativeWidgetCredentialError.invalidCredential
+        }
         return record
     }
 
@@ -258,14 +285,14 @@ final class NativeWidgetCredentialStore {
         var query = baseQuery
         query[kSecValueData as String] = data
         query[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-        let addStatus = SecItemAdd(query as CFDictionary, nil)
+        let addStatus = keychain.add(query as CFDictionary)
         guard addStatus == errSecDuplicateItem else {
             guard addStatus == errSecSuccess else { throw NativeWidgetCredentialError.keychain(addStatus) }
             return
         }
         let update: [String: Any] = [kSecValueData as String: data,
                       kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly]
-        let updateStatus = SecItemUpdate(baseQuery as CFDictionary, update as CFDictionary)
+        let updateStatus = keychain.update(baseQuery as CFDictionary, attributes: update as CFDictionary)
         guard updateStatus == errSecSuccess else { throw NativeWidgetCredentialError.keychain(updateStatus) }
     }
 
