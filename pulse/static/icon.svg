@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
-  <title id="title">Marca abstracta de Pulse</title>
-  <rect width="64" height="64" rx="18" fill="#245841"/>
-  <path d="M11 34h12l6-13 9 25 7-15h8" fill="none" stroke="#C9E8D1" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#202429"/>
+  <path fill="#F5F3EE" fill-rule="evenodd" d="M160 376V136H264C317 136 352 170 352 216C352 263 317 296 264 296H212V376Z M212 184V248H264C288 248 300 236 300 216C300 196 288 184 264 184Z"/>
+  <path fill="#9DE0C0" d="M160 327L212 307V376H160Z"/>
 </svg>
