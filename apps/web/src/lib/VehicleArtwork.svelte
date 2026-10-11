@@ -1,7 +1,31 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { isNativeApp } from './native';
 	import { vehicleArtwork, type VehicleColor } from './vehicle-colors';
 	let { color = null }: { color?: VehicleColor } = $props();
 	let artwork = $derived(vehicleArtwork(color));
+	let mounted = true;
+
+	function warmArtwork() {
+		if (!mounted || isNativeApp() || typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+		const id = artwork.id;
+		void navigator.serviceWorker.ready.then((registration) => {
+			if (mounted && !isNativeApp()) {
+				registration.active?.postMessage({ type: 'PULSE_WARM_VEHICLE_ARTWORK', id });
+			}
+		}).catch(() => undefined);
+	}
+
+	onMount(() => {
+		if (isNativeApp() || !('serviceWorker' in navigator)) {
+			return () => { mounted = false; };
+		}
+		navigator.serviceWorker.addEventListener('controllerchange', warmArtwork);
+		return () => {
+			mounted = false;
+			navigator.serviceWorker.removeEventListener('controllerchange', warmArtwork);
+		};
+	});
 </script>
 
 <figure class="vehicle-artwork" aria-label="Representación orientativa del Leapmotor B10">
@@ -13,6 +37,7 @@
 			height="630"
 			decoding="async"
 			fetchpriority="high"
+			onload={warmArtwork}
 		/>
 	</div>
 	<figcaption>B10 · {color ? artwork.label : 'color sin elegir'} · acabado orientativo</figcaption>
