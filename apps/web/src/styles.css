@@ -210,12 +210,12 @@ button:disabled { cursor: not-allowed; }
 	.boot-screen { display: grid; min-height: 100svh; align-content: center; justify-items: start; gap: 15px; width: min(100% - 40px, 540px); margin: 0 auto; padding: max(40px, var(--pulse-safe-top)) 0 max(40px, var(--pulse-safe-bottom)); }
 .boot-screen h1 { max-width: 520px; margin: 0; font-size: clamp(1.6875rem, 6vw, 2.625rem); font-weight: 580; letter-spacing: -.04em; line-height: 1.1; }
 .boot-screen .body-copy { max-width: 440px; margin: 0; }
-.boot-mark { display: flex; width: 52px; height: 52px; align-items: center; justify-content: center; gap: 4px; margin-bottom: 4px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
-.boot-mark span { width: 4px; border-radius: 99px; background: var(--forest); animation: pulse-rise 1s ease-in-out infinite alternate; }
-.boot-mark span:nth-child(1) { height: 16px; animation-delay: -220ms; }
-.boot-mark span:nth-child(2) { height: 27px; animation-delay: -420ms; }
-.boot-mark span:nth-child(3) { height: 20px; }
-@keyframes pulse-rise { to { transform: scaleY(.62); opacity: .62; } }
+.boot-brand { display: flex; width: 100%; align-items: center; gap: 14px; margin-bottom: 5px; }
+.boot-brand-name { min-width: 0; color: var(--ink); font-size: 1.125rem; font-weight: 650; letter-spacing: -.025em; line-height: 1.35; }
+.boot-mark { display: block; flex: 0 0 56px; width: 56px; height: 56px; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; }
+.boot-mark img { display: block; width: 100%; height: 100%; }
+.boot-progress { width: 64px; height: 3px; border-radius: 99px; background: var(--forest); opacity: .55; animation: pulse-connect 1s ease-in-out infinite alternate; }
+@keyframes pulse-connect { to { opacity: 1; } }
 
 .toast { position: fixed; z-index: 30; right: 24px; bottom: 24px; width: min(390px, calc(100vw - 32px)); padding: 14px 16px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface-raised); box-shadow: var(--shadow); color: var(--ink); font-size: var(--text-label); line-height: 1.55; }
 .toast-success { border-color: var(--forest); }

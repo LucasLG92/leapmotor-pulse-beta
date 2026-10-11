@@ -661,7 +661,9 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 
 	function handleOnlineChange() {
 		online = navigator.onLine;
-		if (online) void openEventSource();
+		if (!online) return;
+		if (bootStatus === 'error') void startSession();
+		else if (bootStatus === 'ready') void openEventSource();
 	}
 
 	function safeLoginUrl(): string {
@@ -908,12 +910,19 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 
 {#if bootStatus === 'loading'}
 	<main class="boot-screen" aria-live="polite">
-		<div class="boot-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+		<div class="boot-brand">
+			<span class="boot-mark" aria-hidden="true"><img src="/icon.svg" width="56" height="56" alt="" /></span>
+			<span class="boot-brand-name">{appName}</span>
+		</div>
 		<h1>{bootMessage}</h1>
+		<span class="boot-progress" aria-hidden="true"></span>
 	</main>
 {:else if bootStatus === 'error'}
 	<main class="boot-screen">
-		<div class="boot-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+		<div class="boot-brand">
+			<span class="boot-mark" aria-hidden="true"><img src="/icon.svg" width="56" height="56" alt="" /></span>
+			<span class="boot-brand-name">{appName}</span>
+		</div>
 		<h1>{bootMessage}</h1>
 		<p class="body-copy">La aplicación no almacena datos del vehículo en este dispositivo. Cuando vuelva la conexión, podrás cargar el estado más reciente del servidor.</p>
 		<button class="button button-primary" onclick={startSession}>Reintentar conexión</button>
@@ -921,7 +930,10 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 	</main>
 {:else if bootStatus === 'unauthenticated'}
 	<main class="boot-screen">
-		<div class="boot-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+		<div class="boot-brand">
+			<span class="boot-mark" aria-hidden="true"><img src="/icon.svg" width="56" height="56" alt="" /></span>
+			<span class="boot-brand-name">{appName}</span>
+		</div>
 		<h1>Tu espacio privado de movilidad.</h1>
 		<p class="body-copy">Inicia sesión para consultar los datos guardados en tu servidor Pulse.</p>
 		{#if nativeApp}
