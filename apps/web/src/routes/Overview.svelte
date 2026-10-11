@@ -88,6 +88,12 @@
 	let connectionReason = $derived(
 		pulseState.connection.reason || 'Pulse todavía no dispone de una conexión validada con el vehículo.'
 	);
+	let collectorLabel = $derived(
+		pulseState.mode === 'demo' ? 'Demo · sin lector físico' :
+		pulseState.telemetry?.collector.running === true ? 'Lector en ejecución' :
+		pulseState.setup?.vehicle_reader_enabled === true ? 'Lector configurado · detenido' : 'Lector sin configurar'
+	);
+	let temporalExplanation = $derived(temporalReason(pulseState.telemetry?.quality.reason_code));
 	let controlActions = $derived.by(() => {
 		const locked = vehicleValues?.locked === true;
 		const climateOn = vehicleValues?.climate_on === true;
@@ -202,6 +208,19 @@
 		return value === 'unknown' ? 'Desconocida' : value || 'Sin dato';
 	}
 
+	function temporalReason(code: string | null | undefined): string {
+		const reasons: Record<string, string> = {
+			no_snapshot: 'Todavía no se ha recibido una lectura del coche.',
+			observed_at_missing: 'La fuente no ha indicado cuándo se observó esta lectura.',
+			observed_at_invalid: 'La fecha de observación recibida no es válida.',
+			observed_at_future: 'La fecha recibida está adelantada; no permite comprobar la antigüedad.',
+			observation_recent: 'Lectura dentro de la ventana temporal de Pulse.',
+			observation_stale: 'Lectura atrasada. Consulta su fecha antes de usarla.',
+			observation_expired: 'Lectura caducada. Puedes consultar sus valores anteriores en Estados.'
+		};
+		return code && reasons[code] ? reasons[code] : 'La antigüedad de la lectura no se ha podido comprobar.';
+	}
+
 	function chargerStateLabel(status: ChargerStatus | null): string {
 		if (!status) return 'Estado pendiente';
 		if (status.status === 'disabled') return 'Sin configurar';
@@ -258,7 +277,6 @@
 	<article class="overview-hero" aria-labelledby="vehicle-profile-title">
 		<header class="overview-heading">
 			<div class="profile-heading">
-				<p class="profile-eyebrow">TU GARAJE</p>
 				<h2 id="vehicle-profile-title">{profileName}</h2>
 				<p>{profileModel} <span>· Perfil de Pulse</span></p>
 			</div>
@@ -280,10 +298,19 @@
 						<dd><Glyph name="battery" size={19} /><span>{number(vehicleValues?.battery_pct)}{vehicleValues?.battery_pct == null ? '' : '%'}</span></dd>
 					</div>
 				</dl>
+				<div class="reading-caption" aria-label="Procedencia de las lecturas del coche">
+					<p>{sourceLabel} <span aria-hidden="true">·</span> {observedAt ? absoluteDateTime(observedAt) : 'Sin lectura disponible'}</p>
+					{#if pulseState.mode === 'telemetry_read_only'}<p class="temporal-explanation">{temporalExplanation} Vigencia física sin comprobar.</p>{:else if pulseState.mode !== 'demo'}<p>{connectionReason}</p>{/if}
+				</div>
 
 
 				{#if batteryPercentage !== null}
 					<meter class="battery-level" aria-label="Nivel de batería recibido" min="0" max="100" value={batteryPercentage}>{number(batteryPercentage)} %</meter>
+				{/if}
+				{#if chargerStatus?.observation}
+					<a class="charge-glance" href="/energy" aria-label="Abrir Energía y el estado del punto de carga">
+						<Glyph name="plug" size={18} /><span><strong>Punto de carga · {chargerStateLabel(chargerStatus)}</strong><span>{chargerStatus.observation.power_w == null ? 'Potencia sin dato' : `${number(chargerStatus.observation.power_w / 1000, true)} kW`} · {chargerStatus.observation.charged_kwh == null ? 'Energía sin dato' : `${number(chargerStatus.observation.charged_kwh)} kWh recibidos`}</span></span><Glyph name="chevron" size={16} />
+					</a>
 				{/if}
 				<VehicleArtwork color={pulseState.settings.vehicle_color ?? null} />
 				</div>
@@ -313,7 +340,7 @@
 					<dl class="vehicle-state" aria-label="Estado recibido del vehículo">
 					<div><dt><Glyph name={vehicleValues?.locked === true ? 'lock' : vehicleValues?.locked === false ? 'unlock' : 'activity'} size={16} />Cierre</dt><dd>{booleanState(vehicleValues?.locked, 'Cerrado', 'Abierto')}</dd></div>
 					<div><dt><Glyph name="climate" size={16} />Clima</dt><dd>{booleanState(vehicleValues?.climate_on, 'Activo', 'Inactivo')}</dd></div>
-					<div><dt><Glyph name="charge" size={16} />Carga</dt><dd>{booleanState(vehicleValues?.charging, 'En curso', 'Detenida')}</dd></div>
+					<div><dt><Glyph name="charge" size={16} />Carga del coche</dt><dd>{booleanState(vehicleValues?.charging, 'En curso', 'Detenida')}</dd></div>
 				<div><dt><Glyph name="car" size={16} />Odómetro</dt><dd>{number(vehicleValues?.odometer_km)}{vehicleValues?.odometer_km == null ? '' : ' km'}</dd></div>
 					</dl>
 
@@ -358,22 +385,6 @@
 
 				</section>
 
-				<div class="observation-summary" aria-label="Origen y fecha de las lecturas">
-					{#if latestTelemetry && pulseState.mode === 'telemetry_read_only'}
-						<p><span>Observada</span><strong>{absoluteDateTime(observedAt)}</strong></p>
-						<p><span>Fuente</span><strong>{sourceLabel}</strong></p>
-						<p class="freshness-summary">Vigencia física: {freshnessLabel(pulseState.telemetry?.quality.freshness)}</p>
-					{:else if pulseState.mode === 'demo' && pulseState.vehicle}
-						<p><span>Dato demo</span><strong>{absoluteDateTime(observedAt)}</strong></p>
-						<p><span>Fuente</span><strong>{sourceLabel}</strong></p>
-						<p class="freshness-summary">Datos ficticios; la vigencia física no aplica.</p>
-					{:else}
-						<p><span>Observación</span><strong>Sin lectura disponible</strong></p>
-						<p><span>Fuente</span><strong>Sin proveedor habilitado</strong></p>
-						<p class="freshness-summary">El perfil de Pulse se muestra aparte de cualquier lectura.</p>
-					{/if}
-				</div>
-
 				{#if latestTelemetry && pulseState.mode === 'telemetry_read_only'}
 					<details class="field-source-details">
 						<summary>Fuentes por campo y fechas completas</summary>
@@ -401,9 +412,8 @@
 
 
 				<section class="charger-context" aria-labelledby="charger-context-title">
-					<p class="context-eyebrow"><Glyph name="plug" size={17} /> ENERGÍA EN CASA</p>
 					<div class="context-heading">
-						<h3 id="charger-context-title">Tu carga, de un vistazo</h3>
+						<h3 id="charger-context-title">Punto de carga</h3>
 						<span class="badge">{chargerStateLabel(chargerStatus)}</span>
 					</div>
 					{#if chargerLoading && !chargerStatus}
@@ -419,6 +429,10 @@
 							{#if chargerStatus.observation.active_seconds !== null}<div><dt>Tiempo activo recibido</dt><dd>{activeDuration(chargerStatus.observation.active_seconds)}</dd></div>{/if}
 						</dl>
 						<p class="charger-source">Punto {chargerStatus.observation.loadpoint} · evcc</p>
+						<p class="charger-received">Recibido por Pulse: {absoluteDateTime(chargerStatus.observation.received_at)}</p>
+						{#if vehicleValues?.charging != null && vehicleValues.charging !== chargerStatus.observation.charging}
+							<p class="source-notice">El coche y el punto comunican estados distintos. Son fuentes independientes; sus lecturas pueden corresponder a momentos diferentes.</p>
+						{/if}
 						
 					{:else}
 						<p class="context-copy">
@@ -445,6 +459,8 @@
 						<div class="context-heading"><h3>Última carga detectada</h3><span class="badge">evcc</span></div>
 						<p class="charge-date">{absoluteDateTime(latestAutomaticCharge.started_at)}</p>
 						<div class="latest-charge-values"><span>{number(latestAutomaticCharge.kwh)} kWh</span><strong>{latestAutomaticCharge.pricing_status === 'ready' && latestAutomaticCharge.pvpc ? euros(latestAutomaticCharge.pvpc.cost_eur) : '—'}</strong></div>
+						<dl class="session-timing"><div><dt>Fin</dt><dd>{absoluteDateTime(latestAutomaticCharge.ended_at)}</dd></div><div><dt>Tiempo activo</dt><dd>{activeDuration(latestAutomaticCharge.active_seconds)}</dd></div></dl>
+						<p class="charge-cost-status">{latestAutomaticCharge.pricing_status === 'ready' && latestAutomaticCharge.pvpc ? 'Estimación PVPC guardada' : latestAutomaticCharge.pricing_status === 'pending' ? 'Coste PVPC pendiente' : 'Sin coste calculado'}</p>
 
 						<details class="charger-details"><summary>Detalles de la carga detectada</summary><p class="context-copy">{latestAutomaticCharge.pricing_status === 'ready' ? 'Estimación PVPC guardada · no es la factura total.' : latestAutomaticCharge.pricing_status === 'pending' ? 'PVPC pendiente de datos suficientes.' : latestAutomaticCharge.pricing_status === 'ineligible' ? 'Sesión sin datos suficientes para calcular PVPC.' : 'Cálculo PVPC desactivado.'}</p><p>Punto {latestAutomaticCharge.loadpoint} · sesión comunicada por evcc</p><p>Fin: {absoluteDateTime(latestAutomaticCharge.ended_at)}</p><p>Tiempo activo: {activeDuration(latestAutomaticCharge.active_seconds)}</p><p>Recibida por Pulse: {absoluteDateTime(latestAutomaticCharge.received_at)}. La recepción no confirma el momento de medición física.</p></details>
 					</section>
@@ -460,13 +476,24 @@
 					</section>
 				{/if}
 
-				<details class="connection-context connection-details"><summary>Conexión del vehículo <span>{connectionLabel}</span></summary><p class="context-copy">{connectionReason}</p><a class="context-link" href="/settings">Revisar integración y perfil <Glyph name="arrow" size={16} /></a></details>
+
 			</aside>
 		</div>
+		<section class="connection-context" aria-labelledby="connection-context-title">
+			<div class="context-heading"><h3 id="connection-context-title">Conexión y lecturas</h3><span class="badge">{connectionLabel}</span></div>
+			<dl class="connection-readings">
+				<div><dt>Lector del coche</dt><dd>{collectorLabel}</dd></div>
+				<div><dt>Último contacto con el proveedor</dt><dd>{pulseState.connection.last_contact_at ? absoluteDateTime(pulseState.connection.last_contact_at) : 'Sin contacto registrado'}</dd></div>
+				<div><dt>Última observación del proveedor</dt><dd>{pulseState.connection.last_observed_at ? absoluteDateTime(pulseState.connection.last_observed_at) : 'Sin observación registrada'}</dd></div>
+				<div><dt>Controles físicos</dt><dd>Pendientes de validación</dd></div>
+			</dl>
+			<details class="charger-details"><summary>Detalles de conexión</summary><p class="context-copy">{connectionReason}</p></details>
+			<a class="context-link" href="/settings">Revisar integración y perfil <Glyph name="arrow" size={16} /></a>
+		</section>
 	</article>
 
 	<section class="overview-mobility" aria-labelledby="mobility-title">
-	<header class="mobility-heading"><div><p class="profile-eyebrow">EL DETALLE DE TU MOVILIDAD</p><h2 id="mobility-title">Tu actividad reciente</h2></div><a class="context-link" href="/activity">Abrir diario <Glyph name="arrow" size={16} /></a></header>
+	<header class="mobility-heading"><div><h2 id="mobility-title">Tu actividad reciente</h2></div><a class="context-link" href="/activity">Abrir diario <Glyph name="arrow" size={16} /></a></header>
 	<div class="overview-records" aria-label="Energía, actividad y mantenimiento">
 		<article class="record-summary energy-summary">
 			<div class="record-heading"><h2>Energía registrada</h2><a href="/energy">Ver cargas <Glyph name="arrow" size={16} /></a></div>
@@ -519,18 +546,25 @@
  .overview-page { display: grid; gap: 32px; min-width: 0; }
  .overview-hero, .profile-heading, .vehicle-scene, .vehicle-task { min-width: 0; }
  .overview-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
- .profile-eyebrow, .context-eyebrow { color: var(--muted-strong); font-size: .6875rem; letter-spacing: .13em; font-weight: 650; line-height: 1.6; margin: 0 0 10px; }
- .overview-heading h2 { margin: 0; font-size: clamp(2rem, 3.3vw, 3rem); font-weight: 600; line-height: 1.12; letter-spacing: -.045em; overflow-wrap: anywhere; }
- .overview-heading p:not(.profile-eyebrow) { margin: 8px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; overflow-wrap: anywhere; }
+ .overview-heading h2 { margin: 0; font-size: clamp(2rem, 3.3vw, 3rem); font-weight: 600; line-height: 1.12; letter-spacing: -.035em; overflow-wrap: anywhere; }
+ .overview-heading p { margin: 8px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; overflow-wrap: anywhere; }
  .overview-heading :global(.status-pill) { flex: 0 0 auto; min-height: 32px; font-size: .75rem; }
  .overview-layout { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(290px, .85fr); gap: 36px; align-items: start; }
- .vehicle-display { position: relative; background: radial-gradient(ellipse at 50% 75%, var(--surface-soft), transparent 70%); border-radius: 30px; padding-top: 0; }
+ .vehicle-display { position: relative; padding-top: 0; }
+ .reading-caption { margin: 10px 0; text-align: center; }
+ .reading-caption p { margin: 4px 0; color: var(--muted); font-size: .75rem; line-height: 1.5; overflow-wrap: anywhere; }
+ .reading-caption .temporal-explanation { color: var(--muted-strong); }
+ .charge-glance { display: flex; align-items: center; gap: 12px; width: fit-content; max-width: 100%; min-height: 60px; margin: 18px auto 0; padding: 10px 16px; border: 1px solid var(--line); border-radius: 16px; color: var(--forest); background: var(--forest-soft); text-decoration: none; }
+ .charge-glance > span { display: grid; gap: 4px; min-width: 0; }
+ .charge-glance strong { font-size: .8125rem; overflow-wrap: anywhere; }
+ .charge-glance span span { font-size: .75rem; color: var(--muted-strong); overflow-wrap: anywhere; }
+ .charge-glance :global(svg) { flex-shrink: 0; }
  .vehicle-readings { display: flex; align-items: center; justify-content: center; gap: 40px; margin: 0; font-variant-numeric: tabular-nums; }
  .vehicle-readings > div { min-width: 0; }
  .vehicle-readings dt { color: var(--muted); font-size: .8125rem; line-height: 1.5; }
  .vehicle-readings dd { margin: 5px 0 0; overflow-wrap: anywhere; }
  .range-reading { text-align: center; }
- .range-reading dd { font-size: clamp(2.75rem, 5vw, 4.25rem); font-weight: 550; letter-spacing: -.06em; line-height: 1.08; }
+ .range-reading dd { font-size: clamp(2.75rem, 5vw, 4.25rem); font-weight: 550; letter-spacing: -.04em; line-height: 1.08; }
  .battery-reading dd { display: flex; align-items: center; gap: 7px; font-size: 1.25rem; font-weight: 600; }
  .battery-level { display: block; width: 166px; height: 5px; margin: 14px auto 0; border: 0; border-radius: 9px; background: var(--line); }
  .battery-level::-webkit-meter-bar { height: 5px; border: 0; border-radius: 9px; background: var(--line); }
@@ -560,14 +594,10 @@
  .control-action:disabled .control-circle, .alternate-action:disabled .control-circle { color: var(--muted); }
  .control-label { font-weight: 600; overflow-wrap: anywhere; }
  .alternate-actions { margin-top: 12px; }
- .alternate-actions summary, .field-source-details summary, .charger-details summary, .connection-details summary { min-height: 44px; display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--muted-strong); font-size: .75rem; font-weight: 600; list-style: revert; }
+ .alternate-actions summary, .field-source-details summary, .charger-details summary { min-height: 44px; display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--muted-strong); font-size: .75rem; font-weight: 600; list-style: revert; }
  .alternate-actions summary { justify-content: center; }
  .alternate-action-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; padding: 10px 0; }
  .control-footnote { color: var(--muted); text-align: center; font-size: .6875rem; line-height: 1.5; margin: 0; }
- .observation-summary { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
- .observation-summary p { display: flex; flex-wrap: wrap; gap: 5px; margin: 0; color: var(--muted); font-size: .6875rem; line-height: 1.5; }
- .observation-summary strong { font-weight: 500; color: var(--muted-strong); }
- .observation-summary .freshness-summary { flex-basis: 100%; justify-content: center; }
  .field-source-details { margin-top: 6px; }
  .field-source-details summary { justify-content: center; }
  .field-source-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin: 8px 0; }
@@ -579,7 +609,6 @@
  .received-times strong { font-weight: 500; overflow-wrap: anywhere; }
  .vehicle-task { display: grid; gap: 16px; }
  .charger-context { padding: 22px; border-radius: 24px; background: var(--surface); border: 1px solid var(--line); }
- .context-eyebrow { display: flex; align-items: center; gap: 8px; color: var(--forest); margin-bottom: 16px; }
  .context-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
  .context-heading h3 { margin: 0; font-size: .9375rem; font-weight: 600; line-height: 1.45; }
  .charger-context .context-heading h3 { font-size: 1.25rem; letter-spacing: -.025em; }
@@ -596,6 +625,12 @@
  .charger-metric { padding-bottom: 16px; border-bottom: 1px solid var(--line); }
  .charger-metric dd { font-size: clamp(1.3rem, 2.2vw, 1.8rem); font-weight: 550; letter-spacing: -.035em; }
  .charger-source { color: var(--muted); font-size: .75rem; margin: 18px 0 8px; overflow-wrap: anywhere; }
+ .charger-received, .charge-cost-status { color: var(--muted); font-size: .75rem; line-height: 1.5; margin: 8px 0; overflow-wrap: anywhere; }
+ .source-notice { margin: 12px 0 0; padding: 12px 0; border-block: 1px solid var(--line); color: var(--muted-strong); font-size: .75rem; line-height: 1.6; }
+ .session-timing, .connection-readings { display: grid; gap: 10px; margin: 14px 0 0; font-size: .75rem; line-height: 1.5; }
+ .session-timing > div, .connection-readings > div { min-width: 0; display: grid; gap: 4px; }
+ .session-timing dt, .connection-readings dt { color: var(--muted); }
+ .session-timing dd, .connection-readings dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
  .context-copy, .charger-details p { color: var(--muted); font-size: .75rem; line-height: 1.6; margin: 10px 0; overflow-wrap: anywhere; }
  .context-link { display: inline-flex; min-height: 44px; align-items: center; gap: 9px; color: var(--forest); font-size: .8125rem; font-weight: 600; text-decoration: none; }
  .charger-context .context-link { display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
@@ -604,9 +639,9 @@
  .latest-charge-values { display: flex; justify-content: space-between; gap: 16px; font-size: 1.125rem; margin-top: 10px; font-variant-numeric: tabular-nums; }
  .latest-charge-values strong { font-size: 1.5rem; font-weight: 550; letter-spacing: -.03em; }
  .latest-charge + .latest-charge { border-top: 1px solid var(--line); padding-top: 12px; }
- .connection-context { padding-top: 12px; border-top: 1px solid var(--line); }
- .connection-details summary { display: flex; justify-content: space-between; flex-wrap: wrap; }
- .connection-details summary span { color: var(--muted); font-weight: 400; font-size: .6875rem; }
+ .connection-context { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
+ .connection-readings { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px 24px; }
+ .connection-context > .context-link { margin-top: 4px; }
  .overview-mobility { border-top: 1px solid var(--line); padding-top: 32px; }
  .mobility-heading { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-bottom: 30px; }
  .mobility-heading h2 { margin: 0; font-size: clamp(1.5rem, 2.2vw, 2rem); font-weight: 550; letter-spacing: -.035em; line-height: 1.25; }
@@ -655,10 +690,9 @@
  @media (max-width: 700px) {
   .overview-page { gap: 30px; }
   .overview-heading { margin-bottom: 12px; gap: 12px; }
-  .profile-eyebrow { font-size: .625rem; margin-bottom: 6px; }
   .overview-heading h2 { font-size: 1.875rem; }
   .overview-heading :global(.status-pill) { max-width: 40%; white-space: normal; }
-  .overview-heading p:not(.profile-eyebrow) { font-size: .75rem; }
+  .overview-heading p { font-size: .75rem; }
   .overview-heading p span { display: none; }
   .vehicle-readings { gap: 28px; }
   .range-reading dd { font-size: 3.25rem; }
@@ -680,10 +714,10 @@
   .mobility-heading { display: block; margin-bottom: 20px; }
   .mobility-heading > a { margin-top: 8px; }
   .overview-records { grid-template-columns: 1fr; gap: 28px; }
+  .connection-readings { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
   .record-heading { gap: 12px; }
   .mini-charge-bar { display: none; }
   .charge-history-mini a { grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; }
-  .observation-summary { gap: 4px 8px; }
  }
  @media (prefers-reduced-motion: reduce) { .control-circle { transition: none; } }
 </style>
