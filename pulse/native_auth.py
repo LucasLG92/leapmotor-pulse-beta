@@ -128,6 +128,8 @@ class NativeAccessValidator:
                         unauthorized=True, headers={"Accept": "application/json", "Authorization": "Bearer " + token})
                     if not isinstance(profile, dict) or profile.get("sub") != identity.subject:
                         raise DomainError("El permiso de acceso no es válido o ha caducado.", 401)
+                    # UserInfo puede terminar después de exp aunque empezara a tiempo.
+                    identity = self._identity(claims, expected_scopes)
         except DomainError:
             raise
         except Exception:

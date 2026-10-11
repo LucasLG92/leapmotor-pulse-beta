@@ -11,6 +11,7 @@ import pytest
 
 from pulse.app import create_app
 from pulse.config import Config
+from pulse.native_auth import NativeAccessValidator
 
 
 def config(**changes):
@@ -80,6 +81,58 @@ def register(native, code, access="fixture-first-access", installation=None):
 def snapshot(native, registered):
     return native.get(f'/api/native/widget-grants/{registered["grant"]["id"]}/snapshot',
                       headers={"Authorization": f'Bearer {registered["widget_token"]}'})
+
+
+@pytest.mark.parametrize("app_bootstrap", [False, True], ids=["widget", "app"])
+def test_expiry_during_userinfo_does_not_create_access_or_consume_pairing(tmp_path, monkeypatch, app_bootstrap):
+    now = [1000.9]
+    expiry = [1001]
+
+    def validator(selected, *, transport=None):
+        return NativeAccessValidator(selected, transport=transport, clock=lambda: now[0])
+
+    monkeypatch.setattr("pulse.native.NativeAccessValidator", validator)
+
+    def handler(request):
+        if request.method == "POST":
+            scope = "openid profile pulse.app.access" if app_bootstrap else "openid pulse.widget.read"
+            return httpx.Response(200, json={"active": True, "iss": "https://id.example.org",
+                "sub": "fixture-first", "client_id": "pulse-native", "exp": expiry[0],
+                "aud": "https://pulse.example.org/api/native", "scope": scope})
+        now[0] = 1001
+        return httpx.Response(200, json={"sub": "fixture-first", "preferred_username": "fixture"})
+
+    selected = config(native_app_enabled=app_bootstrap)
+    app = create_app(tmp_path / "pulse.sqlite3", config=selected, native_transport=httpx.MockTransport(handler))
+    with TestClient(app, base_url=selected.public_url) as web:
+        native = TestClient(app, base_url=selected.public_url)
+        sid, session = app.state.sessions.create({"id": "fixture-first", "name": "Fixture"})
+        web.cookies.set(selected.cookie_name, sid, domain="pulse.example.org", path="/")
+        web.headers["X-Pulse-CSRF"] = session.csrf
+        selected_profile = profile(web)
+        code = pair(web, selected_profile)
+        grants_url = f'/api/widget-profiles/{selected_profile["id"]}/native-grants'
+        before = len(app.state.sessions.records)
+
+        def exchange():
+            if app_bootstrap:
+                return native.post("/api/native/app-sessions", json={},
+                                   headers={"Authorization": "Bearer fixture-first-access"})
+            return register(native, code)
+
+        rejected = exchange()
+        assert rejected.status_code == 401
+        assert rejected.headers["cache-control"] == "no-store"
+        assert "set-cookie" not in rejected.headers
+        assert len(app.state.sessions.records) == before
+        assert web.get(grants_url).json()["items"] == []
+
+        # A new, valid token can still use the unconsumed pairing or create a session.
+        expiry[0] = 2000
+        assert exchange().status_code == 200
+        assert len(app.state.sessions.records) == before + int(app_bootstrap)
+        assert len(web.get(grants_url).json()["items"]) == int(not app_bootstrap)
+        native.close()
 
 
 def test_end_to_end_pair_snapshot_update_and_web_revoke(clients):
