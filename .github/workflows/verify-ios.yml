@@ -47,3 +47,16 @@ jobs:
             apps/mobile/ios/App/output/ci-smoke/receipt.json
           retention-days: 7
           if-no-files-found: warn
+
+      - name: Retain Swift resolution and advisory evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ios-spm-security
+          path: |
+            apps/mobile/ios/App/output/ci-spm/Package.resolved
+            apps/mobile/ios/App/output/ci-spm/inventory.json
+            apps/mobile/ios/App/output/ci-spm/osv-query.json
+            apps/mobile/ios/App/output/ci-spm/receipt.json
+          retention-days: 7
+          if-no-files-found: error
