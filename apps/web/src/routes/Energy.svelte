@@ -701,6 +701,15 @@
 						<div class="charge-mark"><Glyph name="charge" size={17} /></div>
 						<div class="charge-row-main"><strong>{dateTime(item.started_at)}</strong><span>{number(item.kwh)} kWh <i aria-hidden="true">·</i> {euros(item.cost_eur)}</span></div>
 						<span class="badge" class:badge-demo={item.source !== 'manual'}>{item.source !== 'manual' ? 'Demo' : isPvpcCharge(item) ? 'PVPC estimado' : 'Manual'}</span>
+						<details class="saved-charge-details">
+							<summary>Detalles del registro</summary>
+							<dl>
+								<div><dt>Origen</dt><dd>{item.source === 'manual' ? 'Registro manual' : 'Demostración'}</dd></div>
+								<div><dt>Fin registrado</dt><dd>{item.ended_at ? formatInstantWithOffset(item.ended_at) : 'No indicado'}</dd></div>
+								<div><dt>Método de precio guardado</dt><dd>{item.pricing_method === 'pvpc' ? 'PVPC estimado' : item.pricing_method === 'manual' ? 'Precio fijo manual' : 'No indicado en el registro'}</dd></div>
+								{#if !isPvpcCharge(item)}<div><dt>Tarifa histórica aplicada</dt><dd>{item.tariff_eur_kwh === null ? 'No incluida en este registro' : `${new Intl.NumberFormat('es-ES', { maximumFractionDigits: 6 }).format(item.tariff_eur_kwh)} €/kWh`}</dd></div>{/if}
+							</dl>
+						</details>
 						{#if isPvpcCharge(item)}
 							<details class="saved-pricing-details">
 								<summary>Ver desglose PVPC estimado</summary>
@@ -845,6 +854,17 @@
 						<div><span>Hueco máximo</span><strong>{gapDuration(analytics.observations.max_gap_seconds)}</strong></div>
 						<div class="coverage-last-observation"><span>Última observación</span><strong>{observedAtUtc(analytics.observations.last_observed_at)}</strong></div>
 					</div>
+					<div class="analytics-technical-details" aria-label="Análisis técnico no cualificado">
+						<strong>Análisis técnico no cualificado</strong>
+						<dl>
+							<div><dt>Tiempo cubierto por lecturas</dt><dd>{gapDuration(analytics.observations.covered_seconds)}</dd></div>
+							<div><dt>Primera observación</dt><dd>{observedAtUtc(analytics.observations.first_observed_at)}</dd></div>
+							<div><dt>Variación de odómetro comunicada</dt><dd>{analytics.observations.odometer_delta_km === null ? 'No disponible' : `${number(analytics.observations.odometer_delta_km)} km`}</dd></div>
+							<div><dt>Intervalos candidatos elegibles</dt><dd>{count(analytics.observations.eligible_interval_count)}</dd></div>
+							<div><dt>Validación</dt><dd>No cualificado</dd></div>
+						</dl>
+						<p>Estos valores describen lecturas y candidatos de intervalos. No acreditan un viaje, consumo del vehículo ni una sesión de carga validada.</p>
+					</div>
 					<div class="analytics-quality-details">Diagnósticos en la retención — Posteriores al período: {count(analytics.observations.future_timestamp_count)} <span aria-hidden="true">·</span> No monótonos: {count(analytics.observations.non_monotonic_count)} <span aria-hidden="true">·</span> Duplicados: {count(analytics.observations.duplicate_time_count)}</div>
 				</div>
 			</details>
@@ -969,6 +989,16 @@
 	.charge-row-main > span { color: var(--muted); font-size: .875rem; }
 	.charge-row-main i { font-style: normal; }
 	.saved-pricing-details { grid-column: 2 / -1; min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-soft); }
+	.saved-charge-details { grid-column: 2 / -1; min-width: 0; padding: 0 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-soft); }
+	.saved-charge-details summary { display: flex; min-height: 44px; align-items: center; color: var(--forest); cursor: pointer; font-size: .875rem; font-weight: 650; }
+	.saved-charge-details summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 5px; }
+	.saved-charge-details dl, .analytics-technical-details dl { display: grid; gap: 0; margin: 0 0 8px; }
+	.saved-charge-details dl > div, .analytics-technical-details dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid var(--line); }
+	.saved-charge-details dt, .analytics-technical-details dt { color: var(--muted); font-size: .8125rem; }
+	.saved-charge-details dd, .analytics-technical-details dd { margin: 0; color: var(--ink); font-size: .8125rem; font-weight: 620; text-align: right; font-variant-numeric: tabular-nums; }
+	.analytics-technical-details { display: grid; gap: 5px; padding-top: 10px; border-top: 1px solid var(--line); }
+	.analytics-technical-details > strong { font-size: .8125rem; }
+	.analytics-technical-details p { margin: 0; color: var(--muted); font-size: .75rem; line-height: 1.45; }
 	.saved-pricing-details summary { display: flex; min-height: 44px; align-items: center; color: var(--forest); cursor: pointer; font-size: .875rem; font-weight: 650; }
 	.saved-pricing-details > p { margin: 2px 0 8px; color: var(--muted); font-size: .875rem; line-height: 1.5; }
 	.pricing-intervals { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
