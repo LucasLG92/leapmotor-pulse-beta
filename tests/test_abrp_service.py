@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timedelta, timezone
+import http.client
 import json
+import socket
 import threading
+import time
+from unittest.mock import Mock
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -110,14 +114,16 @@ class FakeSession:
 class FakeTransport:
     """Synthetic transport with the same TLS/revalidation/send boundary."""
 
-    def __init__(self, *, block_send=False, ack=True):
+    def __init__(self, *, block_send=False, ack=True, close_unblocks=False):
         self.block_send = block_send
         self.ack = ack
+        self.close_unblocks = close_unblocks
         self.connected = threading.Event()
         self.send_started = threading.Event()
         self.release_send = threading.Event()
         self.finished = threading.Event()
         self.sessions = []
+        self.close_calls = []
         self.calls = []
         self.payload = None
 
@@ -153,9 +159,11 @@ class FakeTransport:
             self.close(session)
             self.finished.set()
 
-    @staticmethod
-    def close(session):
+    def close(self, session):
+        self.close_calls.append(session)
         session.closed = True
+        if self.close_unblocks:
+            self.release_send.set()
 
 
 def run(coroutine):
@@ -402,6 +410,51 @@ def test_revocation_after_tls_connect_prevents_the_post():
     run(scenario())
 
 
+def test_close_during_connect_closes_late_session_without_post():
+    async def scenario():
+        class DelayedConnectTransport(FakeTransport):
+            def __init__(self):
+                super().__init__()
+                self.connect_started = threading.Event()
+                self.release_connect = threading.Event()
+
+            def connect(self, timeout_seconds):
+                self.connect_started.set()
+                if not self.release_connect.wait(2):
+                    raise TimeoutError
+                return super().connect(timeout_seconds)
+
+        transport = DelayedConnectTransport()
+        bridge, coordinator, _ = make_bridge(transport=transport)
+        try:
+            await bridge.set_consent(True)
+            coordinator.snapshot = snapshot()
+            bridge.observe(coordinator.snapshot)
+            await bridge.start()
+            await wait_thread_event(transport.connect_started)
+
+            closed = await asyncio.wait_for(bridge.close(), timeout=1.5)
+            assert closed["status"] == "disabled"
+            assert transport.sessions == []
+
+            # Python cannot cancel the in-progress connect; once it returns,
+            # its unclaimed session must be closed without sending a POST.
+            transport.release_connect.set()
+            await wait_until(
+                lambda: len(transport.sessions) == 1 and transport.sessions[0].closed
+            )
+            await wait_until(lambda: bridge._worker_future is None)
+            assert len(transport.close_calls) == 1
+            assert transport.calls == []
+            assert coordinator.reserve_count == 1
+            assert bridge.status()["status"] == "disabled"
+        finally:
+            transport.release_connect.set()
+            await bridge.close()
+
+    run(scenario())
+
+
 def test_import_during_an_already_started_request_cannot_be_reported_shared():
     async def scenario():
         bridge, coordinator, transport = make_bridge(transport=FakeTransport(block_send=True))
@@ -456,10 +509,12 @@ def test_revocation_during_an_already_started_request_never_reports_shared():
     run(scenario())
 
 
-def test_timeout_keeps_single_worker_latched_and_deduplicates_the_attempt(monkeypatch):
+def test_timeout_aborts_slow_worker_without_retry_or_false_ack(monkeypatch):
     async def scenario():
         monkeypatch.setattr(abrp_module, "NETWORK_TIMEOUT_SECONDS", 0.03)
-        bridge, coordinator, transport = make_bridge(transport=FakeTransport(block_send=True))
+        bridge, coordinator, transport = make_bridge(
+            transport=FakeTransport(block_send=True, close_unblocks=True)
+        )
         try:
             await start_without_runner(bridge)
             await bridge.set_consent(True)
@@ -468,23 +523,160 @@ def test_timeout_keeps_single_worker_latched_and_deduplicates_the_attempt(monkey
             first = await bridge.poll_once()
             assert first["status"] == "error"
             assert first["reason_code"] == "send_failed"
+            assert transport.close_calls
+            assert transport.finished.wait(1)
+            await wait_until(lambda: bridge._inflight is False)
+            assert bridge.status()["last_shared_at"] is None
 
             second = await bridge.poll_once()
-            assert second["status"] == "sharing"
+            assert second["reason_code"] == "already_attempted"
             assert transport.calls and len(transport.calls) == 1
             assert len(transport.sessions) == 1
-
-            transport.release_send.set()
-            await wait_thread_event(transport.finished)
-            await wait_until(lambda: bridge._inflight is False)
-            after = await bridge.poll_once()
-            assert after["reason_code"] == "already_attempted"
-            assert len(transport.calls) == 1
+            assert bridge.status()["last_shared_at"] is None
         finally:
             transport.release_send.set()
             await bridge.close()
 
     run(scenario())
+
+
+def test_close_aborts_slow_worker_and_never_claims_late_ack():
+    async def scenario():
+        bridge, coordinator, transport = make_bridge(
+            transport=FakeTransport(block_send=True, close_unblocks=True)
+        )
+        try:
+            await start_without_runner(bridge)
+            await bridge.set_consent(True)
+            coordinator.snapshot = snapshot()
+            bridge.observe(coordinator.snapshot)
+            poll = asyncio.create_task(bridge.poll_once())
+            await wait_thread_event(transport.send_started)
+
+            closed = await asyncio.wait_for(bridge.close(), timeout=1.5)
+            await asyncio.wait_for(poll, timeout=1.5)
+            await wait_thread_event(transport.finished)
+
+            assert closed["status"] == "disabled"
+            assert len(transport.calls) == 1
+            assert transport.close_calls
+            assert coordinator.reserve_count == 1
+            assert bridge.status()["last_shared_at"] is None
+            assert bridge.status()["status"] == "disabled"
+            assert bridge._inflight is False
+        finally:
+            transport.release_send.set()
+            await bridge.close()
+
+    run(scenario())
+
+
+def test_real_http_response_read_is_aborted_by_deadline_or_close(monkeypatch):
+    async def scenario(abort_by_close):
+        monkeypatch.setattr(
+            abrp_module,
+            "NETWORK_TIMEOUT_SECONDS",
+            5.0 if abort_by_close else 0.25,
+        )
+
+        client_sock, server_sock = socket.socketpair()
+        session = http.client.HTTPSConnection(abrp_module.ABRP_HOST, timeout=1)
+        session.sock = client_sock
+        session._pulse_socket = client_sock
+        transport = AbrpTransport()
+        connect_calls = []
+
+        def connected_session(_timeout_seconds):
+            connect_calls.append(True)
+            return session
+
+        transport.connect = connected_session
+        request_started = threading.Event()
+        response_ready = threading.Event()
+        peer_finished = threading.Event()
+        requests = []
+
+        getresponse = session.getresponse
+
+        def observed_getresponse():
+            response = getresponse()
+            response_ready.set()
+            return response
+
+        session.getresponse = observed_getresponse
+
+        def serve_slow_response():
+            request = bytearray()
+            try:
+                while b"\r\n\r\n" not in request:
+                    part = server_sock.recv(4096)
+                    if not part:
+                        return
+                    request.extend(part)
+                requests.append(bytes(request))
+                server_sock.sendall(
+                    b"HTTP/1.1 200 OK\r\n"
+                    b"Content-Length: 8192\r\n"
+                    b"Content-Type: application/json\r\n"
+                    b"Connection: close\r\n\r\n"
+                    b'{"status":"ok"}'
+                )
+                request_started.set()
+                while True:
+                    server_sock.sendall(b" ")
+                    time.sleep(0.01)
+            except OSError:
+                pass
+            finally:
+                peer_finished.set()
+
+        peer = threading.Thread(target=serve_slow_response, name="abrp-slow-response-test")
+        peer.start()
+        bridge, coordinator, _ = make_bridge(transport=transport)
+        poll = None
+        try:
+            await start_without_runner(bridge)
+            await bridge.set_consent(True)
+            coordinator.snapshot = snapshot()
+            bridge.observe(coordinator.snapshot)
+
+            if abort_by_close:
+                poll = asyncio.create_task(bridge.poll_once())
+                await wait_thread_event(request_started)
+                await wait_thread_event(response_ready)
+                assert session.sock is None
+                await asyncio.wait_for(bridge.close(), timeout=1.5)
+                await asyncio.wait_for(poll, timeout=1.5)
+            else:
+                result = await bridge.poll_once()
+                assert result["reason_code"] == "send_failed"
+                assert response_ready.is_set()
+                assert session.sock is None
+
+            await wait_thread_event(peer_finished)
+            await wait_until(lambda: bridge._inflight is False)
+            assert connect_calls == [True]
+            assert len(requests) == 1
+            assert coordinator.reserve_count == 1
+            assert bridge.status()["last_shared_at"] is None
+            if abort_by_close:
+                assert bridge.status()["status"] == "disabled"
+            else:
+                assert bridge.status()["reason_code"] == "send_failed"
+                assert (await bridge.poll_once())["reason_code"] == "already_attempted"
+                assert len(requests) == 1
+        finally:
+            transport.close(session)
+            server_sock.close()
+            peer.join(timeout=1)
+            if poll is not None and not poll.done():
+                poll.cancel()
+                await asyncio.gather(poll, return_exceptions=True)
+            await bridge.close()
+        assert not peer.is_alive()
+
+    run(scenario(False))
+    run(scenario(True))
 
 
 class FakeSocket:
@@ -545,6 +737,7 @@ class FakeHTTPSConnection:
 
 
 def test_stdlib_transport_posts_only_contract_fields_and_requires_exact_ack(monkeypatch):
+    monkeypatch.delenv("SSLKEYLOGFILE", raising=False)
     FakeHTTPSConnection.instances.clear()
     FakeHTTPSConnection.response_status = 200
     FakeHTTPSConnection.response_body = b'{"status":"ok"}'
@@ -584,9 +777,27 @@ def test_stdlib_transport_posts_only_contract_fields_and_requires_exact_ack(monk
     assert "api_key" not in headers
     assert permitted == [True]
     assert connection.closed is True
+    assert connection._pulse_socket is not None
+
+
+def test_stdlib_transport_rejects_sslkeylogfile_before_tls_or_socket(monkeypatch, tmp_path):
+    keylog = tmp_path / "tls-keylog.log"
+    monkeypatch.setenv("SSLKEYLOGFILE", str(keylog))
+    create_context = Mock()
+    create_connection = Mock()
+    monkeypatch.setattr(abrp_module.ssl, "create_default_context", create_context)
+    monkeypatch.setattr(abrp_module.http.client, "HTTPSConnection", create_connection)
+
+    with pytest.raises(AbrpTransportError):
+        AbrpTransport().connect()
+
+    create_context.assert_not_called()
+    create_connection.assert_not_called()
+    assert not keylog.exists()
 
 
 def test_transport_rejects_redirects_malformed_duplicate_and_oversized_ack(monkeypatch):
+    monkeypatch.delenv("SSLKEYLOGFILE", raising=False)
     monkeypatch.setattr(abrp_module.http.client, "HTTPSConnection", FakeHTTPSConnection)
     transport = AbrpTransport()
     cases = [
@@ -615,6 +826,7 @@ def test_transport_rejects_redirects_malformed_duplicate_and_oversized_ack(monke
 
 
 def test_transport_closes_session_without_post_when_permission_latch_is_clear(monkeypatch):
+    monkeypatch.delenv("SSLKEYLOGFILE", raising=False)
     monkeypatch.setattr(abrp_module.http.client, "HTTPSConnection", FakeHTTPSConnection)
     transport = AbrpTransport()
     session = transport.connect(8)
@@ -634,6 +846,7 @@ def test_transport_closes_session_without_post_when_permission_latch_is_clear(mo
 
 
 def test_transport_releases_lifecycle_lock_before_blocking_request(monkeypatch):
+    monkeypatch.delenv("SSLKEYLOGFILE", raising=False)
     monkeypatch.setattr(abrp_module.http.client, "HTTPSConnection", FakeHTTPSConnection)
     FakeHTTPSConnection.response_status = 200
     FakeHTTPSConnection.response_body = b'{"status":"ok"}'
