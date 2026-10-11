@@ -3,6 +3,7 @@
 from pulse.providers.base import ProviderUnavailable, UnconfiguredProvider
 from pulse.providers.mate_api import MateApiB10Provider
 from pulse.providers.b10_bootstrap import build_b10_provider
+from pulse.providers.b10_transport import build_b10_transport
 from pulse.providers.readiness import inspect_certificate_path_metadata
 
 __all__ = [
@@ -10,5 +11,6 @@ __all__ = [
     "ProviderUnavailable",
     "UnconfiguredProvider",
     "build_b10_provider",
+    "build_b10_transport",
     "inspect_certificate_path_metadata",
 ]
