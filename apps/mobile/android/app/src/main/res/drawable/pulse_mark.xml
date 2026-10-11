@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Marca original de Pulse, compartida con apps/web/public/icon.svg. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="512" android:viewportHeight="512">
-    <path android:fillColor="#18352B"
-        android:pathData="M112,0H400A112,112 0,0 1,512 112V400A112,112 0,0 1,400 512H112A112,112 0,0 1,0 400V112A112,112 0,0 1,112 0" />
-    <path android:fillColor="@android:color/transparent" android:strokeColor="#B9DEC5"
-        android:strokeWidth="20" android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M112,342H400M146,342L171,260C178,236 197,221 222,221H298C323,221 342,236 349,260L374,342M180,342V371M332,342V371M190,261H322" />
-    <path android:fillColor="#B9DEC5"
-        android:pathData="M272,170A16,16 0,1 1,240 170A16,16 0,1 1,272 170" />
+    <path android:fillColor="#202429" android:pathData="M0 0H512V512H0Z" />
+    <path android:fillColor="#F5F3EE" android:fillType="evenOdd"
+        android:pathData="M160 376V136H264C317 136 352 170 352 216C352 263 317 296 264 296H212V376Z M212 184V248H264C288 248 300 236 300 216C300 196 288 184 264 184Z" />
+    <path android:fillColor="#9DE0C0" android:pathData="M160 327L212 307V376H160Z" />
 </vector>
