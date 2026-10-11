@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Glyph from '../lib/Glyph.svelte';
 	import ObservedEventsPanel from '../lib/ObservedEventsPanel.svelte';
+	import TelemetryHistoryPanel from '../lib/TelemetryHistoryPanel.svelte';
 	import { count, dateTime } from '../lib/format';
 	import type { PageProps } from '../lib/types';
 
@@ -101,6 +102,15 @@
 {/if}
 </section>
 </section>
+{#if pulseState.mode !== 'demo'}
+	<TelemetryHistoryPanel
+		{online}
+		{revision}
+		quality={pulseState.telemetry?.quality ?? null}
+		collector={pulseState.telemetry?.collector ?? null}
+		{onSessionExpired}
+	/>
+{/if}
 
 <style>
 	.page-intro h2 { margin: 0; font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing: -.035em; }
