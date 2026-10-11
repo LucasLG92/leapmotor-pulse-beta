@@ -96,6 +96,27 @@ printf '%s\n' 'Comprobando, probando y construyendo web y móvil.'
 printf '%s\n' 'Comprobando el proyecto Xcode y las pruebas de PulseCore.'
 "$python_bin" scripts/check_ios_project.py
 swift test --package-path apps/mobile/ios/PulseCore
+printf '%s\n' 'Comprobando mutaciones de consentimiento con Keychain falso.'
+credential_tests="$tmp_root/WidgetCredentialTests"
+mkdir -p "$credential_tests/Sources/WidgetCredentialStore" "$credential_tests/Tests/WidgetCredentialStoreTests"
+cp apps/mobile/ios/App/App/NativeBridge/NativeWidgetCredentialStore.swift \
+    "$credential_tests/Sources/WidgetCredentialStore/NativeWidgetCredentialStore.swift"
+cp tests/ios/NativeWidgetCredentialStoreTests.swift \
+    "$credential_tests/Tests/WidgetCredentialStoreTests/NativeWidgetCredentialStoreTests.swift"
+cat > "$credential_tests/Package.swift" <<'SWIFT'
+// swift-tools-version: 6.0
+import PackageDescription
+let package = Package(
+    name: "WidgetCredentialTests",
+    platforms: [.macOS(.v13)],
+    targets: [
+        .target(name: "WidgetCredentialStore"),
+        .testTarget(name: "WidgetCredentialStoreTests", dependencies: ["WidgetCredentialStore"])
+    ],
+    swiftLanguageModes: [.v5]
+)
+SWIFT
+swift test --package-path "$credential_tests"
 
 project=apps/mobile/ios/App/App.xcodeproj
 scheme=App
