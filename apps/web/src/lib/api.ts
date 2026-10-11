@@ -1,4 +1,5 @@
 import { getNativeBridge, nativeRequestFailureMessage } from './native';
+import { waitForRead } from './startup-read';
 import type { ChargePage, ChargerPricingHistoryPage, ChargerSessionPage, ChargerStatus, CommandHistoryEntry, CommandHistoryResponse, EnergyAnalytics, HttpMethod, NativeCapabilities, ObservedEventPage, PulseState, SessionState, TelemetryPage, WidgetGrantList, WidgetProfileList } from './types';
 
 export class ApiError extends Error {
@@ -106,15 +107,18 @@ export async function queryNavigation<T>(
 	return responseJson<T>(response);
 }
 
-export async function getSession(): Promise<SessionState> {
+export async function getSession(signal?: AbortSignal): Promise<SessionState> {
+	if (signal?.aborted) throw signal.reason ?? new DOMException('La lectura se canceló.', 'AbortError');
 	const bridge = getNativeBridge();
 	if (bridge) {
 		let status;
 		try {
-			status = await bridge.status();
-		} catch {
+			status = await (signal ? waitForRead(bridge.status(), signal) : bridge.status());
+		} catch (error) {
+			if (signal?.aborted) throw signal.reason ?? error;
 			throw new ApiError('No se pudo consultar el acceso de la app. Inténtalo de nuevo.', 0);
 		}
+		if (signal?.aborted) throw signal.reason ?? new DOMException('La lectura se canceló.', 'AbortError');
 		if (!status.configured || !status.authenticated) {
 			return { authenticated: false, csrf_token: '', user: null, login_url: null };
 		}
@@ -123,17 +127,19 @@ export async function getSession(): Promise<SessionState> {
 		method: 'GET',
 		credentials: 'same-origin',
 		cache: 'no-store',
-		headers: { Accept: 'application/json' }
+		headers: { Accept: 'application/json' },
+		signal
 	});
 	return responseJson<SessionState>(response);
 }
 
-export async function getState(): Promise<PulseState> {
+export async function getState(signal?: AbortSignal): Promise<PulseState> {
 	const response = await requestApi('/api/state', {
 		method: 'GET',
 		credentials: 'same-origin',
 		cache: 'no-store',
-		headers: { Accept: 'application/json' }
+		headers: { Accept: 'application/json' },
+		signal
 	});
 	return responseJson<PulseState>(response);
 }
