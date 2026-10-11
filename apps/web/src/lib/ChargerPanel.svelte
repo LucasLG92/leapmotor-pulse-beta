@@ -355,6 +355,12 @@
 		const remainingMinutes = minutes % 60;
 		return hours > 0 ? `${hours} h ${remainingMinutes} min` : `${minutes} min`;
 	}
+
+	function absoluteDateTime(value: string): string {
+		const date = new Date(value);
+		if (Number.isNaN(date.getTime())) return value;
+		return new Intl.DateTimeFormat('es-ES', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'shortOffset' }).format(date);
+	}
 </script>
 
 <section class="charger-panel card" aria-labelledby="charger-title">
@@ -419,6 +425,8 @@
 			<details class="charger-details history-details">
 				<summary>Fuente y cobertura</summary>
 				<p>Fuente: evcc. Historial {status ? historyLabel(status.history_status) : 'guardado por Pulse'}; {status ? `${status.history_months} ${status.history_months === 1 ? 'mes configurado' : 'meses configurados'} y hasta ${number(Math.min(status.retention_limit, retentionLimit))} sesiones retenidas` : 'cobertura todavía no disponible'}.</p>
+				<p>Última lectura correcta recibida por Pulse: {status?.last_success_at ? absoluteDateTime(status.last_success_at) : 'No hay una lectura correcta registrada'}.</p>
+				<p>Última actualización del historial recibida por Pulse: {status?.last_history_at ? absoluteDateTime(status.last_history_at) : 'No hay una actualización del historial registrada'}.</p>
 				{#if pricingMethod === 'pvpc'}
 				<p>Con PVPC, Pulse estima el coste cuando evcc confirma el cierre y hay datos suficientes, sin formulario. Las estimaciones indican si el reparto es uniforme o por intervalos. Los intervalos de evcc siguen siendo candidatos hasta que Pulse los vincula a una sesión y valida la cobertura completa; las estimaciones anteriores conservan su cálculo uniforme.</p>
 				{:else}
@@ -467,6 +475,10 @@
 								</div>
 							</div>
 							<div class="session-secondary-metrics"><span>{durationLabel(session.active_seconds)} activos</span><span>Fin {dateTime(session.ended_at)}</span></div>
+							<details class="charger-details session-received-details">
+								<summary>Recepción y procedencia</summary>
+								<p>Fuente: sesión comunicada por evcc. Recibida por Pulse: {absoluteDateTime(session.received_at)}. Esta hora indica cuándo llegó al servidor, no cuándo se midieron físicamente los valores.</p>
+							</details>
 							<button class="button button-quiet pricing-history-toggle" type="button" aria-expanded={pricingHistorySessionId === session.id} aria-controls={`pricing-history-${session.id}`} disabled={pricingHistorySessionId !== session.id && (!online || busy || !!quoteBusyId)} onclick={() => togglePricingHistory(session)}>{pricingHistorySessionId === session.id ? 'Cerrar historial del cálculo' : 'Historial del cálculo'}</button>
 							<section id={`pricing-history-${session.id}`} class="pricing-history-panel" hidden={pricingHistorySessionId !== session.id} aria-label="Historial del cálculo">
 							{#if pricingHistorySessionId === session.id}
