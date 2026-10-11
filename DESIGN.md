@@ -256,3 +256,9 @@ La pantalla permite recorrer por páginas el historial retenido que Pulse expone
 - **Don't** sustituir la ilustración propia por logotipos o fotografía oficial del fabricante.
 - **Don't** tratar el perfil como telemetría ni una etiqueta de demo como conexión o control físico.
 - **Don't** aplanar las seis rutas en un patrón idéntico de tarjetas; conserva la composición específica de cada tarea.
+
+
+## Icono e identidad
+Símbolo original de Pulse: P sólida marfil (#F5F3EE), terminal diagonal verde suave (#9DE0C0), fondo charcoal (#202429). SVG canónico en apps/web/public/icon.svg; exportaciones PNG opacas de180/192/512px y1024px para iOS. Fondo completo, sin esquinas grabadas: el sistema aplica la máscara. El símbolo queda dentro de la zona segura central del icono adaptativo Android; las versiones13+ tienen recurso monocromo separado. Navegación, favicon, PWA y launcher comparten geometría. No es el logotipo de ningún fabricante.
+
+Para regenerar los PNG: renderizar el SVG canónico a cada resolución con rsvg-convert y guardar RGB opaco; comprobar dimensiones y que no hay transparencia. Estas herramientas de diseño no forman parte de las dependencias de ejecución. Verificar icono instalado en teléfonos: una PWA ya instalada puede conservar el icono anterior hasta que el sistema lo actualice o se reinstale.
