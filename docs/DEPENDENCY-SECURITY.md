@@ -73,6 +73,15 @@ el lock validado, inventario, consulta resumida y recibo; no configuración
 del operador, claves, credenciales ni datos del vehículo. Su presencia debe
 comprobarse en un job real antes de afirmar que se obtuvo esta evidencia.
 
+La prueba de arranque utiliza exclusivamente una app sin configuración del
+operador y un simulador desechable propio. La instalación tiene un límite
+de 180 segundos y la captura de 120; los fallos siguen haciendo fallar el job.
+Se conserva el recibo con la etapa y el tipo de fallo, también si no se obtuvo
+la captura, sin comandos, rutas ni logs de la operación. El artefacto
+`ios-simulator-startup` solo permite recibo y PNG genéricos, durante siete días.
+Compilar App y WidgetKit no acredita el arranque, la revisión visual, el widget
+en ejecución, OAuth ni un teléfono físico; cada resultado se acepta por separado.
+
 ## Imagen de ejecución
 
 La comprobación de locks no cubre todos los componentes de la imagen. Una
