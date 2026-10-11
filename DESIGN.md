@@ -259,6 +259,8 @@ La pantalla permite recorrer por páginas el historial retenido que Pulse expone
 
 
 ## Icono e identidad
+Las pantallas de acceso, carga y recuperación muestran el mismo símbolo junto al nombre visible de Pulse. La marca permanece quieta; sólo el estado de carga añade un indicador discreto, sujeto a la preferencia de movimiento reducido. El icono del shell mínimo usa el mismo SVG canónico.
+Si la red vuelve mientras se muestra la pantalla de error, Pulse vuelve a consultar la sesión automáticamente. Las acciones del vehículo no se repiten; una sesión sin acceso sigue mostrando el inicio de sesión.
 Símbolo original de Pulse: P sólida marfil (#F5F3EE), terminal diagonal verde suave (#9DE0C0), fondo charcoal (#202429). SVG canónico en apps/web/public/icon.svg; exportaciones PNG opacas de180/192/512px y1024px para iOS. Fondo completo, sin esquinas grabadas: el sistema aplica la máscara. El símbolo queda dentro de la zona segura central del icono adaptativo Android; las versiones13+ tienen recurso monocromo separado. Navegación, favicon, PWA y launcher comparten geometría. No es el logotipo de ningún fabricante.
 
 Para regenerar los PNG: renderizar el SVG canónico a cada resolución con rsvg-convert y guardar RGB opaco; comprobar dimensiones y que no hay transparencia. Estas herramientas de diseño no forman parte de las dependencias de ejecución. Verificar icono instalado en teléfonos: una PWA ya instalada puede conservar el icono anterior hasta que el sistema lo actualice o se reinstale.
