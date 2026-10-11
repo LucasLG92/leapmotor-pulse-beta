@@ -648,6 +648,60 @@
 	</aside>
 </section>
 
+<section class="energy-totals" aria-labelledby="energy-totals-title">
+	<div class="energy-totals-heading">
+		<div>
+			<p class="section-label">ACUMULADO REGISTRADO</p>
+			<h2 id="energy-totals-title">Totales personales</h2>
+			<p>Los registros manuales y la demostración conservan sus propios totales.</p>
+		</div>
+		<span class="energy-totals-scope">Las sesiones comunicadas por evcc se muestran aparte.</span>
+	</div>
+	{#if online}
+		<div class="energy-total-groups" class:energy-total-groups-demo={pulseState.mode === 'demo'}>
+			<article class="energy-total-group" aria-labelledby="manual-totals-title">
+				<div class="energy-total-group-heading">
+					<span class="source-dot source-manual" aria-hidden="true"></span>
+					<div><h3 id="manual-totals-title">Manual</h3><p>Registros personales guardados en Pulse</p></div>
+				</div>
+				<dl class="energy-total-metrics">
+					<div><dt>Energía registrada</dt><dd>{pulseState.energy.totals_by_source?.manual?.kwh == null ? 'Sin datos' : `${number(pulseState.energy.totals_by_source.manual.kwh)} kWh`}</dd></div>
+					<div><dt>Coste guardado</dt><dd>{pulseState.energy.totals_by_source?.manual?.cost_eur == null ? 'Sin datos' : euros(pulseState.energy.totals_by_source.manual.cost_eur)}</dd></div>
+				</dl>
+			</article>
+			{#if pulseState.mode === 'demo'}
+				{@const demoTotals = pulseState.energy.totals_by_source?.demo}
+				<article class="energy-total-group energy-total-group-demo" aria-labelledby="demo-totals-title">
+					<div class="energy-total-group-heading">
+						<span class="source-dot source-demo" aria-hidden="true"></span>
+						<div><h3 id="demo-totals-title">Demostración</h3><p>Registros ficticios, sin sumar sesiones evcc</p></div>
+					</div>
+					<dl class="energy-total-metrics">
+						<div><dt>Energía registrada</dt><dd>{demoTotals?.kwh == null ? 'Sin datos' : `${number(demoTotals.kwh)} kWh`}</dd></div>
+						<div><dt>Coste guardado</dt><dd>{demoTotals?.cost_eur == null ? 'Sin datos' : euros(demoTotals.cost_eur)}</dd></div>
+					</dl>
+					<div class="demo-trip-totals">
+						<p>Trayectos de demostración</p>
+						<dl class="energy-total-metrics energy-demo-metrics">
+							<div>
+								<dt>Distancia simulada</dt>
+								<dd>{#if pulseState.journeys.length > 0 && typeof demoTotals?.distance_km === 'number' && Number.isFinite(demoTotals.distance_km)}{number(demoTotals.distance_km)} km{:else}Sin datos{/if}</dd>
+							</div>
+							<div>
+								<dt>Consumo calculado de trayectos demo</dt>
+								<dd>{#if pulseState.journeys.length > 0 && typeof demoTotals?.distance_km === 'number' && demoTotals.distance_km > 0 && typeof demoTotals.consumption_kwh_100km === 'number' && Number.isFinite(demoTotals.consumption_kwh_100km)}{number(demoTotals.consumption_kwh_100km)} kWh/100 km{:else}Sin datos{/if}</dd>
+							</div>
+						</dl>
+						<p class="demo-trip-note">Estos valores proceden del diario ficticio de Pulse; no representan el consumo real del vehículo.</p>
+					</div>
+				</article>
+			{/if}
+		</div>
+	{:else}
+		<p class="energy-totals-offline" role="status">Conéctate para consultar los totales guardados en Pulse.</p>
+	{/if}
+</section>
+
 <section class="personal-records" aria-labelledby="personal-records-title">
 	<div class="personal-records-heading">
 		<div>
@@ -658,19 +712,9 @@
 			<button class="button button-secondary personal-toggle" type="button" aria-expanded={personalExpanded} aria-controls="energy-personal-content" disabled={personalExpanded && (busy || savingCharge || quoteBusy)} onclick={togglePersonalRecords}>{personalExpanded ? 'Ocultar registros' : 'Mostrar registros'}</button>
 			{#if !editing}<button class="button button-primary personal-register" type="button" onclick={focusChargeForm}>Registrar carga</button>{/if}
 		</div>
-	</div>
-	<div id="energy-personal-content" class="energy-personal-content" hidden={!personalExpanded}>
-		{#if online && pulseState.energy.totals_by_source}
-			<section class="source-totals card" aria-label="Totales de registros personales por origen">
-				<div><h3>Totales por origen</h3><p>Pulse mantiene separados los registros manuales y los de demostración.</p></div>
-				<div class="source-value"><span><i class="source-dot source-manual"></i>Total manual</span><strong>{number(pulseState.energy.totals_by_source.manual.kwh)} kWh <small>· {euros(pulseState.energy.totals_by_source.manual.cost_eur)}</small></strong></div>
-				{#if pulseState.mode === 'demo'}
-					<div class="source-value"><span><i class="source-dot source-demo"></i>Total de demostración</span><strong>{number(pulseState.energy.totals_by_source.demo.kwh)} kWh <small>· {euros(pulseState.energy.totals_by_source.demo.cost_eur)}</small></strong></div>
-				{/if}
-			</section>
-		{/if}
-
-<section class="energy-main-grid">
+		</div>
+		<div id="energy-personal-content" class="energy-personal-content" hidden={!personalExpanded}>
+	<section class="energy-main-grid">
 	<div class="energy-history-column">
 		<div class="section-heading"><div><h2>Cargas manuales y de demostración</h2><p class="energy-section-copy">Cada registro conserva su fecha, energía, coste y fuente.</p></div></div>
 		{#if loadingCharges}
@@ -955,12 +999,32 @@
 	.energy-personal-content { display: grid; gap: 16px; min-width: 0; }
 	.energy-personal-content[hidden] { display: none; }
 	.form-icon { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 11px; background: var(--forest-soft); color: var(--forest); }
-	.source-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 205px), 1fr)); gap: 16px; align-items: center; margin: 4px 0; padding: 17px 0; border: 0; border-block: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; }
-	.source-totals > div:first-child p:last-child { margin: 6px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
-	.source-value { display: grid; gap: 6px; }
-	.source-value > span { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: .875rem; }
-	.source-value strong { overflow-wrap: anywhere; font-size: .875rem; font-weight: 650; }
-	.source-value small { color: var(--muted); font-size: .875rem; font-weight: 500; }
+	.energy-totals { display: grid; gap: 17px; margin: 0 0 30px; padding-top: 20px; border-top: 1px solid var(--line); }
+	.energy-totals-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
+	.energy-totals-heading .section-label { margin: 0; }
+	.energy-totals-heading h2 { margin: 5px 0 0; font-size: 1.25rem; font-weight: 650; letter-spacing: -.025em; }
+	.energy-totals-heading > div > p:last-child { margin: 6px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
+	.energy-totals-scope { max-width: 250px; padding: 7px 0 3px 14px; border-left: 2px solid var(--forest); color: var(--muted); font-size: .8125rem; line-height: 1.5; }
+	.energy-total-groups { display: grid; grid-template-columns: minmax(0, 1fr); border-block: 1px solid var(--line); }
+	.energy-total-groups-demo { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); }
+	.energy-total-group { min-width: 0; padding: 17px 22px 18px 0; }
+	.energy-total-group + .energy-total-group { padding-left: 22px; border-left: 1px solid var(--line); }
+	.energy-total-group-heading { display: flex; align-items: flex-start; gap: 9px; min-width: 0; }
+	.energy-total-group-heading .source-dot { flex: 0 0 8px; margin-top: 6px; }
+	.energy-total-group-heading > div { min-width: 0; }
+	.energy-total-group-heading h3 { margin: 0; font-size: .9375rem; font-weight: 680; }
+	.energy-total-group-heading p { margin: 4px 0 0; color: var(--muted); font-size: .8125rem; line-height: 1.45; }
+	.energy-total-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; margin: 18px 0 0; }
+	.energy-total-metrics > div { display: grid; align-content: start; gap: 5px; min-width: 0; }
+	.energy-total-metrics dt { color: var(--muted); font-size: .8125rem; line-height: 1.4; }
+	.energy-total-metrics dd { margin: 0; color: var(--ink); font-size: 1.125rem; font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+	.energy-total-group-demo .energy-total-metrics dd { color: var(--accent); }
+	.demo-trip-totals { margin-top: 17px; padding-top: 13px; border-top: 1px dashed var(--line-strong); }
+	.demo-trip-totals > p:first-child { margin: 0; color: var(--muted-strong); font-size: .8125rem; font-weight: 650; }
+	.energy-demo-metrics { margin-top: 10px; }
+	.energy-demo-metrics dd { font-size: .9375rem; }
+	.demo-trip-note { margin: 11px 0 0; color: var(--muted); font-size: .75rem; line-height: 1.45; }
+	.energy-totals-offline { margin: 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
 	.source-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--forest); }
 	.source-demo { background: var(--accent); }
 	.energy-main-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(255px, .75fr); align-items: start; gap: 18px; margin-top: 28px; }
@@ -1055,9 +1119,6 @@
 		.personal-records-heading { align-items: stretch; flex-direction: column; }
 		.personal-records-actions { justify-content: stretch; }
 		.personal-records-actions .button { flex: 1 1 150px; }
-		.source-totals { grid-template-columns: 1fr; gap: 13px; }
-		.source-value { display: flex; justify-content: space-between; gap: 10px; }
-		.source-value strong { text-align: right; }
 		.analytics-heading { flex-direction: column; }
 		.analytics-range-control { width: 100%; }
 		.analytics-range-button { flex: 1 1 0; }
@@ -1097,7 +1158,6 @@
 	.energy-cost-facts dt { color: var(--muted); font-size: .875rem; line-height: 1.45; }
 	.energy-cost-facts dd { margin: 0; color: var(--ink); font-size: .875rem; font-weight: 650; text-align: right; font-variant-numeric: tabular-nums; }
 	.energy-settings-link { display: inline-flex; min-height: 44px; align-items: center; color: var(--forest); font-size: .875rem; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
-	.source-totals > div:first-child h3 { margin: 0; font-size: .9375rem; font-weight: 660; }
 	.energy-section-copy { margin: 5px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
 	.energy-history-column > .section-heading { align-items: flex-end; }
 	.energy-history-column > .section-heading h2 { margin: 0; }
@@ -1109,9 +1169,13 @@
 		.energy-cost-profile { margin-top: 0; padding: 15px 0 0; border-top: 1px solid var(--line); border-left: 0; }
 	}
 	@media (max-width: 700px) {
+		.energy-totals-heading { align-items: flex-start; flex-direction: column; }
+		.energy-totals-scope { max-width: none; padding: 0 0 0 11px; }
+		.energy-total-groups-demo { grid-template-columns: minmax(0, 1fr); }
+		.energy-total-group, .energy-total-group + .energy-total-group { padding: 15px 0; border-left: 0; }
+		.energy-total-group + .energy-total-group { border-top: 1px solid var(--line); }
+		.energy-total-metrics { gap: 12px; }
 		.analytics-source-card { padding-right: 0; }
 		.analytics-source-card + .analytics-source-card { padding-left: 0; border-top: 1px solid var(--line); border-left: 0; }
-		.source-value { padding-top: 12px; border-top: 1px solid var(--line); }
-		.source-totals > div:first-child + .source-value { padding-top: 0; border-top: 0; }
 	}
 </style>
