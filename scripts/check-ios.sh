@@ -63,6 +63,9 @@ if [ "$pnpm_version" != '11.25.0' ]; then
 fi
 
 tmp_root=$(mktemp -d "${TMPDIR:-/tmp}/pulse-ios-check.XXXXXX")
+# macOS TMPDIR can use /var, a symlink to /private/var. Keep our new
+# workspace on its physical path so strict audit input checks remain useful.
+tmp_root=$(cd "$tmp_root" && pwd -P)
 derived_data="$tmp_root/DerivedData"
 spm_clones="$tmp_root/SourcePackages"
 cleanup() {
@@ -95,6 +98,7 @@ printf '%s\n' 'Comprobando, probando y construyendo web y móvil.'
 
 printf '%s\n' 'Comprobando el proyecto Xcode y las pruebas de PulseCore.'
 "$python_bin" scripts/check_ios_project.py
+"$python_bin" -m unittest discover -s tests -p test_ios_spm_audit.py
 swift test --package-path apps/mobile/ios/PulseCore
 printf '%s\n' 'Comprobando mutaciones de consentimiento con Keychain falso.'
 credential_tests="$tmp_root/WidgetCredentialTests"
@@ -126,6 +130,15 @@ xcodebuild -resolvePackageDependencies \
     -scheme "$scheme" \
     -clonedSourcePackagesDirPath "$spm_clones"
 
+spm_resolution="$repo_root/$project/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
+spm_checkout="$spm_clones/checkouts/capacitor-swift-pm"
+spm_evidence="$repo_root/apps/mobile/ios/App/output/ci-spm"
+printf '%s\n' 'Conservando la resolución Swift y consultando avisos conocidos por revisión.'
+"$python_bin" scripts/ios-spm-audit.py capture \
+    --lockfile "$spm_resolution" \
+    --checkout "$spm_checkout" \
+    --output "$spm_evidence"
+
 for configuration in Debug Release; do
     printf 'Construyendo App y PulseWidget para iOS Simulator (%s), sin firma.\n' "$configuration"
     xcodebuild build \
@@ -149,6 +162,12 @@ for configuration in Debug Release; do
     fi
     printf 'Productos presentes para %s: App.app y PulseWidget.appex.\n' "$configuration"
 done
+
+printf '%s\n' 'Comprobando que los builds conservaron la resolución Swift revisada.'
+"$python_bin" scripts/ios-spm-audit.py verify \
+    --lockfile "$spm_resolution" \
+    --checkout "$spm_checkout" \
+    --output "$spm_evidence"
 
 printf '%s\n' 'Comprobación iOS de Apple completada para Debug y Release.'
 printf '%s\n' 'Instalando y arrancando la app genérica en un simulador propio.'
