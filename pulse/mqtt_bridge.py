@@ -6,6 +6,7 @@ import asyncio
 from collections.abc import Callable
 from datetime import datetime, timezone
 import json
+import os
 import socket
 import ssl
 import threading
@@ -72,6 +73,8 @@ class _PahoTransport:
         on_message: Callable[[str, bytes], None],
     ) -> None:
         """Create a clean client and start its Paho network thread."""
+        if self._config.tls and "SSLKEYLOGFILE" in os.environ:
+            raise RuntimeError("mqtt_tls_key_logging_unsupported")
         try:
             import paho.mqtt.client as mqtt
         except ImportError:
