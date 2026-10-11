@@ -1,5 +1,5 @@
 import { getNativeBridge, nativeRequestFailureMessage } from './native';
-import type { ChargePage, ChargerPricingHistoryPage, ChargerSessionPage, ChargerStatus, CommandHistoryEntry, CommandHistoryResponse, EnergyAnalytics, HttpMethod, NativeCapabilities, ObservedEventPage, PulseState, SessionState, WidgetGrantList, WidgetProfileList } from './types';
+import type { ChargePage, ChargerPricingHistoryPage, ChargerSessionPage, ChargerStatus, CommandHistoryEntry, CommandHistoryResponse, EnergyAnalytics, HttpMethod, NativeCapabilities, ObservedEventPage, PulseState, SessionState, TelemetryPage, WidgetGrantList, WidgetProfileList } from './types';
 
 export class ApiError extends Error {
 	status: number;
@@ -17,6 +17,15 @@ export async function getObservedEvents(limit = 20, offset = 0, signal?: AbortSi
 		headers: { Accept: 'application/json' }, signal
 	});
 	return responseJson<ObservedEventPage>(response);
+}
+
+export async function getTelemetryHistory(limit = 20, offset = 0, signal?: AbortSignal): Promise<TelemetryPage> {
+	const query = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+	const response = await requestApi(`/api/telemetry/history?${query.toString()}`, {
+		method: 'GET', credentials: 'same-origin', cache: 'no-store',
+		headers: { Accept: 'application/json' }, signal
+	});
+	return responseJson<TelemetryPage>(response);
 }
 
 export async function requestApi(path: string, init: RequestInit): Promise<Response> {

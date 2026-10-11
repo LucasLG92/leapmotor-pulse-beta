@@ -41,7 +41,8 @@
 				charging: vehicle.charging
 			} : null;
 		}
-		return pulseState.mode === 'telemetry_read_only' ? latestTelemetry?.vehicle ?? null : null;
+		// The state response applies temporal availability; history retains expired snapshots.
+		return pulseState.mode === 'telemetry_read_only' ? pulseState.vehicle ?? null : null;
 	});
 	let profileName = $derived(pulseState.settings.vehicle_name || 'Vehículo sin nombre');
 	let profileModel = $derived(pulseState.settings.model || 'Modelo sin indicar');
@@ -50,7 +51,7 @@
 	);
 	let displayMode = $derived(
 		pulseState.mode === 'demo' ? 'Datos simulados' :
-		pulseState.mode === 'telemetry_read_only' ? 'Solo lectura' : 'Preparación'
+		pulseState.mode === 'telemetry_read_only' ? pulseState.telemetry?.quality.temporal_status === 'unavailable' ? 'Lectura caducada' : 'Solo lectura' : 'Preparación'
 	);
 	let profileUpdatedAt = $derived(pulseState.updated_at);
 	let observedAt = $derived(
@@ -257,6 +258,7 @@
 	<article class="overview-hero" aria-labelledby="vehicle-profile-title">
 		<header class="overview-heading">
 			<div class="profile-heading">
+				<p class="profile-eyebrow">TU GARAJE</p>
 				<h2 id="vehicle-profile-title">{profileName}</h2>
 				<p>{profileModel} <span>· Perfil de Pulse</span></p>
 			</div>
@@ -267,6 +269,7 @@
 
 		<div class="overview-layout">
 			<section class="vehicle-scene" aria-label="Vehículo y lecturas">
+				<div class="vehicle-display">
 				<dl class="vehicle-readings" aria-label="Autonomía y batería">
 					<div class="range-reading">
 						<dt>Autonomía estimada</dt>
@@ -283,40 +286,7 @@
 					<meter class="battery-level" aria-label="Nivel de batería recibido" min="0" max="100" value={batteryPercentage}>{number(batteryPercentage)} %</meter>
 				{/if}
 				<VehicleArtwork color={pulseState.settings.vehicle_color ?? null} />
-				<div class="observation-summary" aria-label="Origen y fecha de las lecturas">
-					{#if latestTelemetry && pulseState.mode === 'telemetry_read_only'}
-						<p><span>Observada</span><strong>{absoluteDateTime(observedAt)}</strong></p>
-						<p><span>Fuente</span><strong>{sourceLabel}</strong></p>
-						<p class="freshness-summary">Vigencia física: {freshnessLabel(pulseState.telemetry?.quality.freshness)}</p>
-					{:else if pulseState.mode === 'demo' && pulseState.vehicle}
-						<p><span>Dato demo</span><strong>{absoluteDateTime(observedAt)}</strong></p>
-						<p><span>Fuente</span><strong>{sourceLabel}</strong></p>
-						<p class="freshness-summary">Datos ficticios; la vigencia física no aplica.</p>
-					{:else}
-						<p><span>Observación</span><strong>Sin lectura disponible</strong></p>
-						<p><span>Fuente</span><strong>Sin proveedor habilitado</strong></p>
-						<p class="freshness-summary">El perfil de Pulse se muestra aparte de cualquier lectura.</p>
-					{/if}
 				</div>
-
-				{#if latestTelemetry && pulseState.mode === 'telemetry_read_only'}
-					<details class="field-source-details">
-						<summary>Fuentes por campo y fechas completas</summary>
-						<dl class="field-source-list">
-							{#each sourceRows as row (row.label)}
-								<div><dt>{row.label}</dt><dd>{row.source}</dd></div>
-							{/each}
-						</dl>
-						<div class="received-times">
-							<p><span>Observada por la fuente</span><strong>{absoluteDateTime(observedAt)}</strong></p>
-							<p><span>Recibida por el proveedor</span><strong>{absoluteDateTime(latestTelemetry.provider_received_at)}</strong></p>
-							<p><span>Recibida por Pulse</span><strong>{absoluteDateTime(latestTelemetry.server_received_at)}</strong></p>
-							<p><span>Vigencia física</span><strong>{freshnessLabel(pulseState.telemetry?.quality.freshness)}</strong></p>
-							<p><span>Estado temporal</span><strong>{pulseState.telemetry?.quality.temporal_status ?? 'Sin dato'}</strong></p>
-							<p><span>Motivo temporal</span><strong>{pulseState.telemetry?.quality.reason_code ?? 'Sin dato'}</strong></p>
-						</div>
-					</details>
-				{/if}
 
 
 				<details class="color-picker"><summary>Personalizar color <span>{currentColorLabel}</span><Glyph name="chevron" size={16} /></summary>
@@ -388,6 +358,41 @@
 
 				</section>
 
+				<div class="observation-summary" aria-label="Origen y fecha de las lecturas">
+					{#if latestTelemetry && pulseState.mode === 'telemetry_read_only'}
+						<p><span>Observada</span><strong>{absoluteDateTime(observedAt)}</strong></p>
+						<p><span>Fuente</span><strong>{sourceLabel}</strong></p>
+						<p class="freshness-summary">Vigencia física: {freshnessLabel(pulseState.telemetry?.quality.freshness)}</p>
+					{:else if pulseState.mode === 'demo' && pulseState.vehicle}
+						<p><span>Dato demo</span><strong>{absoluteDateTime(observedAt)}</strong></p>
+						<p><span>Fuente</span><strong>{sourceLabel}</strong></p>
+						<p class="freshness-summary">Datos ficticios; la vigencia física no aplica.</p>
+					{:else}
+						<p><span>Observación</span><strong>Sin lectura disponible</strong></p>
+						<p><span>Fuente</span><strong>Sin proveedor habilitado</strong></p>
+						<p class="freshness-summary">El perfil de Pulse se muestra aparte de cualquier lectura.</p>
+					{/if}
+				</div>
+
+				{#if latestTelemetry && pulseState.mode === 'telemetry_read_only'}
+					<details class="field-source-details">
+						<summary>Fuentes por campo y fechas completas</summary>
+						<dl class="field-source-list">
+							{#each sourceRows as row (row.label)}
+								<div><dt>{row.label}</dt><dd>{row.source}</dd></div>
+							{/each}
+						</dl>
+						<div class="received-times">
+							<p><span>Observada por la fuente</span><strong>{absoluteDateTime(observedAt)}</strong></p>
+							<p><span>Recibida por el proveedor</span><strong>{absoluteDateTime(latestTelemetry.provider_received_at)}</strong></p>
+							<p><span>Recibida por Pulse</span><strong>{absoluteDateTime(latestTelemetry.server_received_at)}</strong></p>
+							<p><span>Vigencia física</span><strong>{freshnessLabel(pulseState.telemetry?.quality.freshness)}</strong></p>
+							<p><span>Estado temporal</span><strong>{pulseState.telemetry?.quality.temporal_status ?? 'Sin dato'}</strong></p>
+							<p><span>Motivo temporal</span><strong>{pulseState.telemetry?.quality.reason_code ?? 'Sin dato'}</strong></p>
+						</div>
+					</details>
+				{/if}
+
 
 			</section>
 
@@ -396,8 +401,9 @@
 
 
 				<section class="charger-context" aria-labelledby="charger-context-title">
+					<p class="context-eyebrow"><Glyph name="plug" size={17} /> ENERGÍA EN CASA</p>
 					<div class="context-heading">
-						<h3 id="charger-context-title">Carga en casa</h3>
+						<h3 id="charger-context-title">Tu carga, de un vistazo</h3>
 						<span class="badge">{chargerStateLabel(chargerStatus)}</span>
 					</div>
 					{#if chargerLoading && !chargerStatus}
@@ -406,15 +412,14 @@
 						<p class="context-copy" role="status">{chargerError}</p>
 						<button class="inline-action" type="button" disabled={!online || chargerLoading} onclick={() => refreshCharger()}>Volver a consultar</button>
 					{:else if chargerStatus?.observation}
+						<div class="charge-connection" aria-hidden="true"><Glyph name="plug" size={22} /><span class:flow-active={chargerStatus.observation.charging}></span><Glyph name="car" size={22} /></div>
 						<dl class="charger-readings">
-							<div><dt>Conexión</dt><dd>{chargerStatus.observation.connected ? 'Conectado' : 'Desconectado'}</dd></div>
-							<div><dt>Estado recibido</dt><dd>{chargerStatus.observation.charging ? 'Carga en curso' : 'Sin carga en curso'}</dd></div>
 							{#if chargerStatus.observation.charged_kwh !== null}<div class="charger-metric"><dt>Energía recibida</dt><dd>{number(chargerStatus.observation.charged_kwh)} kWh</dd></div>{/if}
 							{#if chargerStatus.observation.power_w !== null}<div class="charger-metric"><dt>Potencia recibida</dt><dd>{number(chargerStatus.observation.power_w / 1000, true)} kW</dd></div>{/if}
 							{#if chargerStatus.observation.active_seconds !== null}<div><dt>Tiempo activo recibido</dt><dd>{activeDuration(chargerStatus.observation.active_seconds)}</dd></div>{/if}
 						</dl>
 						<p class="charger-source">Punto {chargerStatus.observation.loadpoint} · evcc</p>
-						<p class="context-copy">La observación no incluye el inicio de sesión ni un coste actual. Consulta Energía para sesiones e importes disponibles.</p>
+						
 					{:else}
 						<p class="context-copy">
 							{#if chargerStatus?.status === 'disabled'}Pulse no tiene un cargador configurado.
@@ -425,12 +430,14 @@
 					{/if}
 					{#if chargerStatus?.observation || (chargerStatus?.reason_code && chargerStatus.reason_code !== 'none')}
 						<details class="charger-details">
-							<summary>Detalles de la consulta</summary>
+							<summary>Fuente y detalles de la consulta</summary><p>Esta observación no incluye el inicio de sesión ni un coste actual. El coste está disponible en las sesiones guardadas, cuando hay datos suficientes.</p>{#if chargerStatus.observation}<dl class="charger-secondary">							<div><dt>Conexión</dt><dd>{chargerStatus.observation.connected ? 'Conectado' : 'Desconectado'}</dd></div>
+							<div><dt>Estado recibido</dt><dd>{chargerStatus.observation.charging ? 'Carga en curso' : 'Sin carga en curso'}</dd></div>
+</dl>{/if}
 							{#if chargerStatus.observation}<p>Recibida por Pulse {absoluteDateTime(chargerStatus.observation.received_at)}</p>{/if}
 							{#if chargerStatus.reason_code && chargerStatus.reason_code !== 'none'}<p>Motivo técnico: <code>{chargerStatus.reason_code}</code></p>{/if}
 						</details>
 					{/if}
-					<a class="context-link" href="/energy">Ver sesiones, costes y resúmenes <Glyph name="arrow" size={16} /></a>
+					<a class="context-link" href="/energy">Abrir Energía <Glyph name="arrow" size={16} /></a>
 				</section>
 
 				{#if latestAutomaticCharge}
@@ -458,7 +465,9 @@
 		</div>
 	</article>
 
-	<section class="overview-records" aria-label="Energía, actividad y mantenimiento">
+	<section class="overview-mobility" aria-labelledby="mobility-title">
+	<header class="mobility-heading"><div><p class="profile-eyebrow">EL DETALLE DE TU MOVILIDAD</p><h2 id="mobility-title">Tu actividad reciente</h2></div><a class="context-link" href="/activity">Abrir diario <Glyph name="arrow" size={16} /></a></header>
+	<div class="overview-records" aria-label="Energía, actividad y mantenimiento">
 		<article class="record-summary energy-summary">
 			<div class="record-heading"><h2>Energía registrada</h2><a href="/energy">Ver cargas <Glyph name="arrow" size={16} /></a></div>
 			<div class="record-totals">
@@ -500,154 +509,181 @@
 			<strong class="protection-count">{count(protectionCount)} <span>{protectionDescription}</span></strong>
 			<p>{pulseState.mode === 'demo' ? 'Eventos ficticios de la demostración.' : protectionCount ? 'Cambios guardados entre observaciones recibidas.' : 'Aún no hay cambios observados en Pulse.'} No hay cámaras ni modo centinela.</p>
 		</article>
+	</div>
 	</section>
 
 	<footer class="overview-footer">Estado de Pulse actualizado: {absoluteDateTime(profileUpdatedAt)} <span aria-hidden="true">·</span> Conexión: {connectionLabel}</footer>
 </div>
 
 <style>
-	.overview-page { display: grid; gap: 28px; min-width: 0; }
-	.overview-hero, .profile-heading, .vehicle-scene, .vehicle-task { min-width: 0; }
-	.overview-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding-bottom: 8px; }
-	.overview-heading h2 { margin: 0; font-size: 2rem; font-weight: 650; line-height: 1.12; letter-spacing: -.035em; overflow-wrap: anywhere; }
-	.overview-heading p { margin: 6px 0 0; color: var(--muted); font-size: .8125rem; line-height: 1.4; overflow-wrap: anywhere; }
-	.overview-heading :global(.status-pill) { flex: 0 0 auto; min-height: 30px; font-size: .75rem; }
-	.overview-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, .9fr); align-items: start; gap: 40px; margin-top: 16px; }
-	.vehicle-readings { display: flex; align-items: center; justify-content: center; gap: 36px; margin: 0 0 10px; font-variant-numeric: tabular-nums; }
-	.vehicle-readings > div { min-width: 0; }
-	.vehicle-readings dt { color: var(--muted); font-size: .75rem; line-height: 1.35; }
-	.vehicle-readings dd { margin: 4px 0 0; overflow-wrap: anywhere; }
-	.range-reading { text-align: center; }
-	.range-reading dd { font-size: 2.75rem; font-weight: 650; line-height: 1.08; letter-spacing: -.035em; }
-	.battery-reading dd { display: flex; align-items: center; gap: 8px; font-size: 1.0625rem; font-weight: 620; }
-	.battery-level { display: block; width: 172px; height: 8px; margin: 0 auto 4px; border: 0; border-radius: 4px; background: var(--surface-soft); }
-	.battery-level::-webkit-meter-bar { height: 8px; border: 0; border-radius: 4px; background: var(--surface-soft); }
-	.battery-level::-webkit-meter-optimum-value { border-radius: 4px; background: var(--forest); }
-	.battery-level::-moz-meter-bar { border-radius: 4px; background: var(--forest); }
-	.vehicle-scene :global(.vehicle-frame) { height: 300px; }
-	.observation-summary { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px 14px; padding: 12px 0 0; }
-	.observation-summary p { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 3px 6px; min-width: 0; margin: 0; color: var(--ink); font-size: .75rem; line-height: 1.4; overflow-wrap: anywhere; }
-	.observation-summary p > span { color: var(--muted); }
-	.observation-summary p > strong { min-width: 0; font-size: inherit; font-weight: 600; overflow-wrap: anywhere; }
-	.observation-summary .freshness-summary { flex-basis: 100%; color: var(--muted-strong); }
-	.field-source-details { margin: 6px 0 0; }
-	summary { min-height: 44px; display: flex; align-items: center; color: var(--muted-strong); cursor: pointer; font-size: .75rem; font-weight: 600; }
-	.field-source-details summary { justify-content: center; color: var(--forest); }
-	.field-source-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; margin: 0; padding-bottom: 8px; }
-	.field-source-list > div { display: flex; justify-content: space-between; gap: 8px; min-width: 0; }
-	.field-source-list dt, .received-times span { color: var(--muted); font-size: .75rem; }
-	.field-source-list dd { min-width: 0; margin: 0; font-size: .75rem; font-weight: 620; text-align: end; overflow-wrap: anywhere; }
-	.received-times { display: grid; gap: 5px; padding-top: 8px; border-top: 1px solid var(--line); }
-	.received-times p { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin: 0; font-size: .75rem; }
-	.received-times strong { font-weight: 600; overflow-wrap: anywhere; }
-	.color-picker { max-width: 450px; margin: 0 auto; }
-	.color-picker summary { justify-content: center; flex-wrap: wrap; gap: 4px 8px; color: var(--forest); font-weight: 500; }
-	.color-picker summary span { color: var(--muted); }
-	.vehicle-colors { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px; margin-bottom: 8px; }
-	.color-swatch { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; padding: 3px; border: 1.5px solid transparent; border-radius: 50%; background: transparent; cursor: pointer; }
-	.color-swatch span { width: 21px; height: 21px; border: 1px solid var(--line-strong); border-radius: 50%; background: var(--swatch); }
-	.color-swatch:hover:not(:disabled) { border-color: var(--line-strong); }
-	.color-swatch.selected { border-color: var(--forest); }
-	.color-swatch:disabled { cursor: not-allowed; opacity: .55; }
-	.color-name { color: var(--muted); font-size: .75rem; margin-left: 6px; }
-	.vehicle-controls { margin-top: 10px; }
-	.vehicle-state { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 20px; margin: 0 0 12px; }
-	.vehicle-state > div, .vehicle-state dt { display: flex; align-items: center; gap: 5px; min-width: 0; }
-	.vehicle-state dt { color: var(--muted); font-size: .75rem; }
-	.vehicle-state dd { margin: 0; font-size: .75rem; font-weight: 600; overflow-wrap: anywhere; }
-	.control-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-	.control-action, .alternate-action { display: flex; min-width: 0; min-height: 80px; flex-direction: column; align-items: center; gap: 7px; padding: 1px 3px 4px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); cursor: pointer; font-size: .75rem; line-height: 1.25; text-align: center; text-decoration: none; }
-	.control-circle { display: grid; width: 52px; height: 52px; flex: 0 0 52px; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--surface-raised); color: var(--ink); transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease, color var(--motion-fast) ease; }
-	.control-action:hover:not(:disabled) .control-circle, .alternate-action:hover:not(:disabled) .control-circle { border-color: var(--forest); background: var(--forest-soft); color: var(--forest); }
-	.control-action:disabled, .alternate-action:disabled { color: var(--muted); cursor: not-allowed; }
-	.control-action:disabled .control-circle, .alternate-action:disabled .control-circle { color: var(--muted); opacity: .78; }
-	.control-label { font-weight: 650; overflow-wrap: anywhere; }
-	.alternate-actions { margin-top: 6px; border-top: 1px solid var(--line); }
-	.alternate-action-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; padding-bottom: 8px; }
-	.alternate-action { min-height: 68px; justify-content: center; font-weight: 600; }
-	.alternate-action .control-circle { width: 46px; height: 46px; flex-basis: 46px; }
-	.control-footnote { margin: 2px 0 0; color: var(--muted); font-size: .75rem; line-height: 1.4; text-align: center; }
-	.vehicle-task { padding-left: 28px; border-left: 1px solid var(--line); }
-	.connection-details summary { gap: 10px; flex-wrap: wrap; justify-content: space-between; }
-	.connection-details summary span { font-weight: 500; color: var(--muted); }
-	.vehicle-task h3 { margin: 0; font-size: 1rem; line-height: 1.4; }
-	.context-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
-	.context-heading :global(.badge) { min-height: 24px; font-size: .75rem; }
-	.context-copy { margin: 8px 0 0; color: var(--muted); font-size: .8125rem; line-height: 1.5; overflow-wrap: anywhere; }
-	.charger-readings { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; margin: 10px 0 0; }
-	.charger-readings > div { display: grid; gap: 4px; padding: 9px 0; border-bottom: 1px solid var(--line); }
-	.charger-readings dd { margin: 0; font-size: .8125rem; font-weight: 600; text-align: start; }
-	.charger-metric dd { font-size: 1.25rem; }
-	.charger-source, .charge-date { margin: 8px 0 0; color: var(--muted); font-size: .75rem; line-height: 1.45; overflow-wrap: anywhere; }
-	.charger-details p { margin: 0 0 8px; color: var(--muted); font-size: .75rem; line-height: 1.45; overflow-wrap: anywhere; }
-	.charger-details code { font-size: inherit; }
-	.context-link, .record-heading a { display: inline-flex; min-height: 44px; align-items: center; gap: 5px; color: var(--forest); font-size: .75rem; font-weight: 650; text-decoration: none; text-underline-offset: 3px; }
-	.context-link:hover, .record-heading a:hover { text-decoration: underline; }
-	.inline-action { min-height: 44px; margin-top: 8px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 9px; background: transparent; color: var(--forest); font-size: .75rem; font-weight: 600; cursor: pointer; }
-	.inline-action:disabled { color: var(--muted); cursor: not-allowed; }
-	.latest-charge, .connection-context { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line); }
-	.latest-charge-values { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 12px; font-size: 1.125rem; }
-	.latest-charge-values strong { font-size: 1.375rem; letter-spacing: -.025em; overflow-wrap: anywhere; }
-	.overview-records { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px 36px; padding-top: 24px; border-top: 1px solid var(--line); }
-	.record-summary { min-width: 0; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
-	.record-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0 12px; }
-	.record-heading h2 { font-size: 1.125rem; font-weight: 650; letter-spacing: -.02em; margin: 0; }
-	.record-summary p { font-size: .8125rem; color: var(--muted); line-height: 1.5; }
-	.record-totals { display: flex; gap: 28px; flex-wrap: wrap; margin: 14px 0; }
-	.record-totals > div { display: grid; gap: 4px; }
-	.record-totals strong { font-size: 1.375rem; letter-spacing: -.02em; }
-	.record-totals small { font-size: .875rem; font-weight: 500; }
-	.record-totals span { color: var(--muted); font-size: .75rem; }
-	.charge-history-mini { padding: 0; margin: 16px 0 0; list-style: none; }
-	.charge-history-mini a { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(20px, .6fr) auto auto; align-items: center; gap: 10px; min-height: 58px; padding: 7px 0; border-bottom: 1px solid var(--line); color: var(--ink); text-decoration: none; font-size: .75rem; }
-	.charge-history-mini a:hover { color: var(--forest); }
-	.mini-charge-label { min-width: 0; overflow-wrap: anywhere; }
-	.mini-charge-label small { display: block; color: var(--muted); font-size: .75rem; margin-top: 3px; }
-	.mini-charge-bar { display: block; height: 6px; background: var(--surface-soft); border-radius: 3px; }
-	.mini-charge-bar > span { display: block; height: 100%; background: var(--forest); border-radius: inherit; }
-	.record-note { font-size: .75rem !important; }
-	.journey-source { margin-top: 14px; }
-	.journey-path { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 12px 0; font-size: 1rem; }
-	.journey-path strong { min-width: 0; overflow-wrap: anywhere; }
-	.journey-stop { width: 9px; height: 9px; border: 2px solid var(--forest); border-radius: 50%; flex-shrink: 0; }
-	.journey-line { flex: 1; min-width: 16px; height: 1px; background: var(--line-strong); }
-	.journey-metrics { display: flex; flex-wrap: wrap; gap: 14px 24px; margin: 10px 0 0; }
-	.journey-metrics dt { color: var(--muted); font-size: .75rem; }
-	.journey-metrics dd { margin: 5px 0 0; font-size: 1rem; font-weight: 600; }
-	.quiet-empty { padding-top: 16px; }
-	.quiet-empty :global(svg) { color: var(--muted); }
-	.record-summary h3 { font-size: 1rem; font-weight: 600; line-height: 1.4; margin: 12px 0 0; overflow-wrap: anywhere; }
-	.maintenance-date { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; }
-	.protection-count { display: flex; align-items: baseline; gap: 10px; margin-top: 18px; font-size: 1.75rem; }
-	.protection-count span { color: var(--muted); font-size: .875rem; font-weight: 500; }
-	.overview-footer { color: var(--muted); font-size: .75rem; line-height: 1.5; overflow-wrap: anywhere; }
-	summary:focus-visible, .color-swatch:focus-visible, .control-action:focus-visible, .alternate-action:focus-visible, .context-link:focus-visible, .record-heading a:focus-visible, .charge-history-mini a:focus-visible, .inline-action:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
-	@media (max-width: 1050px) {
-		.overview-layout { grid-template-columns: 1fr; gap: 24px; }
-		.vehicle-task { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 24px; padding: 24px 0 0; border-left: 0; border-top: 1px solid var(--line); }
-		.latest-charge, .connection-context { margin: 0; padding-top: 0; border-top: 0; }
-	}
-	@media (max-width: 700px) {
-		.overview-page { gap: 24px; }
-		.overview-heading { gap: 10px; }
-		.overview-heading h2 { font-size: 1.75rem; }
-		.overview-heading :global(.status-pill) { max-width: 42%; white-space: normal; }
-		.overview-layout { gap: 18px; margin-top: 12px; }
-		.vehicle-readings { gap: 26px; }
-		.range-reading dd { font-size: 2.5rem; }
-		.vehicle-scene :global(.vehicle-frame) { height: 180px; }
-		.observation-summary { gap: 4px 10px; }
-		.field-source-list { grid-template-columns: 1fr; }
-		.vehicle-state { gap: 8px 12px; }
-		.control-actions { gap: 2px; }
-		.control-action { min-height: 72px; gap: 4px; padding-inline: 1px; }
-		.control-circle { width: 48px; height: 48px; flex-basis: 48px; }
-		.alternate-action .control-circle { width: 44px; height: 44px; flex-basis: 44px; }
-		.vehicle-task { display: block; padding-top: 20px; }
-		.latest-charge, .connection-context { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line); }
-		.overview-records { grid-template-columns: 1fr; gap: 22px; padding-top: 20px; }
-		.record-summary { padding-bottom: 14px; }
-		.mini-charge-bar { display: none; }
-		.charge-history-mini a { grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; }
-	}
+ .overview-page { display: grid; gap: 32px; min-width: 0; }
+ .overview-hero, .profile-heading, .vehicle-scene, .vehicle-task { min-width: 0; }
+ .overview-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
+ .profile-eyebrow, .context-eyebrow { color: var(--muted-strong); font-size: .6875rem; letter-spacing: .13em; font-weight: 650; line-height: 1.6; margin: 0 0 10px; }
+ .overview-heading h2 { margin: 0; font-size: clamp(2rem, 3.3vw, 3rem); font-weight: 600; line-height: 1.12; letter-spacing: -.045em; overflow-wrap: anywhere; }
+ .overview-heading p:not(.profile-eyebrow) { margin: 8px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; overflow-wrap: anywhere; }
+ .overview-heading :global(.status-pill) { flex: 0 0 auto; min-height: 32px; font-size: .75rem; }
+ .overview-layout { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(290px, .85fr); gap: 36px; align-items: start; }
+ .vehicle-display { position: relative; background: radial-gradient(ellipse at 50% 75%, var(--surface-soft), transparent 70%); border-radius: 30px; padding-top: 0; }
+ .vehicle-readings { display: flex; align-items: center; justify-content: center; gap: 40px; margin: 0; font-variant-numeric: tabular-nums; }
+ .vehicle-readings > div { min-width: 0; }
+ .vehicle-readings dt { color: var(--muted); font-size: .8125rem; line-height: 1.5; }
+ .vehicle-readings dd { margin: 5px 0 0; overflow-wrap: anywhere; }
+ .range-reading { text-align: center; }
+ .range-reading dd { font-size: clamp(2.75rem, 5vw, 4.25rem); font-weight: 550; letter-spacing: -.06em; line-height: 1.08; }
+ .battery-reading dd { display: flex; align-items: center; gap: 7px; font-size: 1.25rem; font-weight: 600; }
+ .battery-level { display: block; width: 166px; height: 5px; margin: 14px auto 0; border: 0; border-radius: 9px; background: var(--line); }
+ .battery-level::-webkit-meter-bar { height: 5px; border: 0; border-radius: 9px; background: var(--line); }
+ .battery-level::-webkit-meter-optimum-value { background: var(--forest); border-radius: 9px; }
+ .battery-level::-moz-meter-bar { background: var(--forest); border-radius: 9px; }
+ .vehicle-scene :global(.vehicle-frame) { height: clamp(215px, 22vw, 270px); }
+ .vehicle-scene :global(figcaption) { padding: 0 10px 12px; font-size: .6875rem; }
+ .color-picker { margin: 8px auto 16px; }
+ .color-picker > summary { display: flex; width: fit-content; min-height: 44px; align-items: center; justify-content: center; gap: 8px; margin: auto; color: var(--forest); font-size: .75rem; cursor: pointer; list-style: none; }
+ .color-picker > summary::-webkit-details-marker { display: none; }
+ .color-picker > summary span { color: var(--muted); }
+ .vehicle-colors { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px; }
+ .color-swatch { display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid transparent; border-radius: 50%; background: transparent; cursor: pointer; }
+ .color-swatch span { width: 22px; height: 22px; border: 1px solid var(--line-strong); border-radius: 50%; background: var(--swatch); box-shadow: inset 0 2px 5px rgb(255 255 255 / 25%); }
+ .color-swatch.selected { border-color: var(--forest); }
+ .color-swatch:disabled { cursor: not-allowed; opacity: .55; }
+ .color-name { color: var(--muted); font-size: .75rem; margin-left: 6px; }
+ .vehicle-state { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 0 18px; padding: 18px 0; border-block: 1px solid var(--line); }
+ .vehicle-state > div { min-width: 0; text-align: center; }
+ .vehicle-state dt { display: flex; justify-content: center; align-items: center; gap: 6px; color: var(--muted); font-size: .75rem; }
+ .vehicle-state dd { margin: 8px 0 0; font-size: .8125rem; font-weight: 600; overflow-wrap: anywhere; }
+ .control-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; max-width: 500px; margin-inline: auto; }
+ .control-action, .alternate-action { display: flex; min-width: 0; min-height: 82px; flex-direction: column; align-items: center; gap: 10px; padding: 3px; border: 0; border-radius: 12px; background: transparent; color: var(--ink); cursor: pointer; font-size: .75rem; line-height: 1.35; text-align: center; text-decoration: none; }
+ .control-circle { display: grid; width: 52px; height: 52px; flex: 0 0 52px; place-items: center; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); color: var(--ink); transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease; }
+ .control-action:hover:not(:disabled) .control-circle, .alternate-action:hover:not(:disabled) .control-circle { border-color: var(--forest); background: var(--forest-soft); color: var(--forest); }
+ .control-action:disabled, .alternate-action:disabled { color: var(--muted); cursor: not-allowed; }
+ .control-action:disabled .control-circle, .alternate-action:disabled .control-circle { color: var(--muted); }
+ .control-label { font-weight: 600; overflow-wrap: anywhere; }
+ .alternate-actions { margin-top: 12px; }
+ .alternate-actions summary, .field-source-details summary, .charger-details summary, .connection-details summary { min-height: 44px; display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--muted-strong); font-size: .75rem; font-weight: 600; list-style: revert; }
+ .alternate-actions summary { justify-content: center; }
+ .alternate-action-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; padding: 10px 0; }
+ .control-footnote { color: var(--muted); text-align: center; font-size: .6875rem; line-height: 1.5; margin: 0; }
+ .observation-summary { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+ .observation-summary p { display: flex; flex-wrap: wrap; gap: 5px; margin: 0; color: var(--muted); font-size: .6875rem; line-height: 1.5; }
+ .observation-summary strong { font-weight: 500; color: var(--muted-strong); }
+ .observation-summary .freshness-summary { flex-basis: 100%; justify-content: center; }
+ .field-source-details { margin-top: 6px; }
+ .field-source-details summary { justify-content: center; }
+ .field-source-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin: 8px 0; }
+ .field-source-list div { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+ .field-source-list dt, .received-times span { color: var(--muted); }
+ .field-source-list dd { margin: 0; overflow-wrap: anywhere; }
+ .field-source-list, .received-times { font-size: .75rem; line-height: 1.6; }
+ .received-times p { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0; }
+ .received-times strong { font-weight: 500; overflow-wrap: anywhere; }
+ .vehicle-task { display: grid; gap: 16px; }
+ .charger-context { padding: 22px; border-radius: 24px; background: var(--surface); border: 1px solid var(--line); }
+ .context-eyebrow { display: flex; align-items: center; gap: 8px; color: var(--forest); margin-bottom: 16px; }
+ .context-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+ .context-heading h3 { margin: 0; font-size: .9375rem; font-weight: 600; line-height: 1.45; }
+ .charger-context .context-heading h3 { font-size: 1.25rem; letter-spacing: -.025em; }
+ .context-heading :global(.badge) { font-size: .6875rem; }
+ .charge-connection { display: flex; align-items: center; gap: 16px; color: var(--muted); margin: 16px 0; }
+ .charge-connection span { flex: 1; height: 2px; background: var(--line); }
+ .charge-connection .flow-active { background: var(--forest); }
+ .charger-secondary { margin: 10px 0; display: grid; gap: 8px; font-size: .75rem; }
+ .charger-secondary dd { margin: 4px 0; }
+ .charger-readings { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 12px; margin: 20px 0 0; }
+ .charger-readings > div { min-width: 0; }
+ .charger-readings dt { font-size: .75rem; color: var(--muted); line-height: 1.5; }
+ .charger-readings dd { margin: 6px 0 0; font-size: .8125rem; font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+ .charger-metric { padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+ .charger-metric dd { font-size: clamp(1.3rem, 2.2vw, 1.8rem); font-weight: 550; letter-spacing: -.035em; }
+ .charger-source { color: var(--muted); font-size: .75rem; margin: 18px 0 8px; overflow-wrap: anywhere; }
+ .context-copy, .charger-details p { color: var(--muted); font-size: .75rem; line-height: 1.6; margin: 10px 0; overflow-wrap: anywhere; }
+ .context-link { display: inline-flex; min-height: 44px; align-items: center; gap: 9px; color: var(--forest); font-size: .8125rem; font-weight: 600; text-decoration: none; }
+ .charger-context .context-link { display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+ .latest-charge { padding-inline: 4px; }
+ .charge-date { color: var(--muted); font-size: .6875rem; line-height: 1.55; margin: 8px 0; }
+ .latest-charge-values { display: flex; justify-content: space-between; gap: 16px; font-size: 1.125rem; margin-top: 10px; font-variant-numeric: tabular-nums; }
+ .latest-charge-values strong { font-size: 1.5rem; font-weight: 550; letter-spacing: -.03em; }
+ .latest-charge + .latest-charge { border-top: 1px solid var(--line); padding-top: 12px; }
+ .connection-context { padding-top: 12px; border-top: 1px solid var(--line); }
+ .connection-details summary { display: flex; justify-content: space-between; flex-wrap: wrap; }
+ .connection-details summary span { color: var(--muted); font-weight: 400; font-size: .6875rem; }
+ .overview-mobility { border-top: 1px solid var(--line); padding-top: 32px; }
+ .mobility-heading { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-bottom: 30px; }
+ .mobility-heading h2 { margin: 0; font-size: clamp(1.5rem, 2.2vw, 2rem); font-weight: 550; letter-spacing: -.035em; line-height: 1.25; }
+ .overview-records { display: grid; grid-template-columns: 1.1fr 1fr; gap: 30px 40px; }
+ .record-summary { min-width: 0; }
+ .record-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+ .record-heading h2 { font-size: .9375rem; font-weight: 600; line-height: 1.45; margin: 0; }
+ .record-heading a { display: inline-flex; min-height: 44px; align-items: center; gap: 6px; font-size: .75rem; color: var(--forest); text-decoration: none; }
+ .record-totals { display: flex; flex-wrap: wrap; gap: 20px 36px; margin-bottom: 20px; }
+ .record-totals > div { display: grid; gap: 6px; }
+ .record-totals span { color: var(--muted); font-size: .75rem; }
+ .record-totals strong { font-size: 1.5rem; font-weight: 550; letter-spacing: -.035em; }
+ .record-totals strong small { font-size: .875rem; font-weight: 400; letter-spacing: normal; }
+ .charge-history-mini { list-style: none; margin: 0; padding: 0; }
+ .charge-history-mini li { border-bottom: 1px solid var(--line); }
+ .charge-history-mini a { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(44px, .8fr) auto auto; align-items: center; gap: 12px; min-height: 64px; text-decoration: none; font-size: .75rem; }
+ .mini-charge-label { color: var(--muted-strong); line-height: 1.55; overflow-wrap: anywhere; }
+ .mini-charge-label small { display: block; color: var(--muted); font-size: .6875rem; }
+ .mini-charge-bar { height: 4px; border-radius: 9px; background: var(--line); }
+ .mini-charge-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--forest); }
+ .record-summary p { color: var(--muted); line-height: 1.6; font-size: .8125rem; }
+ .record-summary .record-note, .journey-source { font-size: .6875rem; }
+ .journey-path { display: flex; align-items: center; gap: 10px; padding: 20px 0; min-width: 0; }
+ .journey-path strong { font-size: .875rem; min-width: 0; overflow-wrap: anywhere; }
+ .journey-stop { width: 8px; height: 8px; flex: 0 0 8px; border: 2px solid var(--forest); border-radius: 50%; }
+ .journey-line { height: 1px; background: var(--line-strong); flex: 1; min-width: 8px; }
+ .journey-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; }
+ .journey-metrics dt { color: var(--muted); font-size: .75rem; }
+ .journey-metrics dd { font-size: 1.125rem; font-weight: 550; margin: 8px 0 0; overflow-wrap: anywhere; }
+ .quiet-empty { padding: 16px 0; }
+ .quiet-empty :global(svg) { color: var(--muted); }
+ .record-summary h3 { font-size: 1rem; font-weight: 600; line-height: 1.4; margin: 12px 0 0; overflow-wrap: anywhere; }
+ .maintenance-summary, .protection-summary { border-top: 1px solid var(--line); padding-top: 22px; }
+ .maintenance-date { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; }
+ .protection-count { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; margin-top: 18px; font-size: 1.75rem; font-weight: 550; }
+ .protection-count span { color: var(--muted); font-size: .8125rem; font-weight: 400; }
+ .overview-footer { color: var(--muted); font-size: .6875rem; line-height: 1.6; overflow-wrap: anywhere; padding-top: 20px; border-top: 1px solid var(--line); }
+ summary:focus-visible, .color-swatch:focus-visible, .control-action:focus-visible, .alternate-action:focus-visible, .context-link:focus-visible, .record-heading a:focus-visible, .charge-history-mini a:focus-visible, .inline-action:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+ @media (max-width: 1120px) {
+  .overview-layout { grid-template-columns: 1fr; gap: 30px; }
+  .vehicle-scene { max-width: 760px; width: 100%; margin-inline: auto; }
+  .vehicle-task { grid-template-columns: 1fr 1fr; gap: 24px; }
+  .charger-context { grid-row: span 3; }
+  .latest-charge + .latest-charge { border-top: 0; padding-top: 0; }
+ }
+ @media (max-width: 700px) {
+  .overview-page { gap: 30px; }
+  .overview-heading { margin-bottom: 12px; gap: 12px; }
+  .profile-eyebrow { font-size: .625rem; margin-bottom: 6px; }
+  .overview-heading h2 { font-size: 1.875rem; }
+  .overview-heading :global(.status-pill) { max-width: 40%; white-space: normal; }
+  .overview-heading p:not(.profile-eyebrow) { font-size: .75rem; }
+  .overview-heading p span { display: none; }
+  .vehicle-readings { gap: 28px; }
+  .range-reading dd { font-size: 3.25rem; }
+  .vehicle-scene :global(.vehicle-frame) { height: 165px; }
+  .vehicle-state { gap: 6px; padding-block: 16px; }
+  .vehicle-state dt { flex-direction: row; gap: 5px; font-size: .6875rem; }
+  .vehicle-state dt :global(svg) { display: none; }
+  .color-picker { margin-bottom: 8px; }
+  .vehicle-state dd { font-size: .75rem; }
+  .control-actions { gap: 4px; }
+  .control-action { font-size: .6875rem; }
+  .control-circle { width: 48px; height: 48px; flex-basis: 48px; border-radius: 16px; }
+  .vehicle-task { grid-template-columns: 1fr; gap: 22px; }
+  .charger-context { padding: 22px; border-radius: 22px; }
+  .charger-readings { gap: 16px; }
+  .charger-metric dd { font-size: 1.75rem; }
+  .latest-charge + .latest-charge { border-top: 1px solid var(--line); padding-top: 20px; }
+  .field-source-list { grid-template-columns: 1fr; }
+  .mobility-heading { display: block; margin-bottom: 20px; }
+  .mobility-heading > a { margin-top: 8px; }
+  .overview-records { grid-template-columns: 1fr; gap: 28px; }
+  .record-heading { gap: 12px; }
+  .mini-charge-bar { display: none; }
+  .charge-history-mini a { grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; }
+  .observation-summary { gap: 4px 8px; }
+ }
+ @media (prefers-reduced-motion: reduce) { .control-circle { transition: none; } }
 </style>
