@@ -1,5 +1,23 @@
 # Rendimiento local y transferencia de la PWA
 
+## Ilustraciones bajo demanda: laboratorio del 11 de octubre de 2026
+
+Dos orígenes loopback nuevos, el mismo backend real y bases SQLite ficticias comparan el build publicado con el candidato. El navegador negocia gzip, conserva su caché HTTP normal y solicita el acabado azul. Se retrasa únicamente la respuesta del worker tres segundos en ambas fixtures para comprobar el caso en que la imagen carga antes del control. El producto no lleva instrumentación adicional. El servidor cuenta todos los cuerpos de activos públicos realmente enviados, incluidos recursos repetidos, HTML, manifiesto y worker; no registra cuerpos API, cookies ni credenciales.
+
+| Primera instalación en Chromium | Build publicado | Candidato |
+| --- | ---: | ---: |
+| Cuerpos HTTP públicos, bytes | 574152 | 284246 |
+| Peticiones HTTP públicas | 35 | 30 |
+| Ilustraciones descargadas | 6 | 1 |
+
+La reducción observada es del **50,49 %** y esta instalación queda bajo el presupuesto de 300000 bytes de cuerpos públicos. El azul ocupa 71990 bytes, el mayor de los seis archivos conservados; no se han medido seis instalaciones independientes. La imagen que llegó antes del control termina en la caché de ilustraciones sin una segunda petición de red. Las seis variantes siguen disponibles y mantienen exactamente sus bytes y calidad. Descargar todos los activos del candidato por sockets entrega 1046642 bytes identity o 574346 con gzip negociado, frente a 1043661/573391 del build anterior: se reduce el trabajo de instalación, no el tamaño total de las seis variantes más código.
+
+El candidato tiene 31 entradas de manifiesto y 26 recursos únicos de precache, sin WebP B10; los cinco duplicados del manifiesto no se suman dos veces. El worker admite solamente las seis URLs públicas de esta build. La QA verifica los seis colores, caché sin rutas API, imagen azul con servidor detenido y caché HTTP desactivada, aviso genérico al reabrir la app y recuperación por reintento. Un activo obsoleto ficticio desaparece tras activar otra versión. Con dos pestañas, cancelar la actualización conserva un borrador de 7,25 kWh; aplicar en la otra deja intactos documento y borrador hasta aprobar su propia actualización. Los marcadores de versión existen sólo en variantes de QA.
+
+La actualización directa desde la PWA publicada cambia al script del candidato mediante «Actualizar ahora», retira las seis imágenes del precache anterior y conserva únicamente la azul utilizada en la caché pública independiente. No quedan rutas API en ninguna de las dos cachés de ese origen.
+
+25 pruebas web y siete del puente móvil pasan; el chequeo de tipos no detecta errores ni advertencias. La revisión independiente de esta caché no encuentra P1/P2. Evidencia: `../pulse-artwork-cache-20261011/first-install-summary.json`, `transfer-all-assets.json`, `first-cache-inspection.json`, `colors-browser.json`, `offline-image.json`, `cache-after-update.json` y `update-browser.json`. Esto cualifica Chromium local, no transferencia HTTPS/Caddy, ciclo de vida de Safari/Android, consumo, Web Vitals ni datos del coche. La imagen de producción y el APK conservan su versión hasta cualificar y desplegar este candidato por separado.
+
 ## Experiencia B10: medición local del 11 de octubre de 2026
 
 El build final conserva la carga diferida de las rutas y del mapa, fuentes del sistema y ninguna dependencia nueva. Las seis ilustraciones WebP originales suman 362850 bytes; se almacenan como activos genéricos de la PWA. El manifiesto de precache contiene 37 entradas y 999,10 KiB antes de negociación de transferencia; este tamaño incluye activos y entradas de precache, no equivale a una carga inicial del navegador.
