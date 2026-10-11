@@ -120,10 +120,7 @@ button:disabled { cursor: not-allowed; }
 .brand-lockup strong, .account-link strong { display: block; font-size: 0.875rem; letter-spacing: -.02em; }
 .brand-lockup small, .account-link small { display: block; margin-top: 4px; color: var(--muted); font-size: 0.75rem; }
 .brand-mark { display: inline-flex; width: 34px; height: 34px; align-items: center; justify-content: center; gap: 3px; border: 1px solid var(--line-strong); border-radius: 11px; background: var(--forest-soft); }
-.brand-mark span { display: block; width: 3px; border-radius: 9px; background: var(--forest); }
-.brand-mark span:nth-child(1) { height: 10px; }
-.brand-mark span:nth-child(2) { height: 18px; }
-.brand-mark span:nth-child(3) { height: 13px; }
+.brand-mark img { display: block; width: 100%; height: 100%; border-radius: 9px; }
 .rail-section-label { margin: 32px 10px 12px; color: var(--muted); font-size: 0.75rem; font-weight: 700; letter-spacing: .04em; }
 .primary-nav { display: grid; gap: 5px; }
 .primary-nav a, .mobile-nav a { display: flex; min-height: 48px; align-items: center; gap: 12px; padding: 0 13px; border: 1px solid transparent; border-radius: 10px; color: var(--muted-strong); font-size: var(--text-label); font-weight: 560; transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease; }

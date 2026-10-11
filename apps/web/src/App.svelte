@@ -940,7 +940,7 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 	<div class="app-shell">
 		<aside class="desktop-rail" aria-label="Navegación principal">
 			<a class="brand-lockup" href="/" onclick={(event) => navigate(event, '/')} aria-label={`${appName}, ir al resumen`}>
-				<span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+				<span class="brand-mark" aria-hidden="true"><img src="/icon.svg" width="34" height="34" alt="" /></span>
 				<span><strong>{appName}</strong></span>
 			</a>
 			<nav class="primary-nav" aria-label="Secciones de Pulse">
