@@ -32,6 +32,7 @@
 	let currentEndpointHash: string | null = $state(null);
 	let disposed = false;
 	let requestId = 0;
+	class PushBrowserError extends Error {}
 
 	const currentDevice = $derived(devices.find((device) => device.endpoint_hash === currentEndpointHash) ?? null);
 	function isPushDeviceDirty(): boolean {
@@ -97,24 +98,28 @@
 		return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 	}
 
-	async function inspectLocalSubscription(publicKey: string | null, request: number) {
+	async function inspectLocalSubscription(publicKey: string | null, request: number): Promise<boolean> {
 		currentEndpointHash = null;
 		localKeyMatches = false;
-		if (!supported) return;
+		if (!supported) return true;
 		try {
 			const registration = await navigator.serviceWorker.getRegistration();
+			if (disposed || request !== requestId) return false;
 			const subscription = await registration?.pushManager.getSubscription();
-			if (!subscription || disposed || request !== requestId) return;
+			if (disposed || request !== requestId) return false;
+			if (!subscription) return true;
 			const endpointHash = await endpointDigest(subscription.endpoint);
-			if (disposed || request !== requestId) return;
+			if (disposed || request !== requestId) return false;
 			currentEndpointHash = endpointHash;
 			const localKey = subscription.options.applicationServerKey;
 			if (publicKey) {
 				const expected = decodeBase64Url(publicKey);
 				localKeyMatches = localKey !== null && equalBytes(new Uint8Array(localKey), expected);
 			}
+			return true;
 		} catch {
-			// A local browser API failure does not reveal subscription material.
+			// Unknown local state must not be presented as an absent subscription.
+			return false;
 		}
 	}
 
@@ -133,13 +138,17 @@
 		error = '';
 		try {
 			const nextCapabilities = await notifications.capabilities();
+			if (disposed || request !== requestId) return;
 			const nextDevices = await notifications.devices();
 			if (disposed || request !== requestId) return;
 			capabilities = nextCapabilities;
 			devices = nextDevices.items;
 			maxDevices = nextDevices.max_devices;
 			loaded = true;
-			await inspectLocalSubscription(nextCapabilities.application_server_key, request);
+			const inspected = await inspectLocalSubscription(nextCapabilities.application_server_key, request);
+			if (!disposed && request === requestId && !inspected) {
+				error = 'No se pudo comprobar la suscripción de este navegador. Reintenta la consulta antes de cambiar los avisos.';
+			}
 		} catch {
 			if (!disposed && request === requestId) error = 'No se pudo consultar la disponibilidad o la lista de dispositivos. Inténtalo de nuevo.';
 		} finally {
@@ -157,6 +166,7 @@
 
 	function fixedActionError(error: unknown, fallback: string): string {
 		if (error instanceof DOMException && error.name === 'NotAllowedError') return 'El navegador no concedió permiso para las notificaciones.';
+		if (error instanceof PushBrowserError) return error.message;
 		return fallback;
 	}
 
@@ -177,24 +187,39 @@
 		};
 	}
 
-	async function getOrCreateSubscription(forceReplace = false): Promise<PushSubscription> {
+	async function unsubscribeAndVerify(registration: ServiceWorkerRegistration, subscription: PushSubscription): Promise<boolean> {
+		await subscription.unsubscribe();
+		if (disposed) return false;
+		// false can also mean that the subscription was already removed. Read back
+		// the browser state instead of assuming either success or failure.
+		const remaining = await registration.pushManager.getSubscription();
+		if (disposed) return false;
+		if (remaining) throw new PushBrowserError('El navegador conserva una suscripción. No se pudo confirmar su baja; actualiza el estado antes de reintentarlo.');
+		return true;
+	}
+
+	async function getOrCreateSubscription(forceReplace = false): Promise<PushSubscription | null> {
 		const registration = await navigator.serviceWorker.getRegistration();
-		if (!registration) throw new Error('No se encontró el service worker de Pulse. Recarga la aplicación e inténtalo de nuevo.');
+		if (disposed) return null;
+		if (!registration) throw new PushBrowserError('No se encontró el service worker de Pulse. Recarga la aplicación e inténtalo de nuevo.');
 		let subscription = await registration.pushManager.getSubscription();
+		if (disposed) return null;
 		const key = capabilities?.application_server_key;
-		if (!key) throw new Error('El servidor no tiene disponible una clave de notificaciones.');
+		if (!key) throw new PushBrowserError('El servidor no tiene disponible una clave de notificaciones.');
 		if (subscription && !forceReplace) {
 			const localKey = subscription.options.applicationServerKey;
 			if (!localKey || !equalBytes(new Uint8Array(localKey), decodeBase64Url(key))) {
-				throw new Error('La clave de notificaciones cambió. Usa «Renovar suscripción» para actualizar este navegador.');
+				throw new PushBrowserError('La clave de notificaciones cambió. Usa «Renovar suscripción» para actualizar este navegador.');
 			}
 			return subscription;
 		}
 		if (subscription && forceReplace) {
 			const oldHash = await endpointDigest(subscription.endpoint);
+			if (disposed) return null;
 			const serverDevice = devices.find((device) => device.endpoint_hash === oldHash);
 			if (serverDevice) await notifications.revoke(serverDevice.id);
-			await subscription.unsubscribe();
+			if (disposed) return null;
+			if (!await unsubscribeAndVerify(registration, subscription) || disposed) return null;
 			subscription = null;
 		}
 		const decodedKey = decodeBase64Url(key);
@@ -204,7 +229,7 @@
 
 	async function registerCurrentSubscription(subscription: PushSubscription) {
 		const input = subscriptionInput(subscription);
-		if (!input) throw new Error('El navegador no pudo preparar una suscripción válida.');
+		if (!input) throw new PushBrowserError('El navegador no pudo preparar una suscripción válida.');
 		const submittedName = deviceName;
 		const registeredName = submittedName.trim();
 		await notifications.register(registeredName, input);
@@ -234,7 +259,7 @@
 				if (disposed || permission !== 'granted') return;
 				try {
 					const subscription = await getOrCreateSubscription();
-					if (disposed) return;
+					if (!subscription || disposed) return;
 					await registerCurrentSubscription(subscription);
 				} catch (error) {
 					// A failed response can leave a valid local subscription. Reconcile the server list without retrying the write.
@@ -274,9 +299,9 @@
 					'Renovar suscripción'
 				);
 				if (!confirmed || disposed || loading) return;
-				const subscription = await getOrCreateSubscription(true);
-				if (disposed) return;
 				try {
+					const subscription = await getOrCreateSubscription(true);
+					if (!subscription || disposed) return;
 					await registerCurrentSubscription(subscription);
 				} catch (error) {
 					if (canReconcile(error)) try { await loadData(true); } catch { /* Do not retry registration automatically. */ }
@@ -300,20 +325,24 @@
 		actionMessage = '';
 		actionError = '';
 		actionBusy = true;
+		let revokedOnServer = false;
 		try {
 			await runNotificationAction(async () => {
 				const confirmed = await confirmAction('Desactivar notificaciones', `Se desactivarán los avisos en «${device.name}». El permiso del navegador seguirá activo.`, 'Desactivar');
 				if (!confirmed || disposed || loading) return;
 				await notifications.revoke(device.id);
+				revokedOnServer = true;
 				if (disposed) return;
 				if (device.endpoint_hash === currentEndpointHash && supported) {
 					const registration = await navigator.serviceWorker.getRegistration();
 					if (disposed) return;
 					const subscription = await registration?.pushManager.getSubscription();
 					if (disposed) return;
-					if (subscription && await endpointDigest(subscription.endpoint) === device.endpoint_hash) {
+					if (subscription) {
+						const actualHash = await endpointDigest(subscription.endpoint);
 						if (disposed) return;
-						await subscription.unsubscribe();
+						if (actualHash !== device.endpoint_hash) throw new PushBrowserError('La suscripción de este navegador cambió. Actualiza el estado antes de retirar otra suscripción.');
+						if (!await unsubscribeAndVerify(registration!, subscription) || disposed) return;
 					}
 					if (disposed) return;
 					currentEndpointHash = null;
@@ -326,7 +355,44 @@
 			if (disposed) return;
 		} catch (error) {
 			if (canReconcile(error)) try { await loadData(true); } catch { /* A fixed error remains visible if reconciliation also fails. */ }
-			if (!disposed) actionError = fixedActionError(error, 'No se pudo desactivar este dispositivo. Inténtalo de nuevo.');
+			if (!disposed) actionError = revokedOnServer
+				? `Los avisos se desactivaron en Pulse. ${fixedActionError(error, 'No se pudo confirmar la baja en este navegador. Comprueba su suscripción local antes de reintentarlo.')}`
+				: fixedActionError(error, 'No se pudo confirmar la desactivación de este dispositivo. Comprueba la lista antes de reintentarlo.');
+		} finally {
+			if (!disposed) {
+				actionBusy = false;
+				await restorePanelFocus(previousFocus);
+			}
+		}
+	}
+
+	async function removeLocalSubscription() {
+		if (busy || actionBusy || loading || !online || !currentEndpointHash || currentDevice) return;
+		const expectedHash = currentEndpointHash;
+		const previousFocus = capturePanelFocus();
+		actionMessage = '';
+		actionError = '';
+		actionBusy = true;
+		try {
+			await runNotificationAction(async () => {
+				const confirmed = await confirmAction('Retirar suscripción local', 'Este navegador conserva una suscripción que no figura en Pulse. Puedes retirarla para completar la desactivación.', 'Retirar suscripción');
+				if (!confirmed || disposed) return;
+				const registration = await navigator.serviceWorker.getRegistration();
+				if (disposed) return;
+				const subscription = await registration?.pushManager.getSubscription();
+				if (disposed) return;
+				if (subscription) {
+					const actualHash = await endpointDigest(subscription.endpoint);
+					if (disposed) return;
+					if (actualHash !== expectedHash) throw new PushBrowserError('La suscripción de este navegador cambió. Actualiza el estado antes de retirarla.');
+					if (!await unsubscribeAndVerify(registration!, subscription) || disposed) return;
+				}
+				await loadData(true);
+				if (!disposed) actionMessage = 'Suscripción retirada de este navegador. El permiso de notificaciones sigue activo.';
+			});
+		} catch (error) {
+			if (canReconcile(error)) await loadData(true);
+			if (!disposed) actionError = fixedActionError(error, 'No se pudo confirmar la baja local. Actualiza el estado antes de reintentarlo.');
 		} finally {
 			if (!disposed) {
 				actionBusy = false;
@@ -399,6 +465,10 @@
 		{#if !online}<p class="push-note" role="status">Sin conexión. No se pueden consultar ni cambiar las suscripciones.</p>{/if}
 		{#if loading && !loaded}<p class="push-loading" role="status">Consultando el servicio…</p>{/if}
 		{#if error}<div class="push-error" role="alert"><span>{error}</span><button class="button button-small button-secondary" type="button" disabled={!online || busy || actionBusy || loading} onclick={() => void loadData()}>Reintentar</button></div>{/if}
+		{#if !error && supported && loaded && currentEndpointHash && !currentDevice}
+			<p class="push-note" role="status">Este navegador conserva una suscripción que no figura en Pulse. Puedes retirarla para completar la desactivación.</p>
+			<button class="button button-secondary button-block" type="button" disabled={busy || actionBusy || loading || !online} onclick={() => void removeLocalSubscription()}>Retirar suscripción local</button>
+		{/if}
 		{#if !error && supported && capabilities?.enabled && permission !== 'denied'}
 			<div class="push-activation">
 				{#if currentDevice?.state !== 'active'}<div class="push-name-field"><label for="push-device-name">Nombre de este dispositivo</label><input id="push-device-name" bind:value={deviceName} maxlength="60" autocomplete="off" aria-describedby="push-name-hint" disabled={busy || actionBusy} /><span id="push-name-hint">Máximo 60 caracteres. Solo se usa para reconocerlo aquí.</span></div>{/if}

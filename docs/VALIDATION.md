@@ -27,3 +27,12 @@ El monitor genérico se limita a metadatos de copias: estado, antigüedad, tama�
 El registro estructurado conserva **nueve fases** y **siete puertas reales pendientes**. La aceptación física y la finalización del objetivo permanecen abiertas. El estado por fase, las versiones y los criterios están en [DELIVERY-STATUS.json](DELIVERY-STATUS.json).
 
 El historial de aceptación conserva observaciones humanas acotadas de instalación PWA, funcionamiento offline y recepción de avisos en dispositivos concretos, incluida una notificación recibida con un teléfono bloqueado. No demuestra el candidato actual, compatibilidad universal, entrega general de avisos, autenticación tras reinicio, app/widget nativos, conexión del vehículo ni aceptación final.
+
+
+## Incrementos locales para revisión móvil
+
+El ciclo Push del componente real se comprobó con APIs sintéticas en 19 escenarios funcionales: inspección fallida visible, renovación sólo tras retirada comprobada, recuperación local explícita y guardas de desmontaje. 43 pruebas web, 7 móviles, Svelte sin errores/avisos y builds web/móvil pasan. Esto no acredita Web Push físico ni teléfonos. Revisión estática independiente sin P1/P2 confirmados.
+
+La nueva opción iOS de IPA de dispositivo permanece desactivada por defecto. Ocho pruebas del empaquetador con datos originales sintéticos pasan; Bash y YAML se comprobaron. La compilación real de esa opción y la instalación/firma no están cualificadas por estas comprobaciones. No se reduce el objetivo, nueve fases ni siete puertas reales; cámaras/centinela continúa como fase final.
+
+La suite backend completa del contenido de esta rama registró **1.182 pruebas y 109 subcasos correctos**, sin pruebas omitidas, con el SDK opcional público fijado al commit declarado en requirements-cloud.txt. No se utilizaron cuentas, vehículo o servicios privados.
