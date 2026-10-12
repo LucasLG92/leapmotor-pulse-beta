@@ -3,9 +3,11 @@
 import asyncio
 from datetime import datetime, timedelta, timezone
 from functools import partial
+import hashlib
 import json
 import os
 import sqlite3
+import threading
 import time
 
 from cryptography.fernet import Fernet
@@ -16,9 +18,10 @@ import http_ece
 import pytest
 
 from pulse.app import create_app
+from pulse.backup_alerts import BackupAlertsConfig
 from pulse.config import Config
 from pulse.collector import Collector
-from pulse.domain import DomainError
+from pulse.domain import DomainError, Store
 from pulse.push_policy import PushConfig, encode_url64
 
 
@@ -40,14 +43,15 @@ class Transport:
         self.closes += 1
 
 
-def selected(*, enabled=True):
+def selected(*, enabled=True, backup_alerts=None):
     private = ec.generate_private_key(ec.SECP256R1())
     push = PushConfig(enabled=True,
         vapid_private_key=encode_url64(private.private_numbers().private_value.to_bytes(32, "big")),
         storage_key=Fernet.generate_key().decode(), contact="mailto:operator@example.org") if enabled else PushConfig()
     return Config(auth_mode="oidc", public_url="https://pulse.example.org", oidc_issuer="https://id.example.org",
         oidc_client_id="pulse-web", oidc_client_secret="test-only-credential", allowed_users=("fixture",),
-        hosts=("pulse.example.org",), push=push)
+        hosts=("pulse.example.org",), push=push,
+        backup_alerts=backup_alerts or BackupAlertsConfig())
 
 
 def attach(client, app, owner="fixture-first"):
@@ -88,6 +92,21 @@ def register(web, data=None):
     response = web.post("/api/push/subscriptions", json=data or payload()[0])
     assert response.status_code == 200
     return response.json()
+
+
+def normalized_backup_reports(now, *, status="healthy", sequence=0, journal="c" * 32, events=()):
+    result = []
+    for profile in ("sqlite", "host"):
+        checked = now.isoformat().replace("+00:00", "Z") if status != "unavailable" else None
+        current_journal = journal if status != "unavailable" else None
+        current_sequence = sequence if profile == "sqlite" and status != "unavailable" else 0
+        current_events = list(events) if profile == "sqlite" and status != "unavailable" else []
+        reason = "missing" if status == "unavailable" else None
+        fingerprint = hashlib.sha256(f"{profile}:{status}:{current_sequence}:{reason}".encode()).hexdigest()
+        result.append({"profile": profile, "status": status, "checked_at": checked,
+            "journal_id": current_journal, "sequence": current_sequence, "events": current_events,
+            "reason_code": reason, "fingerprint": fingerprint})
+    return tuple(result)
 
 
 def test_register_test_export_import_and_owner_revocation(clients):
@@ -186,11 +205,14 @@ def test_expired_service_endpoint_revoked(clients, status):
     assert web.get("/api/push/subscriptions").json()["items"] == []
 
 
-def test_disabled_server_does_not_start_transport_or_register(tmp_path):
+def test_disabled_server_does_not_start_transport_or_register(tmp_path, monkeypatch):
     transport = Transport()
+    monkeypatch.setattr("pulse.push_service.read_monitor_reports",
+        lambda *args: (_ for _ in ()).throw(AssertionError("disabled reader must not run")))
     app = create_app(tmp_path / "pulse.sqlite3", config=selected(enabled=False), push_transport=transport)
     with TestClient(app, base_url="https://pulse.example.org") as web:
         attach(web, app)
+        assert app.state.push._backup_task is None
         assert not web.get("/api/push/capabilities").json()["enabled"]
         assert web.post("/api/push/subscriptions", json=payload()[0]).status_code == 503
         assert web.get("/api/push/subscriptions").json()["items"] == []
@@ -284,6 +306,425 @@ def test_restart_never_renews_an_existing_session_permission(tmp_path):
         assert row["id"] == device["id"] and row["state"] == "session_required"
         assert web.post(f'/api/push/subscriptions/{device["id"]}/test', json={"confirmed": True}).status_code == 409
     assert first_transport.calls == second_transport.calls == []
+
+
+def test_backup_alert_consent_is_confirmed_owner_scoped_and_opt_in(tmp_path, monkeypatch):
+    transport = Transport()
+    backup = BackupAlertsConfig(enabled=True, state_directory=str(tmp_path / "monitor"),
+        owner_id="fixture-first", poll_seconds=30)
+    monkeypatch.setattr("pulse.push_service.read_monitor_reports",
+        lambda config, now: normalized_backup_reports(now))
+    config = selected(backup_alerts=backup)
+    app = create_app(tmp_path / "pulse.sqlite3", config=config, push_transport=transport)
+    with TestClient(app, base_url=config.public_url) as web:
+        other = TestClient(app, base_url=config.public_url)
+        attach(web, app)
+        attach(other, app, "fixture-second")
+        assert web.get("/api/push/capabilities").json()["backup_alerts_available"] is True
+        assert other.get("/api/push/capabilities").json()["backup_alerts_available"] is False
+        device = register(web)
+        assert device["backup_alerts_enabled"] is False
+        path = f'/api/push/subscriptions/{device["id"]}/backup-alerts'
+        assert web.post(path, json={"enabled": True, "confirmed": False}).status_code == 400
+
+        other_device = register(other, payload("https://fcm.googleapis.com/wp/other-device")[0])
+        foreign = other.post(f'/api/push/subscriptions/{other_device["id"]}/backup-alerts',
+            json={"enabled": True, "confirmed": True})
+        assert foreign.status_code == 503
+
+        enabled = web.post(path, json={"enabled": True, "confirmed": True})
+        assert enabled.status_code == 200 and enabled.json()["backup_alerts_enabled"] is True
+        stored_row = stored(web, "get_push_subscription", "fixture-first", device["id"])
+        assert stored_row["backup_alerts_enabled"] == 1 and stored_row["backup_alerts_consented_at"]
+        disabled = web.post(path, json={"enabled": False, "confirmed": False})
+        assert disabled.status_code == 200 and disabled.json()["backup_alerts_enabled"] is False
+        stored_row = stored(web, "get_push_subscription", "fixture-first", device["id"])
+        assert stored_row["backup_alerts_enabled"] == 0 and stored_row["backup_alerts_consented_at"] is None
+        assert transport.calls == []
+        other.close()
+
+
+def test_start_activates_new_backup_scope_before_first_blocked_read(tmp_path, monkeypatch):
+    transport = Transport()
+    db_path = tmp_path / "pulse.sqlite3"
+    endpoint = "https://fcm.googleapis.com/wp/startup-scope-race"
+    previous_scope = hashlib.sha256(b"previous-backup-scope").hexdigest()
+    store = Store(db_path)
+    store.ensure_backup_alert_scope(previous_scope)
+    old_row = store.upsert_push_subscription(
+        "fixture-first", hashlib.sha256(endpoint.encode()).hexdigest(),
+        hashlib.sha256(b"previous-session").hexdigest(), "Old device",
+        "gAAAA-old-synthetic-ciphertext",
+        (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat(),
+    )
+    old_row = store.set_backup_alert_consent(
+        "fixture-first", old_row["id"], True,
+        datetime.now(timezone.utc).isoformat(), expected_revision=old_row["revision"],
+    )
+    assert old_row["backup_alerts_enabled"] == 1
+
+    backup = BackupAlertsConfig(enabled=True, state_directory=str(tmp_path / "monitor"),
+        owner_id="fixture-first", poll_seconds=30)
+    read_started, allow_read = threading.Event(), threading.Event()
+
+    def reader(config, now):
+        read_started.set()
+        if not allow_read.wait(3):
+            raise TimeoutError("test-only-reader-gate")
+        return normalized_backup_reports(now, status="unavailable")
+
+    monkeypatch.setattr("pulse.push_service.read_monitor_reports", reader)
+    config = selected(backup_alerts=backup)
+    app = create_app(db_path, config=config, push_transport=transport)
+    try:
+        with TestClient(app, base_url=config.public_url) as web:
+            attach(web, app)
+            assert read_started.wait(2)
+            old_after_start = stored(web, "get_push_subscription", "fixture-first", old_row["id"])
+            assert old_after_start["backup_alerts_enabled"] == 0
+
+            rebound = register(web, payload(endpoint)[0])
+            assert rebound["id"] == old_row["id"] and rebound["backup_alerts_enabled"] is False
+            consent_path = f'/api/push/subscriptions/{rebound["id"]}/backup-alerts'
+            enabled = web.post(consent_path, json={"enabled": True, "confirmed": True})
+            assert enabled.status_code == 200 and enabled.json()["backup_alerts_enabled"] is True
+
+            allow_read.set()
+
+            async def wait_for_send():
+                async with asyncio.timeout(2):
+                    while not transport.calls:
+                        await asyncio.sleep(0.01)
+
+            web.portal.call(wait_for_send)
+            current = stored(web, "get_push_subscription", "fixture-first", rebound["id"])
+            assert current["backup_alerts_enabled"] == 1
+            assert current["backup_alerts_consented_at"]
+            assert len(transport.calls) == 1
+    finally:
+        allow_read.set()
+
+
+def test_restore_during_backup_encryption_marks_attempt_uncertain_without_replay(tmp_path, monkeypatch):
+    transport = Transport()
+    backup = BackupAlertsConfig(enabled=True, state_directory=str(tmp_path / "monitor"),
+        owner_id="fixture-first", poll_seconds=30)
+    monkeypatch.setattr("pulse.push_service.read_monitor_reports",
+        lambda config, now: normalized_backup_reports(now))
+    config = selected(backup_alerts=backup)
+    app = create_app(tmp_path / "pulse.sqlite3", config=config, push_transport=transport)
+    with TestClient(app, base_url=config.public_url) as web:
+        attach(web, app)
+        device = register(web)
+        consent_path = f'/api/push/subscriptions/{device["id"]}/backup-alerts'
+        assert web.post(consent_path, json={"enabled": True, "confirmed": True}).status_code == 200
+        missing = normalized_backup_reports(datetime.now(timezone.utc), status="unavailable")
+        web.portal.call(partial(app.state.coordinator.call, "observe_backup_reports", backup.scope,
+            missing, write=True))
+        event = web.portal.call(partial(app.state.coordinator.call,
+            "list_backup_alert_candidates", backup.scope, "fixture-first"))[0]
+        row = stored(web, "get_push_subscription", "fixture-first", device["id"])
+        import_epoch = app.state.coordinator.import_epoch
+        reached, release = threading.Event(), threading.Event()
+        original = app.state.push.crypto.request
+
+        def delayed(*args):
+            reached.set()
+            if not release.wait(3):
+                raise TimeoutError("test-only-encryption-gate")
+            return original(*args)
+
+        app.state.push.crypto.request = delayed
+
+        async def scenario():
+            task = asyncio.create_task(app.state.push._send_backup_event(
+                row, event, backup.scope, expected_import_epoch=import_epoch,
+            ))
+            assert await asyncio.to_thread(reached.wait, 2)
+            archive = await app.state.coordinator.call("export_data", owner_id="fixture-first")
+            await app.state.coordinator.restore(archive, owner_id="fixture-first")
+            assert app.state.coordinator.import_epoch == import_epoch + 1
+            release.set()
+            with pytest.raises(DomainError):
+                await asyncio.wait_for(task, 2)
+
+        try:
+            web.portal.call(scenario)
+        finally:
+            release.set()
+
+        assert transport.calls == []
+        current = stored(web, "get_push_subscription", "fixture-first", device["id"])
+        assert current["backup_alerts_enabled"] == 1
+        assert current["backup_alerts_consented_at"] == row["backup_alerts_consented_at"]
+        assert current["last_result"] == "uncertain"
+        with sqlite3.connect(app.state.coordinator.path) as db:
+            assert db.execute("SELECT status FROM backup_alert_deliveries").fetchall() == [("uncertain",)]
+        web.portal.call(partial(app.state.push._send_backup_event, current, event, backup.scope,
+            expected_import_epoch=app.state.coordinator.import_epoch))
+        assert transport.calls == []
+
+
+def test_restore_before_backup_reservation_discards_stale_candidate_without_write(tmp_path, monkeypatch):
+    transport = Transport()
+    backup = BackupAlertsConfig(enabled=True, state_directory=str(tmp_path / "monitor"),
+        owner_id="fixture-first", poll_seconds=30)
+    monkeypatch.setattr("pulse.push_service.read_monitor_reports",
+        lambda config, now: normalized_backup_reports(now))
+    config = selected(backup_alerts=backup)
+    app = create_app(tmp_path / "pulse.sqlite3", config=config, push_transport=transport)
+    with TestClient(app, base_url=config.public_url) as web:
+        attach(web, app)
+        device = register(web)
+        consent_path = f'/api/push/subscriptions/{device["id"]}/backup-alerts'
+        assert web.post(consent_path, json={"enabled": True, "confirmed": True}).status_code == 200
+        missing = normalized_backup_reports(datetime.now(timezone.utc), status="unavailable")
+        web.portal.call(partial(app.state.coordinator.call, "observe_backup_reports", backup.scope,
+            missing, write=True))
+        event = web.portal.call(partial(app.state.coordinator.call,
+            "list_backup_alert_candidates", backup.scope, "fixture-first"))[0]
+        row = stored(web, "get_push_subscription", "fixture-first", device["id"])
+        import_epoch = app.state.coordinator.import_epoch
+        original_call = app.state.coordinator.call
+        reservation_waiting, release_reservation = threading.Event(), asyncio.Event()
+
+        async def gated_call(method, *args, **kwargs):
+            if method == "reserve_backup_alert_delivery":
+                reservation_waiting.set()
+                await release_reservation.wait()
+            return await original_call(method, *args, **kwargs)
+
+        async def scenario():
+            app.state.coordinator.call = gated_call
+            task = asyncio.create_task(app.state.push._send_backup_event(
+                row, event, backup.scope, expected_import_epoch=import_epoch,
+            ))
+            assert await asyncio.to_thread(reservation_waiting.wait, 2)
+            archive = await original_call("export_data", owner_id="fixture-first")
+            await app.state.coordinator.restore(archive, owner_id="fixture-first")
+            release_reservation.set()
+            await asyncio.wait_for(task, 2)
+
+        try:
+            web.portal.call(scenario)
+        finally:
+            release_reservation.set()
+            app.state.coordinator.call = original_call
+
+        current = stored(web, "get_push_subscription", "fixture-first", device["id"])
+        assert current["backup_alerts_enabled"] == 1
+        assert current["backup_alerts_consented_at"] == row["backup_alerts_consented_at"]
+        assert current["last_result"] == "never"
+        with sqlite3.connect(app.state.coordinator.path) as db:
+            assert db.execute("SELECT COUNT(*) FROM backup_alert_deliveries").fetchone()[0] == 0
+        assert transport.calls == []
+
+
+def test_restore_after_backup_request_emission_finishes_uncertain_without_replay(tmp_path, monkeypatch):
+    transport = Transport()
+    backup = BackupAlertsConfig(enabled=True, state_directory=str(tmp_path / "monitor"),
+        owner_id="fixture-first", poll_seconds=30)
+    monkeypatch.setattr("pulse.push_service.read_monitor_reports",
+        lambda config, now: normalized_backup_reports(now))
+    config = selected(backup_alerts=backup)
+    app = create_app(tmp_path / "pulse.sqlite3", config=config, push_transport=transport)
+    with TestClient(app, base_url=config.public_url) as web:
+        attach(web, app)
+        device = register(web)
+        consent_path = f'/api/push/subscriptions/{device["id"]}/backup-alerts'
+        assert web.post(consent_path, json={"enabled": True, "confirmed": True}).status_code == 200
+        missing = normalized_backup_reports(datetime.now(timezone.utc), status="unavailable")
+        web.portal.call(partial(app.state.coordinator.call, "observe_backup_reports", backup.scope,
+            missing, write=True))
+        event = web.portal.call(partial(app.state.coordinator.call,
+            "list_backup_alert_candidates", backup.scope, "fixture-first"))[0]
+        row = stored(web, "get_push_subscription", "fixture-first", device["id"])
+        import_epoch = app.state.coordinator.import_epoch
+        request_emitted, release_response = asyncio.Event(), asyncio.Event()
+
+        async def ambiguous_send(endpoint, headers, body):
+            transport.calls.append((endpoint, headers, body))
+            request_emitted.set()
+            await release_response.wait()
+            raise TimeoutError("test-only-ambiguous-request")
+
+        transport.send = ambiguous_send
+
+        async def scenario():
+            task = asyncio.create_task(app.state.push._send_backup_event(
+                row, event, backup.scope, expected_import_epoch=import_epoch,
+            ))
+            await asyncio.wait_for(request_emitted.wait(), 2)
+            archive = await app.state.coordinator.call("export_data", owner_id="fixture-first")
+            await app.state.coordinator.restore(archive, owner_id="fixture-first")
+            release_response.set()
+            with pytest.raises(DomainError):
+                await asyncio.wait_for(task, 2)
+
+        try:
+            web.portal.call(scenario)
+        finally:
+            release_response.set()
+
+        current = stored(web, "get_push_subscription", "fixture-first", device["id"])
+        assert current["backup_alerts_enabled"] == 1
+        assert current["backup_alerts_consented_at"] == row["backup_alerts_consented_at"]
+        assert current["last_result"] == "uncertain"
+        with sqlite3.connect(app.state.coordinator.path) as db:
+            assert db.execute("SELECT status FROM backup_alert_deliveries").fetchall() == [("uncertain",)]
+        web.portal.call(partial(app.state.push._send_backup_event, current, event, backup.scope,
+            expected_import_epoch=app.state.coordinator.import_epoch))
+        assert len(transport.calls) == 1
+
+
+def test_backup_alert_sends_only_fixed_encrypted_payload_and_deduplicates(tmp_path, monkeypatch):
+    transport = Transport()
+    backup = BackupAlertsConfig(enabled=True, state_directory=str(tmp_path / "monitor"),
+        owner_id="fixture-first", poll_seconds=30)
+    monkeypatch.setattr("pulse.push_service.read_monitor_reports",
+        lambda config, now: normalized_backup_reports(now))
+    config = selected(backup_alerts=backup)
+    app = create_app(tmp_path / "pulse.sqlite3", config=config, push_transport=transport)
+    with TestClient(app, base_url=config.public_url) as web:
+        attach(web, app)
+        data, recipient, auth = payload()
+        device = register(web, data)
+        path = f'/api/push/subscriptions/{device["id"]}/backup-alerts'
+        assert web.post(path, json={"enabled": True, "confirmed": True}).status_code == 200
+        missing = normalized_backup_reports(datetime.now(timezone.utc), status="unavailable")
+        web.portal.call(partial(app.state.coordinator.call, "observe_backup_reports", backup.scope,
+            missing, write=True))
+        event = web.portal.call(partial(app.state.coordinator.call,
+            "list_backup_alert_candidates", backup.scope, "fixture-first"))[0]
+        row = stored(web, "get_push_subscription", "fixture-first", device["id"])
+        web.portal.call(partial(app.state.push._send_backup_event, row, event, backup.scope))
+        assert len(transport.calls) == 1
+        body = http_ece.decrypt(transport.calls[0][2], private_key=recipient, auth_secret=auth,
+            version="aes128gcm")
+        assert json.loads(body) == {"version": 1, "kind": "backup_alert"}
+        assert transport.calls[0][1]["Topic"] == "pulse-backup-alert"
+        assert b"monitor" not in body and b"fixture-first" not in body
+        web.portal.call(partial(app.state.push._send_backup_event, row, event, backup.scope))
+        assert len(transport.calls) == 1
+
+
+def test_backup_alert_cannot_survive_consent_change_during_encryption(tmp_path, monkeypatch):
+    transport = Transport()
+    backup = BackupAlertsConfig(enabled=True, state_directory=str(tmp_path / "monitor"),
+        owner_id="fixture-first", poll_seconds=30)
+    monkeypatch.setattr("pulse.push_service.read_monitor_reports",
+        lambda config, now: normalized_backup_reports(now))
+    config = selected(backup_alerts=backup)
+    app = create_app(tmp_path / "pulse.sqlite3", config=config, push_transport=transport)
+    with TestClient(app, base_url=config.public_url) as web:
+        attach(web, app)
+        device = register(web)
+        path = f'/api/push/subscriptions/{device["id"]}/backup-alerts'
+        assert web.post(path, json={"enabled": True, "confirmed": True}).status_code == 200
+        missing = normalized_backup_reports(datetime.now(timezone.utc), status="unavailable")
+        web.portal.call(partial(app.state.coordinator.call, "observe_backup_reports", backup.scope,
+            missing, write=True))
+        event = web.portal.call(partial(app.state.coordinator.call,
+            "list_backup_alert_candidates", backup.scope, "fixture-first"))[0]
+        row = stored(web, "get_push_subscription", "fixture-first", device["id"])
+        reached, release = threading.Event(), threading.Event()
+        original = app.state.push.crypto.request
+
+        def delayed(*args):
+            reached.set()
+            if not release.wait(3):
+                raise TimeoutError("test-only-encryption-gate")
+            return original(*args)
+
+        app.state.push.crypto.request = delayed
+
+        async def scenario():
+            task = asyncio.create_task(app.state.push._send_backup_event(row, event, backup.scope))
+            assert await asyncio.to_thread(reached.wait, 2)
+            await app.state.push.set_backup_alerts("fixture-first", device["id"],
+                enabled=False, confirmed=False)
+            release.set()
+            with pytest.raises(DomainError):
+                await asyncio.wait_for(task, 2)
+
+        try:
+            web.portal.call(scenario)
+        finally:
+            release.set()
+        assert transport.calls == []
+        with sqlite3.connect(app.state.coordinator.path) as db:
+            assert db.execute("SELECT status FROM backup_alert_deliveries").fetchone()[0] == "uncertain"
+
+
+def test_stopping_backup_consumer_keeps_reserved_attempt_pending_without_send(tmp_path, monkeypatch):
+    transport = Transport()
+    backup = BackupAlertsConfig(enabled=True, state_directory=str(tmp_path / "monitor"),
+        owner_id="fixture-first", poll_seconds=30)
+    read_started, allow_read = threading.Event(), threading.Event()
+    reports_box = {"value": normalized_backup_reports(datetime.now(timezone.utc))}
+
+    def reader(config, now):
+        read_started.set()
+        if not allow_read.wait(3):
+            raise TimeoutError("test-only-reader-gate")
+        return reports_box["value"]
+
+    monkeypatch.setattr("pulse.push_service.read_monitor_reports", reader)
+    config = selected(backup_alerts=backup)
+    app = create_app(tmp_path / "pulse.sqlite3", config=config, push_transport=transport)
+    with TestClient(app, base_url=config.public_url) as web:
+        attach(web, app)
+        assert read_started.wait(2)
+        device = register(web)
+        path = f'/api/push/subscriptions/{device["id"]}/backup-alerts'
+        assert web.post(path, json={"enabled": True, "confirmed": True}).status_code == 200
+        reports_box["value"] = normalized_backup_reports(datetime.now(timezone.utc), status="unavailable")
+
+        encrypted_started, finish_crypto = threading.Event(), threading.Event()
+        original = app.state.push.crypto.request
+
+        def delayed_crypto(*args):
+            encrypted_started.set()
+            if not finish_crypto.wait(3):
+                raise TimeoutError("test-only-crypto-gate")
+            return original(*args)
+
+        app.state.push.crypto.request = delayed_crypto
+        allow_read.set()
+        assert encrypted_started.wait(2)
+        background_task = app.state.push._backup_task
+
+        async def stop_consumer():
+            background_task.cancel()
+            await asyncio.gather(background_task, return_exceptions=True)
+
+        web.portal.call(stop_consumer)
+        finish_crypto.set()
+        assert transport.calls == []
+        with sqlite3.connect(app.state.coordinator.path) as db:
+            assert db.execute("SELECT status FROM backup_alert_deliveries").fetchall() == [("pending",)]
+
+
+def test_new_session_and_rebind_do_not_inherit_backup_consent(tmp_path, monkeypatch):
+    transport = Transport()
+    backup = BackupAlertsConfig(enabled=True, state_directory=str(tmp_path / "monitor"),
+        owner_id="fixture-first", poll_seconds=30)
+    monkeypatch.setattr("pulse.push_service.read_monitor_reports",
+        lambda config, now: normalized_backup_reports(now))
+    config = selected(backup_alerts=backup)
+    app = create_app(tmp_path / "pulse.sqlite3", config=config, push_transport=transport)
+    with TestClient(app, base_url=config.public_url) as web:
+        attach(web, app)
+        data = payload()[0]
+        device = register(web, data)
+        path = f'/api/push/subscriptions/{device["id"]}/backup-alerts'
+        assert web.post(path, json={"enabled": True, "confirmed": True}).status_code == 200
+        assert web.post("/api/auth/logout", json={}).status_code == 200
+        attach(web, app)
+        assert web.post(path, json={"enabled": True, "confirmed": True}).status_code == 409
+        rebound = register(web, data)
+        assert rebound["session_active"] is True and rebound["backup_alerts_enabled"] is False
+        assert transport.calls == []
 
 
 def observation(at, charging):

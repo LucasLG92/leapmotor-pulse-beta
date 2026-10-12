@@ -55,12 +55,13 @@ from pulse.widget_profiles import (
     validate_profile_data,
 )
 from pulse.push_store import PushStoreMixin
+from pulse.backup_alert_store import BackupAlertStoreMixin
 from pulse.observed_events import (
     ObservedEventError, ObservedEventsStoreMixin, select_changes,
     validate_observed_events_archive, validate_observed_event_future_dates,
 )
 
-SCHEMA_VERSION = 17
+SCHEMA_VERSION = 18
 EXPORT_VERSION = 15
 MAX_IMPORT_BYTES = 1_000_000
 MAX_V3_IMPORT_BYTES = 5_000_000
@@ -181,7 +182,7 @@ class DomainError(Exception):
 
 class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin,
             ChargerPricingHistoryStoreMixin,
-            PushStoreMixin, ObservedEventsStoreMixin):
+            PushStoreMixin, BackupAlertStoreMixin, ObservedEventsStoreMixin):
     """A per-call SQLite store with explicit initialization and short transactions."""
 
     def __init__(
@@ -376,6 +377,21 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
         if version == 16:
             self._migrate_v16_to_v17(connection)
             connection.execute("PRAGMA user_version = 17")
+            version = 17
+        if version == 17:
+            self._migrate_v17_to_v18(connection)
+            connection.execute("PRAGMA user_version = 18")
+
+    def _migrate_v17_to_v18(self, connection: sqlite3.Connection) -> None:
+        """Add opt-in backup notices and bounded operational state, outside exports."""
+        connection.execute(
+            """ALTER TABLE push_subscriptions ADD COLUMN backup_alerts_enabled INTEGER NOT NULL
+               DEFAULT 0 CHECK (backup_alerts_enabled IN (0, 1))"""
+        )
+        connection.execute(
+            "ALTER TABLE push_subscriptions ADD COLUMN backup_alerts_consented_at TEXT"
+        )
+        self._create_backup_alert_schema(connection)
 
     def _migrate_v14_to_v15(self, connection: sqlite3.Connection) -> None:
         connection.execute(

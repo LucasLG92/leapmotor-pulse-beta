@@ -11,6 +11,7 @@ class PushCapabilities(BaseModel):
     privacy_mode: Literal["generic"] = "generic"
     max_devices: int = 8
     scope: Literal["pwa"] = "pwa"
+    backup_alerts_available: bool = False
 
 
 class PushDevice(BaseModel):
@@ -25,6 +26,7 @@ class PushDevice(BaseModel):
     last_attempt_at: str | None
     last_accepted_at: str | None
     last_result: Literal["never", "pending", "accepted", "failed", "uncertain"]
+    backup_alerts_enabled: bool = False
 
 
 class PushDeviceList(BaseModel):
@@ -58,4 +60,9 @@ class PushRegister(PushPayload):
 
 
 class PushTest(PushPayload):
+    confirmed: bool
+
+
+class BackupAlertsConsent(PushPayload):
+    enabled: bool
     confirmed: bool

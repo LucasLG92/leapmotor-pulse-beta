@@ -109,11 +109,11 @@ def test_v6_to_v7_migration_preserves_domain_data_and_creates_charger_tables(tmp
         "items": [], "total": 0, "limit": 20, "offset": 0,
     }
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 17
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 18
         assert {row[0] for row in connection.execute(
             "SELECT name FROM sqlite_master WHERE type='table'"
         )} >= {"charger_observations", "charger_sessions"}
-    assert SCHEMA_VERSION == 17
+    assert SCHEMA_VERSION == 18
 
 
 def test_observation_and_sessions_persist_dedupe_and_accept_newer_corrections(tmp_path):

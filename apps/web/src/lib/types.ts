@@ -57,8 +57,12 @@ export type NativeCapabilities = components['schemas']['NativeCapabilities'];
 export type WidgetGrant = components['schemas']['WidgetGrant'];
 export type WidgetGrantList = components['schemas']['WidgetGrantList'];
 export type WidgetPairingResult = components['schemas']['WidgetPairingResult'];
-export type PushCapabilities = components['schemas']['PushCapabilities'];
-export type PushDevice = components['schemas']['PushDevice'];
+export type PushCapabilities = components['schemas']['PushCapabilities'] & {
+	backup_alerts_available: boolean;
+};
+export type PushDevice = components['schemas']['PushDevice'] & {
+	backup_alerts_enabled: boolean;
+};
 export type PushDeviceList = components['schemas']['PushDeviceList'];
 export type PushTestResult = components['schemas']['PushTestResult'];
 export type WebPushSubscriptionInput = components['schemas']['PushSubscription'];
@@ -109,6 +113,7 @@ export interface PageProps {
 		register: (name: string, subscription: WebPushSubscriptionInput) => Promise<PushDevice>;
 		revoke: (id: string) => Promise<void>;
 		test: (id: string) => Promise<PushTestResult>;
+		setBackupAlerts: (id: string, enabled: boolean) => Promise<PushDevice>;
 	};
 	runNotificationAction: (operation: () => Promise<void>) => Promise<void>;
 	confirmAction: (title: string, message: string, confirmLabel?: string) => Promise<boolean>;

@@ -122,7 +122,7 @@ def test_real_quote_insert_creates_one_private_history_event_and_duplicate_does_
     assert item["quote"] == stored_quote
     assert item["corrected_session"] is None
     assert "scope" not in item and "upstream_id" not in item["session"]
-    assert SCHEMA_VERSION == 17
+    assert SCHEMA_VERSION == 18
     assert EXPORT_VERSION == 15
 
     with pytest.raises(DomainError) as error:
@@ -271,7 +271,7 @@ def test_v12_migration_creates_explicit_migration_baseline(tmp_path):
     assert page["items"][0]["kind"] == "baseline"
     assert page["items"][0]["quote"] == quote
     with sqlite3.connect(store.path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 17
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 18
         assert connection.execute(
             "PRAGMA foreign_key_list(charger_pricing_history)"
         ).fetchone()[6] == "CASCADE"

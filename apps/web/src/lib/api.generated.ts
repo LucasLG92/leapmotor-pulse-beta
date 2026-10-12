@@ -722,6 +722,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/push/subscriptions/{item_id}/backup-alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Backup Alert Consent */
+        post: operations["backup_alert_consent_api_push_subscriptions__item_id__backup_alerts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/widget-profiles": {
         parameters: {
             query?: never;
@@ -881,6 +898,13 @@ export interface components {
             name: string;
             /** Version */
             version: string;
+        };
+        /** BackupAlertsConsent */
+        BackupAlertsConsent: {
+            /** Enabled */
+            enabled: boolean;
+            /** Confirmed */
+            confirmed: boolean;
         };
         /** Charge */
         Charge: {
@@ -1685,6 +1709,11 @@ export interface components {
              * @constant
              */
             scope: "pwa";
+            /**
+             * Backup Alerts Available
+             * @default false
+             */
+            backup_alerts_available: boolean;
         };
         /** PushDevice */
         PushDevice: {
@@ -1716,6 +1745,11 @@ export interface components {
              * @enum {string}
              */
             last_result: "never" | "pending" | "accepted" | "failed" | "uncertain";
+            /**
+             * Backup Alerts Enabled
+             * @default false
+             */
+            backup_alerts_enabled: boolean;
         };
         /** PushDeviceList */
         PushDeviceList: {
@@ -3607,6 +3641,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PushTestResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    backup_alert_consent_api_push_subscriptions__item_id__backup_alerts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BackupAlertsConsent"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PushDevice"];
                 };
             };
             /** @description Validation Error */

@@ -35,6 +35,10 @@
 	class PushBrowserError extends Error {}
 
 	const currentDevice = $derived(devices.find((device) => device.endpoint_hash === currentEndpointHash) ?? null);
+	function withBackupAlertState(device: Omit<PushDevice, 'backup_alerts_enabled'> & { backup_alerts_enabled?: boolean }): PushDevice {
+		return { ...device, backup_alerts_enabled: device.backup_alerts_enabled === true };
+	}
+
 	function isPushDeviceDirty(): boolean {
 		return deviceName !== deviceNameBaseline;
 	}
@@ -142,7 +146,7 @@
 			const nextDevices = await notifications.devices();
 			if (disposed || request !== requestId) return;
 			capabilities = nextCapabilities;
-			devices = nextDevices.items;
+			devices = nextDevices.items.map(withBackupAlertState);
 			maxDevices = nextDevices.max_devices;
 			loaded = true;
 			const inspected = await inspectLocalSubscription(nextCapabilities.application_server_key, request);
@@ -430,6 +434,73 @@
 		}
 	}
 
+	function validBackupAlertResponse(value: PushDevice, id: string, enabled: boolean): boolean {
+		return value !== null && typeof value === 'object' && value.id === id &&
+			typeof value.backup_alerts_enabled === 'boolean' && value.backup_alerts_enabled === enabled &&
+			(value.state === 'active' || value.state === 'session_required');
+	}
+
+	async function setBackupAlerts(device: PushDevice) {
+		const originalEnabled = device.backup_alerts_enabled;
+		const enabled = !originalEnabled;
+		if (busy || actionBusy || loading || !online || capabilities?.backup_alerts_available !== true || device.state !== 'active') return;
+		const canSubmit = (insideNotificationAction = false): boolean => {
+			if (disposed) return false;
+			const current = devices.find((item) => item.id === device.id);
+			const allowed = online && (!busy || insideNotificationAction) && !loading &&
+				capabilities?.backup_alerts_available === true && current?.state === 'active' &&
+				current.backup_alerts_enabled === originalEnabled;
+			if (!allowed) actionError = 'Cambió la conexión, disponibilidad o estado del dispositivo. No se aplicó el cambio; consulta el estado antes de intentarlo de nuevo.';
+			return allowed;
+		};
+		const previousFocus = capturePanelFocus();
+		actionMessage = '';
+		actionError = '';
+		actionBusy = true;
+		try {
+			await runNotificationAction(async () => {
+				if (enabled) {
+					const confirmed = await confirmAction(
+						'Activar avisos de copias',
+						'Pulse mostrará avisos genéricos de comprobaciones de copias o recuperación. No informan sobre la integridad del contenido ni garantizan la entrega del aviso.',
+						'Activar avisos'
+					);
+					if (!confirmed || !canSubmit(true)) return;
+				}
+				// runNotificationAction owns the global busy flag while its callback runs; allow that
+				// busy state here, while still rechecking connectivity, capability, loading and row state.
+				if (!canSubmit(true)) return;
+				const updated = await notifications.setBackupAlerts(device.id, enabled);
+				if (disposed) return;
+				if (!validBackupAlertResponse(updated, device.id, enabled)) {
+					throw new PushBrowserError('La respuesta no confirmó el estado solicitado. Comprueba el dispositivo antes de volver a cambiarlo.');
+				}
+				devices = devices.map((item) => item.id === device.id
+					? { ...item, backup_alerts_enabled: updated.backup_alerts_enabled }
+					: item);
+				actionMessage = enabled
+					? 'Avisos de copias activados para este dispositivo. La entrega no está garantizada.'
+					: 'Avisos de copias desactivados para este dispositivo.';
+			});
+		} catch (error) {
+			// A failed or malformed response may follow a committed write. Read once to reconcile; never repeat the POST.
+			if (canReconcile(error)) {
+				try {
+					const latest = await notifications.devices();
+					if (!disposed) devices = latest.items.map(withBackupAlertState);
+				} catch {
+					// Keep the last confirmed state and show the fixed error below.
+				}
+			}
+			if (!disposed) actionError = fixedActionError(error, 'No se pudo confirmar el cambio de avisos de copias. Consulta el estado antes de volver a intentarlo.');
+		} finally {
+			if (!disposed) {
+				actionBusy = false;
+				await restorePanelFocus(previousFocus);
+			}
+		}
+	}
+
 	function deviceState(device: PushDevice): string {
 		if (device.state === 'session_required') return 'Reactivar con esta sesión';
 		if (device.last_result === 'accepted') return 'Último aviso aceptado por el servicio';
@@ -491,6 +562,16 @@
 				{#each devices as device (device.id)}
 					<li class="push-device-row">
 						<div class="push-device-info"><strong>{device.name}</strong><span>{expiryLabel(device.expires_at)}</span><span>{deviceState(device)}</span></div>
+						<div class="push-backup-alerts">
+							<div><strong>Avisos de copias</strong><span>Comprobaciones generales de copias y recuperación.</span></div>
+							<button class="push-switch" type="button" role="switch" aria-checked={device.backup_alerts_enabled} aria-label="Avisos de copias para {device.name}" disabled={!online || busy || actionBusy || loading || capabilities?.backup_alerts_available !== true || device.state !== 'active'} onclick={() => void setBackupAlerts(device)}>
+								<span class="push-switch-track" aria-hidden="true"><span class="push-switch-thumb"></span></span>
+								<span>{device.backup_alerts_enabled ? 'Activados' : 'Desactivados'}</span>
+							</button>
+							{#if capabilities?.backup_alerts_available !== true}<span class="push-backup-explanation">{capabilities ? 'El servidor no tiene disponibles los avisos de copias.' : 'La disponibilidad de los avisos de copias aún no se ha confirmado.'}</span>
+							{:else if device.state !== 'active'}<span class="push-backup-explanation">Reactiva este dispositivo para cambiar esta opción.</span>{/if}
+							<p class="push-backup-disclaimer">El aviso no informa sobre la integridad de una copia ni garantiza su entrega.</p>
+						</div>
 						<div class="push-device-actions">
 							{#if device.state === 'active'}<button class="button button-small button-secondary" type="button" disabled={!online || busy || actionBusy || loading} onclick={() => void sendTest(device)}>{actionBusy ? 'Enviando…' : 'Enviar prueba'}</button>{/if}
 							<button class="button button-small button-quiet push-revoke" type="button" disabled={!online || busy || actionBusy || loading} onclick={() => void revokeDevice(device)}>Desactivar</button>
@@ -523,6 +604,19 @@
 	.push-device-row { display: grid; gap: 7px; min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-soft); }
 	.push-device-info { display: grid; gap: 3px; min-width: 0; color: var(--muted); font-size: .75rem; line-height: 1.45; overflow-wrap: anywhere; }
 	.push-device-info strong { overflow-wrap: anywhere; color: var(--ink); font-size: 1rem; font-weight: 640; }
+	.push-backup-alerts { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+	.push-backup-alerts > div { display: grid; gap: 3px; min-width: 0; }
+	.push-backup-alerts strong { color: var(--ink); font-size: .875rem; }
+	.push-backup-alerts span, .push-backup-disclaimer { margin: 0; color: var(--muted); font-size: .75rem; line-height: 1.45; overflow-wrap: anywhere; }
+	.push-backup-explanation, .push-backup-disclaimer { grid-column: 1 / -1; }
+	.push-switch { display: inline-flex; align-items: center; justify-content: flex-end; gap: 7px; min-width: 44px; min-height: 44px; padding: 4px; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: .75rem; cursor: pointer; }
+	.push-switch:disabled { color: var(--muted); cursor: not-allowed; }
+	.push-switch:disabled .push-switch-track { opacity: .55; }
+	.push-switch-track { display: inline-flex; align-items: center; width: 38px; height: 22px; padding: 3px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface); transition: background-color .12s ease, border-color .12s ease; }
+	.push-switch[aria-checked="true"] .push-switch-track { border-color: var(--forest); background: var(--forest); }
+	.push-switch-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--ink); transition: transform .12s ease, background-color .12s ease; }
+	.push-switch[aria-checked="true"] .push-switch-thumb { transform: translateX(16px); background: var(--surface); }
+	.push-switch:focus-visible { outline: 3px solid var(--focus, var(--forest)); outline-offset: 2px; border-radius: 6px; }
 	.push-device-actions { display: flex; flex-wrap: wrap; gap: 5px; }
 	.push-panel :global(.button) { min-height: 44px; font-size: .875rem; }
 	.push-revoke { color: var(--danger); }
@@ -533,5 +627,5 @@
 	.push-footnote { padding-top: 8px; border-top: 1px solid var(--line); font-size: .75rem; }
 	.push-panel :global(.button) { transition: background-color .12s ease, color .12s ease, border-color .12s ease, opacity .12s ease; }
 	@media (max-width: 430px) { .push-device-actions { display: grid; grid-template-columns: 1fr; } .push-device-actions .button { width: 100%; } }
-	@media (prefers-reduced-motion: reduce) { .push-panel :global(.button) { transition: none; } }
+	@media (prefers-reduced-motion: reduce) { .push-panel :global(.button), .push-switch-track, .push-switch-thumb { transition: none; } }
 </style>

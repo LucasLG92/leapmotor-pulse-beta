@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-12",
+  "updated_at": "2026-10-13",
   "objective_status": "active",
   "objective_acceptance": "A0-A12, las siete puertas reales y la aceptación final siguen vigentes. Un registro estructuralmente válido o una fase de software completada no cierra por sí mismo el objetivo.",
   "latest_delivered": {
@@ -43,18 +43,43 @@
       "status": "local_candidate_not_delivered",
       "version_name": "0.1.1",
       "version_code": 2,
-      "evidence": "docs/VALIDATION.md#candidato-y-suite-python"
+      "evidence": "docs/VALIDATION.md#candidato-y-suite-python",
+      "phase8_native_artifact_alignment": {
+        "date": "2026-10-13",
+        "sha256": "8618a4bc87530214bb3e44d14c50f6a46224480c00557bc7ac70cdf791c6eff4",
+        "size_bytes": 6535400,
+        "verified_native_asset_count": 44,
+        "empty_placeholder_count": 2,
+        "canonical_ui_asset_alignment_verified": true,
+        "source_stage_byte_identity_verified": false,
+        "signed_or_distributed": false,
+        "qualification_reference": "docs/CANDIDATE-QUALIFICATION.json#phase8_native_artifact_alignment"
+      }
     },
     "ios": {
       "status": "local_candidate_not_delivered",
       "marketing_version": "0.1.1",
       "build_number": 2,
-      "evidence": "docs/VALIDATION.md#candidato-y-suite-python"
+      "evidence": "docs/VALIDATION.md#candidato-y-suite-python",
+      "phase8_previous_pr9_ipa_status": {
+        "date": "2026-10-13",
+        "previous_pr9_ipa_includes_phase8_canonical_ui": false,
+        "phase8_ipa_build_qualified": false,
+        "signed_distribution_verified": false,
+        "qualification_reference": "docs/CANDIDATE-QUALIFICATION.json#phase8_native_artifact_alignment"
+      }
     },
     "web": {
       "status": "local_candidate_not_delivered",
-      "scope": "Local candidate: accessibility and persistent-error UX, synthetic QA, six opt-in MQTT sensor fields, and passive raw-code diagnostics with source and observation time; SQLite17/JSON15. Meanings and physical behavior remain unqualified.",
+      "scope": "Local candidate: accessibility and persistent-error UX, synthetic QA, six opt-in MQTT sensor fields, and passive raw-code diagnostics with source and observation time; SQLite18/JSON15. Meanings and physical behavior remain unqualified.",
       "evidence": "docs/VALIDATION.md#candidato-y-suite-python"
+    },
+    "backup_alerts": {
+      "status": "local_candidate_not_delivered",
+      "qualification": "docs/BACKUP-ALERTS-QUALIFICATION.json",
+      "source_published": false,
+      "runtime_deployed": false,
+      "physical_acceptance": false
     }
   },
   "acceptance": {
@@ -247,12 +272,15 @@
         "Probar recuperación operativa, otra cuenta, rendimiento/consumo y uso habitual reales.",
         "Mantener seguridad y recuperación como criterios continuos."
       ],
-      "local_increment": "A generic metadata-only monitor and community guide are included. The focused suite covers bounded status checks; it does not establish any external installation state, backup contents, restoration or alert delivery.",
+      "local_increment": "Local metadata-only producer journal format 2 (up to 64 transitions per profile) and a separate opt-in Push consumer with explicit per-device consent. Community host input is archive while its logical backend label remains host. The monitor itself never sends notifications; protected UID-aware metadata transfer and real receipt remain unverified.",
       "qualification": "docs/SECURITY-QUALIFICATION.json",
       "remaining_software_checks": [
-        "Chosen backup-monitor notification consumer/channel and generic alert/recovery delivery, including checker failure/absent/stale state; natural scheduled cycles and operational recovery acceptance.",
-        "Final artifact/image/optional SDK/native/toolchain security and offsite/whole-host/proxy/auth recovery, real users/phones/performance/habitual acceptance."
-      ]
+        "Transfer metadata to the consumer UID through a protected channel and verify the authorized deployment configuration without adding installer/Compose automation.",
+        "Verify real alert/recovery receipt, checker absence/staleness and consumer/host monitoring with current consent and session.",
+        "Complete off-host copy and whole-host/proxy/auth recovery; security, mobile performance and habitual/physical acceptance remain open.",
+        "Identify the actual pre-change deployed schema and preserve it with the compatible artifact; the local 17-to-18 migration does not establish deployed state."
+      ],
+      "backup_alerts_qualification": "docs/BACKUP-ALERTS-QUALIFICATION.json"
     },
     {
       "id": "sentinel9final",

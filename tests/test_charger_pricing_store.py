@@ -103,14 +103,14 @@ def test_v8_migration_preserves_sessions_and_installs_cascading_ledger(tmp_path)
         connection.execute("PRAGMA user_version = 8")
 
     migrated = Store(path, clock=Clock())
-    assert SCHEMA_VERSION == 17
+    assert SCHEMA_VERSION == 18
     assert migrated.charger_sessions(scope())["items"] == [record | {
         "started_at": "2026-10-08T12:00:00.000000Z",
         "ended_at": "2026-10-08T13:00:00.000000Z",
         "received_at": "2026-10-08T14:00:00.000000Z",
     }]
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 17
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 18
         assert connection.execute(
             "SELECT sql FROM sqlite_master WHERE type='table' AND name='charger_pricing'"
         ).fetchone() is not None
