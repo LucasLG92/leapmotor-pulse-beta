@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-12",
+  "classification": "local_software_candidate",
+  "phase": "phase-6",
+  "delivered": false,
+  "physical_acceptance": false,
+  "selected_fields_maximum": 9,
+  "new_selectable_fields": [
+    "interior_temperature_c",
+    "battery_min_temperature_c",
+    "front_left_pressure_kpa",
+    "front_right_pressure_kpa",
+    "rear_left_pressure_kpa",
+    "rear_right_pressure_kpa"
+  ],
+  "defaults": {
+    "enabled": false,
+    "fields": []
+  },
+  "previous_selections_preserved": true,
+  "units": {
+    "temperatures": "°C",
+    "pressures": "kPa"
+  },
+  "software_checks": {
+    "mqtt_tests": null,
+    "full_backend_tests": 1174,
+    "backend_subtests": 87,
+    "full_backend_single_run_passed": true,
+    "http_related_tests": 25,
+    "web_tests": 43,
+    "svelte_errors": 0,
+    "svelte_warnings": 0,
+    "mobile_typescript": true,
+    "web_build": true,
+    "mobile_build": true,
+    "ui_nine_labels": true,
+    "ui_demo_exclusion_message": true,
+    "ui_390px_light_dark_no_overflow": true,
+    "openapi_exact_and_scoped": true,
+    "independent_review": "no_material_findings_static_only",
+    "mobile_tests": 7
+  },
+  "unchanged": {
+    "sqlite_schema": 16,
+    "json_export_format": 14,
+    "mqtt_transport_and_queue": true,
+    "sdk_and_vehicle_provider": true,
+    "native_widgets_and_privacy": true,
+    "abrp": true,
+    "physical_commands_disabled": true
+  },
+  "limits": [
+    "No broker or Home Assistant real receipt for this increment. FakeTransport tests are software-only.",
+    "No cloud reads, vehicle/charger commands, private configuration or production changes.",
+    "No real vehicle freshness, login/refresh, ACL, phone/widget acceptance or signed distribution proven.",
+    "Stages 4/5 retain real source-contract gates; centinela/cameras remain final phase9."
+  ],
+  "evidence": {
+    "mqtt": "docs/VALIDATION.md#datos-interfaz-e-integraciones",
+    "backend": "docs/VALIDATION.md#datos-interfaz-e-integraciones",
+    "http": "docs/VALIDATION.md#datos-interfaz-e-integraciones",
+    "browser": "docs/VALIDATION.md#datos-interfaz-e-integraciones",
+    "contract": "docs/VALIDATION.md#datos-interfaz-e-integraciones",
+    "review": "docs/VALIDATION.md#datos-interfaz-e-integraciones"
+  },
+  "native_packaging": {
+    "android_generic_release_lint_zipalign": null,
+    "apk_sha256": null,
+    "apk_size_bytes": null,
+    "mobile_assets_exact": 44,
+    "native_android_sources_unchanged": 60,
+    "prior_75_native_tests_reused": true,
+    "ios_generic_sync": true,
+    "ios_sources_unchanged": 42,
+    "apple_build": false,
+    "signed": false,
+    "operational_configuration": false,
+    "phone_acceptance": false,
+    "receipt": "docs/VALIDATION.md#candidato-y-suite-python",
+    "receipt_sha256": null,
+    "android_generic_release_assembled_unsigned": true
+  },
+  "current_storage": {
+    "sqlite_schema": 17,
+    "json_export_format": 15
+  }
+}

@@ -1,11 +1,7 @@
-# Leapmotor Pulse beta
+# Leapmotor Pulse repository
 
-Proyecto original independiente. No copiar material propietario de otras aplicaciones. Mantener avisos y licencias de terceros. La licencia MIT se aplica al código original publicado.
+Pulse is an original application built with Svelte 5, TypeScript, Vite, FastAPI, and SQLite. Keep new code and examples independent of unrelated applications; check third-party licenses and retain required notices. Do not claim vehicle compatibility, production operation, or recovery validation without authorized evidence.
 
-Svelte 5/TypeScript/Vite, FastAPI y SQLite. Ejecutar scripts/check.py y las validaciones de imagen al cambiar runtime. Las integraciones opcionales se activan explícitamente; demo y pruebas sintéticas no prueban compatibilidad física. Los comandos reales permanecen bloqueados.
+Only generic deployment examples belong under `deploy/community`. Never add real hosts, domains, IP addresses, instance IDs, storage UUIDs, installation paths, runtime environments, credentials, certificates, signing material, or pilot assets. Do not run deployment, backup, or service-management commands as part of code review or publication preparation.
 
-No añadir credenciales, datos personales, bases de datos, claves/certificados, configuración de operadores, APK configurados para una instalación particular ni artefactos generados. Mantener ejemplos genéricos. No debilitar autenticación, TLS o privacidad para facilitar la instalación.
-
-## PWA public assets
-
-Offline storage is limited to the generic shell and exact public B10 artwork URLs used on demand. Never persist API responses, identity, profile settings or vehicle telemetry. Capacitor does not register the web service worker.
+Preserve privacy boundaries in the PWA and native shells. Keep demo data explicit and never present synthetic fixtures as vehicle or production evidence.

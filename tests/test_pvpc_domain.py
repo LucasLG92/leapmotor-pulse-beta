@@ -171,7 +171,7 @@ def test_v4_export_import_preserves_pricing_and_rejects_bad_snapshot_atomically(
     source.update_settings({"pricing_method": "pvpc", "tariff_eur_kwh": 0.42})
     charge = add_pvpc_charge(source)
     document = source.export_data()
-    assert document["schema_version"] == 13
+    assert document["schema_version"] == 15
     assert document["settings"]["pricing_method"] == "pvpc"
     assert next(item for item in document["charges"] if item["id"] == charge["id"])["pricing"] == charge["pricing"]
 

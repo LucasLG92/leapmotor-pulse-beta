@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, tick } from 'svelte';
 	import Glyph from './Glyph.svelte';
 	import { getNativeBridge, getNativePlatform, type NativeBridgeStatus } from './native';
 	import type { PageProps } from './types';
@@ -15,7 +15,6 @@
 	let status = $state<NativeBridgeStatus | null>(null);
 	let loading = $state(true);
 	let busy = $state(false);
-	let error = $state('');
 	let pairingCode = $state('');
 	let codeVisible = $state(false);
 	let deviceName = $state('Pulse móvil');
@@ -25,12 +24,29 @@
 	let requestId = 0;
 	let disposed = false;
 	let codeInput = $state<HTMLInputElement>();
-	let statusError = 'No se pudo consultar el estado de la app. Vuelve a intentarlo.';
+	let panelElement = $state<HTMLElement>();
+	let headingElement = $state<HTMLHeadingElement>();
+	let statusError = $state('');
+	let actionError = $state('');
+	const statusErrorMessage = 'No se pudo consultar el estado de la app. Vuelve a intentarlo.';
 
-	const canLink = $derived(Boolean(online && status?.configured && status.authenticated && !busy && /^[-A-Za-z0-9_]{43}$/.test(pairingCode) && deviceName.trim().length > 0 && deviceName.trim().length <= 60));
-	const canManageWidget = $derived(Boolean(online && status?.configured && status.authenticated && status.widgetLinked && !busy));
+	const canLink = $derived(Boolean(online && status?.configured && status.authenticated && !busy && !loading && /^[-A-Za-z0-9_]{43}$/.test(pairingCode) && deviceName.trim().length > 0 && deviceName.trim().length <= 60));
+	const canManageWidget = $derived(Boolean(online && status?.configured && status.authenticated && status.widgetLinked && !busy && !loading));
 
 	onMount(() => drafts.register('native-link', () => deviceName !== deviceNameBaseline || pairingCode.length > 0));
+
+	function capturePanelFocus(): HTMLElement | null {
+		if (typeof document === 'undefined' || !panelElement) return null;
+		const active = document.activeElement;
+		return active instanceof HTMLElement && panelElement.contains(active) ? active : null;
+	}
+
+	async function restorePanelFocus(previous: HTMLElement | null): Promise<void> {
+		await tick();
+		if (!previous || disposed || !document.hasFocus() || document.activeElement !== document.body) return;
+		const target = previous.isConnected && !previous.matches(':disabled') ? previous : headingElement;
+		if (target?.isConnected && !target.matches(':disabled')) target.focus();
+	}
 
 	$effect(() => {
 		void revision;
@@ -42,7 +58,7 @@
 		if (!bridge || disposed) return;
 		const current = ++requestId;
 		loading = true;
-		error = '';
+		statusError = '';
 		try {
 			const next = await bridge.status();
 			if (disposed || current !== requestId) return;
@@ -52,7 +68,7 @@
 		} catch {
 			if (!disposed && current === requestId) {
 				status = null;
-				error = statusError;
+				statusError = statusErrorMessage;
 			}
 		} finally {
 			if (!disposed && current === requestId) loading = false;
@@ -65,20 +81,20 @@
 		if (codeInput) codeInput.value = '';
 	}
 
-	function safeError(action: 'link' | 'cache' | 'clear' | 'pin'): string {
+	function safeError(action: 'cache' | 'clear' | 'pin'): string {
 		if (!online) return 'Necesitas conexión para completar esta acción.';
 		if (!status?.configured) return 'El acceso de esta app aún no está configurado.';
 		if (!status.authenticated) return 'Inicia sesión en Pulse antes de continuar.';
-		if (action === 'link') return 'No se pudo enlazar este dispositivo. Comprueba el código e inténtalo de nuevo.';
 		if (action === 'cache') return 'No se pudo guardar la preferencia de caché. Inténtalo de nuevo.';
 		if (action === 'clear') return 'No se pudo desvincular el widget. Inténtalo de nuevo.';
 		return 'No se pudo abrir la opción de fijado del sistema.';
 	}
 
 	async function linkWidget() {
-		if (!bridge || !canLink) return;
+		if (!bridge || loading || !canLink) return;
+		const previousFocus = capturePanelFocus();
 		busy = true;
-		error = '';
+		actionError = '';
 		const linkedName = deviceName.trim();
 		try {
 			await bridge.linkWidget({ pairingCode, deviceName: linkedName });
@@ -88,20 +104,26 @@
 			clearCode();
 			await refreshStatus();
 		} catch {
-			if (!disposed) error = safeError('link');
+			if (!disposed) {
+				actionError = 'No se pudo confirmar el resultado del enlace. Revisa los dispositivos enlazados en Pulse antes de crear un código nuevo.';
+				clearCode();
+				await refreshStatus();
+			}
 		} finally {
 			if (!disposed) {
 				clearCode();
 				busy = false;
+				await restorePanelFocus(previousFocus);
 			}
 		}
 	}
 
 	async function changeCache(event: Event) {
-		if (!bridge || !canManageWidget) return;
+		if (!bridge || loading || !canManageWidget) return;
+		const previousFocus = capturePanelFocus();
 		const enabled = (event.currentTarget as HTMLInputElement).checked;
 		busy = true;
-		error = '';
+		actionError = '';
 		try {
 			await bridge.setWidgetCache({ enabled });
 			if (disposed) return;
@@ -110,36 +132,44 @@
 		} catch {
 			if (!disposed) {
 				cacheEnabled = status?.widgetCacheEnabled ?? false;
-				error = safeError('cache');
+				actionError = safeError('cache');
 			}
 		} finally {
-			if (!disposed) busy = false;
+			if (!disposed) {
+				busy = false;
+				await restorePanelFocus(previousFocus);
+			}
 		}
 	}
 
 	async function clearWidget() {
-		if (!bridge || !canManageWidget) return;
+		if (!bridge || loading || !canManageWidget) return;
+		const previousFocus = capturePanelFocus();
 		const confirmed = await confirmAction('Desvincular widget', 'Se eliminarán el permiso de acceso y la copia guardada en este dispositivo.', 'Desvincular');
-		if (!confirmed || disposed) return;
+		if (!confirmed || disposed || loading || !canManageWidget) return;
 		busy = true;
-		error = '';
+		actionError = '';
 		try {
 			await bridge.clearWidget();
 			if (disposed) return;
 			cacheEnabled = false;
 			await refreshStatus();
 		} catch {
-			if (!disposed) error = safeError('clear');
+			if (!disposed) actionError = safeError('clear');
 		} finally {
-			if (!disposed) busy = false;
+			if (!disposed) {
+				busy = false;
+				await restorePanelFocus(previousFocus);
+			}
 		}
 	}
 
 	async function pinWidget() {
-		if (!bridge || !canManageWidget) return;
+		if (!bridge || loading || !canManageWidget) return;
+		const previousFocus = capturePanelFocus();
 		busy = true;
 		pinResult = '';
-		error = '';
+		actionError = '';
 		try {
 			const result = await bridge.pinWidget();
 			if (disposed) return;
@@ -149,9 +179,12 @@
 					? 'Mantén pulsado un espacio de la pantalla de inicio, abre la opción para añadir widgets y busca Pulse. Elige el tamaño y añádelo.'
 					: 'Mantén pulsado un espacio de la pantalla de inicio, abre Widgets y busca Pulse para añadirlo.';
 		} catch {
-			if (!disposed) error = safeError('pin');
+			if (!disposed) actionError = safeError('pin');
 		} finally {
-			if (!disposed) busy = false;
+			if (!disposed) {
+				busy = false;
+				await restorePanelFocus(previousFocus);
+			}
 		}
 	}
 
@@ -163,8 +196,8 @@
 </script>
 
 {#if bridge}
-	<section class="native-widget-panel" aria-labelledby="native-widget-heading">
-		<div class="native-widget-heading"><div><p class="section-label">APP NATIVA</p><h3 id="native-widget-heading">Widget de Pulse</h3></div><span class="badge">{platform === 'ios' ? 'iPhone' : platform === 'android' ? 'Android' : 'Este dispositivo'}</span></div>
+	<section bind:this={panelElement} class="native-widget-panel" aria-labelledby="native-widget-heading">
+		<div class="native-widget-heading"><div><p class="section-label">APP NATIVA</p><h3 bind:this={headingElement} id="native-widget-heading" tabindex="-1">Widget de Pulse</h3></div><span class="badge">{platform === 'ios' ? 'iPhone' : platform === 'android' ? 'Android' : 'Este dispositivo'}</span></div>
 		<p class="native-widget-copy">Enlaza el widget de este móvil y decide si quieres guardar una vista mínima para consultarla sin conexión.</p>
 		{#if loading}<p class="native-widget-status" role="status">Consultando el estado de la app…</p>{/if}
 		{#if status && !status.configured}<p class="native-widget-status" role="status">El acceso de esta app aún no está configurado.</p>{/if}
@@ -188,12 +221,13 @@
 			</form>
 		{/if}
 		{#if !online}<p class="native-widget-status" role="status">Sin conexión. No se pueden enlazar ni cambiar las preferencias del widget.</p>{/if}
-		{#if error}<p class="native-widget-error" role="alert">{error}</p>{/if}
-		{#if error === statusError}
+		{#if statusError}
+			<p class="native-widget-error" role="alert">{statusError}</p>
 			<div class="native-widget-actions">
 				<button class="button button-secondary button-small" type="button" disabled={!online || loading || busy} onclick={() => void refreshStatus()}>Reintentar consulta</button>
 			</div>
 		{/if}
+		{#if actionError}<p class="native-widget-error" role="alert">{actionError}</p>{/if}
 	</section>
 {/if}
 

@@ -5,7 +5,8 @@
 	import { DraftGuard } from './lib/draft-guard';
 	import { observeServiceWorkerUpdate } from './lib/pwa-update';
 	import { createStartupAttempt } from './lib/startup-read';
-import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, PageProps, PulseState, Route, SessionState, ThemePreference, WebPushSubscriptionInput, WidgetPairingResult, PushDevice, PushTestResult } from './lib/types';
+	import { internalAppPath, preparationSection } from './lib/app-links';
+import type { BackupActionResult, ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, PageProps, PulseState, Route, SessionState, ThemePreference, WebPushSubscriptionInput, WidgetPairingResult, PushDevice, PushTestResult } from './lib/types';
 	import Glyph from './lib/Glyph.svelte';
 
 	type ViewComponent = Component<PageProps>;
@@ -47,13 +48,14 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 	let route = $state<Route>(routeFromPath(window.location.pathname));
 	let View = $state<ViewComponent | null>(null);
 	let pageTitle = $state<HTMLHeadingElement | undefined>();
-	let routeFocusPending = false;
+	let routeFocusPending = $state(window.location.pathname === '/settings' && window.location.hash === '#preparation');
 	const drafts = new DraftGuard();
 	let formContextRevision = $state(0);
 	// Per-load routing metadata, not an identity or an authentication token.
 	const historyScope = `pulse-${Date.now()}-${Math.random()}`;
 	let historyIndex = 0;
-	let currentLocation = window.location.pathname + window.location.search + window.location.hash;
+	let currentLocation = $state(window.location.pathname + window.location.search + window.location.hash);
+	const settingsSection = $derived(preparationSection(currentLocation));
 	let restoringHistoryIndex: number | null = null;
 	let navigationPending = false;
 	let navigationGeneration = 0;
@@ -101,6 +103,7 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 	let toastTimeout: ReturnType<typeof setTimeout> | undefined;
 	let bootMessage = $state('Estamos conectando con Pulse…');
 	let startupAttempt: ReturnType<typeof createStartupAttempt> | null = null;
+	let bootRetryButton = $state<HTMLButtonElement | undefined>();
 
 	const isBusy = $derived(busyCount > 0);
 	const appName = $derived(pulseState?.app?.name || 'Leapmotor Pulse');
@@ -109,16 +112,29 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 	$effect(() => {
 		const selectedRoute = route;
 		View = null;
-		loaders[selectedRoute]().then(async (module) => {
+		loaders[selectedRoute]().then((module) => {
 			if (route !== selectedRoute) return;
 			View = module.default;
-			await tick();
-			if (route === selectedRoute && routeFocusPending) {
-				routeFocusPending = false;
-				pageTitle?.focus({ preventScroll: true });
-			}
 		}).catch(() => {
 			showToast('No se pudo abrir esta sección. Recarga la página para intentarlo de nuevo.', 'error');
+		});
+	});
+
+	$effect(() => {
+		const pending = routeFocusPending;
+		const selectedRoute = route;
+		const selectedView = View;
+		const selectedLocation = currentLocation;
+		const title = pageTitle;
+		const section = settingsSection;
+		if (!pending || !selectedView || !title) return;
+		void tick().then(() => {
+			if (!routeFocusPending || route !== selectedRoute || View !== selectedView || currentLocation !== selectedLocation) return;
+			const target = section === 'preparation' ? document.getElementById('pulse-preparation') : title;
+			if (!target) return;
+			routeFocusPending = false;
+			target.focus({ preventScroll: true });
+			if (section === 'preparation') target.scrollIntoView({ block: 'start', behavior: 'instant' });
 		});
 	});
 
@@ -426,6 +442,17 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 		}
 	}
 
+	async function retryStartup() {
+		const restoreFocus = document.activeElement === bootRetryButton;
+		await startSession();
+		if (!restoreFocus || bootStatus !== 'error') return;
+		await tick();
+		// Restore only the focus lost with the retry control, never another interaction.
+		if (document.hasFocus() && document.activeElement === document.body) {
+			bootRetryButton?.focus({ preventScroll: true });
+		}
+	}
+
 	async function mutate(path: string, method: HttpMethod, data?: MutationPayload, success = 'Cambios guardados.') {
 		if (updateBusy) { showToast('Pulse se está actualizando. Espera antes de guardar cambios.', 'info'); return false; }
 		busyCount += 1;
@@ -606,7 +633,7 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 		compactNavigationOpen = false;
 		moreNavigationOpen = false;
 		const nextRoute = routeFromPath(new URL(path, window.location.origin).pathname);
-		if (route !== nextRoute) routeFocusPending = true;
+		if (route !== nextRoute || preparationSection(path)) routeFocusPending = true;
 		else pageTitle?.focus({ preventScroll: true });
 		route = nextRoute;
 		currentLocation = path;
@@ -617,7 +644,14 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 		if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
 		event.preventDefault();
 		if (restoringHistoryIndex !== null || navigationPending || confirmResolver) return;
-		if (routeFromPath(path) === route) { showRoute(currentLocation); return; }
+		if (routeFromPath(new URL(path, window.location.origin).pathname) === route) {
+			if (path !== currentLocation) {
+				historyIndex += 1;
+				history.pushState(historyState(historyIndex), '', path);
+			}
+			showRoute(path);
+			return;
+		}
 		if (isBusy || updateBusy) { showToast('Termina la acción en curso antes de cambiar de sección.', 'info'); return; }
 		const generation = ++navigationGeneration;
 		navigationPending = true;
@@ -656,8 +690,8 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 		if (confirmResolver || isBusy || updateBusy) { restoreHistory(targetIndex); return; }
 		if (routeFromPath(window.location.pathname) === route) {
 			historyIndex = targetIndex ?? 0;
-			currentLocation = path;
 			if (targetIndex === null) history.replaceState(historyState(historyIndex), '', path);
+			showRoute(path);
 			return;
 		}
 		const generation = ++navigationGeneration;
@@ -679,8 +713,8 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 		const link = event.target.closest('a');
 		if (!(link instanceof HTMLAnchorElement) || link.hasAttribute('download') || (link.target && link.target !== '_self')) return;
 		const url = new URL(link.href);
-		if (url.origin !== window.location.origin || url.search || url.hash || !navigation.some((item) => item.path === url.pathname)) return;
-		void navigate(event, url.pathname);
+		const path = internalAppPath(url, window.location.origin, navigation.map((item) => item.path));
+		if (path !== null) void navigate(event, path);
 	}
 
 	function handleBeforeUnload(event: BeforeUnloadEvent) {
@@ -746,7 +780,7 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 		}
 	}
 
-	async function exportData() {
+	async function exportData(): Promise<BackupActionResult> {
 		try {
 			const response = await requestApi('/api/export', {
 				credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }
@@ -768,19 +802,28 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 			link.click();
 			link.remove();
 			URL.revokeObjectURL(url);
-			showToast('La copia JSON se ha descargado.', 'success');
+			showToast('La copia JSON está preparada. Comprueba la descarga en el navegador.', 'success');
+			return { status: 'success' };
 		} catch (error) {
 			if (error instanceof ApiError && error.status === 401) {
 				expireSession();
-				return;
+				return { status: 'cancelled' };
 			}
-			showToast(error instanceof Error ? error.message : 'No se pudo crear la copia.', 'error');
+			const message = error instanceof Error ? error.message : 'No se pudo crear la copia.';
+			showToast(message, 'error');
+			return { status: 'error', message };
 		}
 	}
 
-	async function importData(file: File) {
-		if (updateBusy) { showToast('Pulse se está actualizando. Espera antes de restaurar una copia.', 'info'); return; }
-		if (isBusy) { showToast('Termina la acción en curso antes de restaurar una copia.', 'info'); return; }
+	async function importData(file: File): Promise<BackupActionResult> {
+		if (updateBusy) {
+			const message = 'Pulse se está actualizando. Espera antes de restaurar una copia.';
+			showToast(message, 'info'); return { status: 'error', message };
+		}
+		if (isBusy) {
+			const message = 'Termina la acción en curso antes de restaurar una copia.';
+			showToast(message, 'info'); return { status: 'error', message };
+		}
 		busyCount += 1;
 		try {
 			let data: Record<string, unknown>;
@@ -788,12 +831,12 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 				const parsed: unknown = JSON.parse(await file.text());
 				if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
 					showToast('La copia JSON debe contener un objeto en la raíz.', 'error');
-					return;
+					return { status: 'error', message: 'La copia JSON debe contener un objeto en la raíz.' };
 				}
 				data = parsed as Record<string, unknown>;
 			} catch {
 				showToast('El archivo no contiene JSON válido.', 'error');
-				return;
+				return { status: 'error', message: 'El archivo no contiene JSON válido.' };
 			}
 			const confirmed = await confirmAction(
 				'Restaurar una copia',
@@ -811,8 +854,11 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 						bootStatus = 'error';
 						bootMessage = 'La copia se restauró, pero no se pudo leer el estado nuevo. Pulsa «Reintentar» para continuar.';
 					}
+					return { status: 'success' };
 				}
+				return { status: 'error', message: 'No se ha podido confirmar la restauración. Revisa los datos actuales antes de reintentarlo.' };
 			}
+			return { status: 'cancelled' };
 		} finally {
 			busyCount = Math.max(0, busyCount - 1);
 			if (!isBusy && eventRefreshPending) scheduleEventRefresh();
@@ -968,9 +1014,9 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 			<span class="boot-mark" aria-hidden="true"><img src="/icon.svg" width="56" height="56" alt="" /></span>
 			<span class="boot-brand-name">{appName}</span>
 		</div>
-		<h1>{bootMessage}</h1>
+		<div role="alert" aria-atomic="true"><h1>{bootMessage}</h1></div>
 		<p class="body-copy">La aplicación no almacena datos del vehículo en este dispositivo. Cuando vuelva la conexión, podrás cargar el estado más reciente del servidor.</p>
-		<button class="button button-primary" disabled={updateBusy} onclick={startSession}>Reintentar conexión</button>
+		<button class="button button-primary" type="button" bind:this={bootRetryButton} disabled={updateBusy} onclick={retryStartup}>Reintentar conexión</button>
 		{#if !online}<span class="status-pill status-neutral"><span class="status-dot"></span> Sin conexión</span>{/if}
 		{@render updateNotice()}
 	</main>
@@ -1055,6 +1101,7 @@ import type { ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, Page
 						busy={isBusy || updateBusy}
 						online={online}
 						revision={dataRevision}
+						{settingsSection}
 						user={session?.user?.name ?? null}
 						{theme}
 						{canInstall}

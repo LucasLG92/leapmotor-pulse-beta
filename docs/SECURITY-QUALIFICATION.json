@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-12",
+  "classification": "local_security_qualification_summary_no_instance_receipts",
+  "phase": "phase-8",
+  "delivered": true,
+  "full_security_acceptance": false,
+  "dependency_lock_scan": {
+    "scanner_version": "2.6.0",
+    "scanner_sha256": null,
+    "complete_lockfiles": 6,
+    "package_entries": 754,
+    "unique_packages_not_counted": true,
+    "known_advisory_ids": [],
+    "scan_exit_code": 0,
+    "report_sha256": null,
+    "completed_at_utc": "2026-10-12",
+    "lockfiles_unchanged": true,
+    "report_and_failure_receipts_retained": null
+  },
+  "software_checks": {
+    "focused_tests": 14,
+    "focused_subtests": 26,
+    "bash_syntax": true,
+    "workflow_actionlint": true,
+    "workflow_yaml_and_pinned_action_metadata": true,
+    "independent_static_review": "one_traceability_finding_corrected; no_residual_confirmed",
+    "ci_executed": false
+  },
+  "runtime_checks": {
+    "read_only": true,
+    "public_strict_tls_healthz_http_status": null,
+    "public_strict_tls_readyz_http_status": null,
+    "guest_and_host_backup_timers_enabled_active": null,
+    "last_guest_and_host_backup_service_result": "not_reported_in_public_documentation",
+    "latest_archive_contents_or_restore_verified": false,
+    "authenticated_session_or_push_verified": false,
+    "note": "This checked-in summary omits instance-specific host, service, address, backup and operational receipts. No public health, restoration or authenticated-session result is claimed."
+  },
+  "remaining": [
+    "Review the final image and optional SDK/SPM/native/toolchain security surface.",
+    "Choose a notification consumer and verify generic alert/recovery delivery; metadata health does not verify content or restoration.",
+    "Whole-system recovery, another user, authenticated session/push after restart, real phones/vehicle/integrations and habitual acceptance remain pending."
+  ],
+  "evidence": {
+    "directory": "docs/VALIDATION.md#monitor-de-metadatos",
+    "final_summary": "docs/VALIDATION.md#monitor-de-metadatos",
+    "final_inputs": "docs/VALIDATION.md#monitor-de-metadatos",
+    "raw_report": "not included",
+    "inputs_sha256": null,
+    "summary_sha256": null
+  },
+  "invariants": {
+    "source_locks_unchanged": true,
+    "backend_and_web_runtime_unchanged": true,
+    "physical_commands_disabled": true,
+    "phases_preserved": 9,
+    "real_gates_pending": 7,
+    "centinela_cameras_final_phase": 9
+  },
+  "backup_monitor": {
+    "classification": "generic_metadata_monitor_source_and_focused_checks",
+    "delivered": true,
+    "script": "deploy/community/README.md",
+    "default_max_age_hours": null,
+    "checks": [
+      "bounded metadata status",
+      "artifact identity/size/permissions metadata",
+      "age and missing/stale-state checks",
+      "generic scheduled-job status",
+      "filesystem availability metadata"
+    ],
+    "persistent_state": "Protected local state records alert and recovery transitions atomically.",
+    "copy_timestamp_semantics": "Metadata timestamps do not prove copy completion time or content integrity.",
+    "software_checks": {
+      "focused_tests": 29,
+      "subtests": 45,
+      "synthetic_transition_observations": 6,
+      "systemd_units_statically_verified": 6,
+      "cli_help": true,
+      "nonroot_rejection_no_state_write": true,
+      "independent_review": "two parsing/state P2 corrected; no residual P1/P2 in final scoped static review"
+    },
+    "runtime_units_executed": null,
+    "metadata_checks_recorded_healthy": null,
+    "backup_contents_or_private_config_read": false,
+    "artifact_content_hash_verified": false,
+    "restore_verified": false,
+    "notification_delivered": false,
+    "evidence": {
+      "directory": "docs/VALIDATION.md#monitor-de-metadatos",
+      "tests_sha256": null,
+      "review_sha256": null,
+      "fixture_observations_sha256": null,
+      "command_checks_sha256": null
+    },
+    "remaining": [
+      "Choose and verify generic alert/recovery delivery.",
+      "Observe natural scheduled checks and operational recovery acceptance.",
+      "Content integrity, restoration and whole-host recovery remain pending."
+    ],
+    "delivered_at_utc": "2026-10-12",
+    "deployment": {
+      "status": "instance_specific_details_omitted",
+      "host_details_included": false,
+      "rollback_available": null,
+      "rollback_executed": null,
+      "failure_handler_executed": null,
+      "scheduled_cycle_observed": null,
+      "notification_delivered": false,
+      "evidence": "docs/VALIDATION.md#monitor-de-metadatos"
+    }
+  }
+}

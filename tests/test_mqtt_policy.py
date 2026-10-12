@@ -6,12 +6,23 @@ import json
 
 import pytest
 
+from pulse.contracts import MqttStatus
 from pulse.mqtt_policy import (
     MqttConfig,
     discovery_messages,
     discovery_tombstones,
     prepare_publication,
 )
+
+METRIC_VALUES = {
+    "interior_temperature_c": 22.5,
+    "battery_min_temperature_c": -8.25,
+    "front_left_pressure_kpa": 245.0,
+    "front_right_pressure_kpa": 246.0,
+    "rear_left_pressure_kpa": 247.0,
+    "rear_right_pressure_kpa": 248.0,
+}
+ALL_MQTT_FIELDS = ("battery_pct", "range_km", "charging", *METRIC_VALUES)
 
 
 def enabled_config(**overrides) -> MqttConfig:
@@ -60,14 +71,14 @@ def test_configuration_defaults_repr_and_explicit_environment_parsing():
         "PULSE_MQTT_USERNAME": "private-user",
         "PULSE_MQTT_PASSWORD": "private-password",
         "PULSE_MQTT_INSTANCE": "house-2",
-        "PULSE_MQTT_FIELDS": " battery_pct, charging ",
+        "PULSE_MQTT_FIELDS": " battery_pct, charging, interior_temperature_c ",
         "PULSE_MQTT_MAX_AGE_SECONDS": "30",
         "PULSE_MQTT_POLL_SECONDS": "1",
         "PULSE_MQTT_UNRECOGNIZED_TOKEN": "must-not-be-read",
         "OTHER_SECRET": "also-private",
     }
     config = MqttConfig.from_env(secret_env)
-    assert config.fields == ("battery_pct", "charging")
+    assert config.fields == ("battery_pct", "charging", "interior_temperature_c")
     assert config.max_age_seconds == 30
     assert config.poll_seconds == 1
     assert "private-user" not in repr(config)
@@ -79,6 +90,31 @@ def test_configuration_defaults_repr_and_explicit_environment_parsing():
     assert config.client_id == "pulse-house-2"
     assert config.bridge_availability_topic == "pulse/house-2/availability/bridge"
     assert config.birth_topic == "homeassistant/status"
+
+
+def test_mqtt_status_contract_accepts_expanded_operator_selection():
+    status = MqttStatus(
+        enabled=True,
+        status="connected",
+        data_status="published",
+        fields=list(ALL_MQTT_FIELDS),
+        max_age_seconds=900,
+        observed_at="2026-10-08T10:00:00Z",
+        last_published_at="2026-10-08T10:00:00Z",
+        reason_code="published",
+    )
+    assert status.fields == list(ALL_MQTT_FIELDS)
+    disabled = MqttStatus(
+        enabled=False,
+        status="disabled",
+        data_status="no_data",
+        fields=[],
+        max_age_seconds=900,
+        observed_at=None,
+        last_published_at=None,
+        reason_code="disabled",
+    )
+    assert disabled.fields == []
 
 
 @pytest.mark.parametrize(
@@ -123,7 +159,7 @@ def test_configuration_rejects_invalid_types_names_and_private_endpoint_forms(kw
     assert "private-password" not in str(error.value)
 
 
-@pytest.mark.parametrize("host", ["broker.example", "localhost.localdomain", "10.20.30.40", "2001:db8::1"])
+@pytest.mark.parametrize("host", ["broker.example", "localhost.localdomain", "192.168.1.20", "2001:db8::1"])
 def test_tls_plaintext_requires_an_explicit_loopback_destination(host):
     with pytest.raises(ValueError):
         MqttConfig(tls=False, host=host)
@@ -212,6 +248,57 @@ def test_numeric_boundaries_are_allowed_but_invalid_or_boolean_numbers_are_unava
     assert invalid["source"] == "unavailable"
 
 
+@pytest.mark.parametrize(
+    "field_name, minimum, maximum",
+    [
+        ("interior_temperature_c", -100, 100),
+        ("battery_min_temperature_c", -100, 150),
+        ("front_left_pressure_kpa", 0, 1000),
+        ("front_right_pressure_kpa", 0, 1000),
+        ("rear_left_pressure_kpa", 0, 1000),
+        ("rear_right_pressure_kpa", 0, 1000),
+    ],
+)
+def test_added_numeric_fields_accept_bounds_and_reject_invalid_values(field_name, minimum, maximum):
+    config = enabled_config(fields=(field_name,))
+    now = datetime.fromisoformat("2026-10-08T10:00:30+00:00")
+
+    for boundary in (minimum, maximum):
+        result = prepare_publication(
+            config,
+            telemetry_context("2026-10-08T10:00:00Z", {field_name: boundary}),
+            now,
+        )
+        assert result["values"] == {field_name: boundary}
+
+    invalid_values = (True, "12.5", float("nan"), float("inf"), minimum - 0.01, maximum + 0.01)
+    for invalid_value in invalid_values:
+        result = prepare_publication(
+            config,
+            telemetry_context("2026-10-08T10:00:00Z", {field_name: invalid_value}),
+            now,
+        )
+        assert result["data_status"] == "unavailable"
+        assert result["values"] == {}
+
+
+def test_selected_new_fields_publish_only_valid_available_subset():
+    config = enabled_config(fields=("interior_temperature_c", "battery_min_temperature_c", "front_left_pressure_kpa"))
+    vehicle = {
+        "interior_temperature_c": -4.5,
+        "battery_min_temperature_c": float("nan"),
+        "front_left_pressure_kpa": 243,
+        "rear_left_pressure_kpa": 888,
+    }
+    result = prepare_publication(
+        config,
+        telemetry_context("2026-10-08T10:00:00Z", vehicle),
+        datetime.fromisoformat("2026-10-08T10:00:30+00:00"),
+    )
+    assert result["data_status"] == "ready"
+    assert result["values"] == {"interior_temperature_c": -4.5, "front_left_pressure_kpa": 243}
+
+
 def test_future_expired_and_dst_transition_timestamps_use_actual_utc_elapsed_time():
     config = enabled_config(max_age_seconds=1800, fields=("battery_pct",))
     dst_now = datetime.fromisoformat("2026-03-29T01:10:00.000001+00:00")
@@ -284,10 +371,44 @@ def test_discovery_is_namespaced_selected_and_contains_no_credentials_or_command
     assert "private-password" not in rendered
 
 
+def test_added_metric_discovery_uses_home_assistant_units_and_measurement_state_class():
+    fields = tuple(METRIC_VALUES)
+    config = enabled_config(fields=fields)
+    messages = discovery_messages(config, 321)
+    payloads = {
+        topic.rsplit("/", 2)[-2]: json.loads(payload)
+        for topic, payload in messages
+    }
+    assert set(payloads) == set(fields)
+
+    for field_name in ("interior_temperature_c", "battery_min_temperature_c"):
+        payload = payloads[field_name]
+        assert payload["device_class"] == "temperature"
+        assert payload["state_class"] == "measurement"
+        assert payload["unit_of_measurement"] == "°C"
+        assert payload["expire_after"] == 321
+    for field_name in fields[2:]:
+        payload = payloads[field_name]
+        assert payload["device_class"] == "pressure"
+        assert payload["state_class"] == "measurement"
+        assert payload["unit_of_measurement"] == "kPa"
+        assert payload["expire_after"] == 321
+
+
 def test_tombstones_clear_only_unselected_original_pulse_entities():
     config = enabled_config(fields=("battery_pct",))
     assert discovery_tombstones(config) == [
         ("homeassistant/sensor/pulse_garage-1/range_km/config", ""),
         ("homeassistant/sensor/pulse_garage-1/charging/config", ""),
+        ("homeassistant/sensor/pulse_garage-1/interior_temperature_c/config", ""),
+        ("homeassistant/sensor/pulse_garage-1/battery_min_temperature_c/config", ""),
+        ("homeassistant/sensor/pulse_garage-1/front_left_pressure_kpa/config", ""),
+        ("homeassistant/sensor/pulse_garage-1/front_right_pressure_kpa/config", ""),
+        ("homeassistant/sensor/pulse_garage-1/rear_left_pressure_kpa/config", ""),
+        ("homeassistant/sensor/pulse_garage-1/rear_right_pressure_kpa/config", ""),
     ]
-    assert discovery_tombstones(enabled_config(fields=("battery_pct", "range_km", "charging"))) == []
+    legacy_selection_tombstones = discovery_tombstones(
+        enabled_config(fields=("battery_pct", "range_km", "charging"))
+    )
+    assert {topic.rsplit("/", 2)[-2] for topic, _ in legacy_selection_tombstones} == set(METRIC_VALUES)
+    assert discovery_tombstones(enabled_config(fields=ALL_MQTT_FIELDS)) == []

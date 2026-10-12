@@ -3,5 +3,4 @@
     <color name="pulse_forest">#202429</color>
     <color name="pulse_accent">#9DE0C0</color>
     <color name="pulse_surface">#F6F7F2</color>
-    <item type="mipmap" name="pulse_launcher">@drawable/pulse_mark</item>
 </resources>

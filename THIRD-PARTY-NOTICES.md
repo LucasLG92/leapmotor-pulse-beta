@@ -1,6 +1,6 @@
-# Avisos de terceros
+# Dependencias y referencias
 
-El código y los activos originales de Pulse se publican bajo MIT. Las dependencias conservan sus licencias y avisos originales.
+El frontend, dominio y servidor Pulse se escriben como un nuevo proyecto; no incluyen código, estilos, plantillas o imágenes de la aplicación leapmotor-mate. El código original publicado se distribuye bajo la licencia MIT de `LICENSE`.
 
 Dependencias de ejecución instaladas como paquetes independientes:
 
@@ -13,9 +13,9 @@ Dependencias de ejecución instaladas como paquetes independientes:
 
 Los paquetes conservan sus LICENSE y metadatos en la distribución instalada; sus dependencias transitivas también conservan sus avisos. El paquete de fuentes entregado no contiene sus fuentes vendorizadas. Las licencias anteriores se verificaron en los metadatos del runtime utilizado para validar esta versión.
 
-MATE-API es un extra opcional MIT fijado por commit en requirements-cloud.txt. Su [texto MIT y copyright originales](docs/licenses/mate-api-MIT.txt) se conservan junto con los avisos. Su instalación y tipos públicos se verificaron en un entorno separado, con fixtures sintéticas; no forma parte de la imagen base ni aporta material privado de conexión. Véanse docs/VEHICLE.md. No se ha probado una sesión ni un coche real.
+MATE-API es un extra opcional MIT fijado por commit en requirements-cloud.txt. Su instalación y tipos públicos se verificaron en un entorno separado, con fixtures sintéticas; no forma parte de la imagen base ni aporta material privado de conexión. Véanse docs/SDK-PROVENANCE.md y docs/CONNECTION.md. No se ha probado una sesión ni un coche real. Mate (aplicación AGPL) y LPB10 se estudian únicamente como referencias funcionales y conservan sus licencias originales.
 
-Las marcas mencionadas pertenecen a sus titulares. Pulse no incorpora sus logotipos ni imágenes oficiales.
+El catálogo de referencias y restricciones está en docs/REPOSITORIES.md. Las marcas mencionadas pertenecen a sus titulares. Pulse no incorpora sus logotipos ni imágenes oficiales.
 
 Los targets Capacitor Android/iOS 8.5.3 parten de plantillas MIT atribuidas con texto completo en `apps/mobile/LICENSES/Capacitor-MIT.txt`. Véase `apps/mobile/THIRD-PARTY-NOTICES.md` para Glance/WorkManager/AppAuth y el SDK Apple. La licencia propia no sustituye estas licencias de dependencias.
 

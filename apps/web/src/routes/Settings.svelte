@@ -16,7 +16,7 @@
 
 	type PreferencesDraft = { vehicleName: string; model: string; vehicleColor: VehicleColor; homeLabel: string; tariff: string; pricingMethod: PricingMethod };
 
-	let { pulseState, busy, online, revision, user, theme, canInstall, mutate, createWidgetPairing, notifications, runNotificationAction, confirmAction, setTheme, onLogout, onExport, onImport, onInstall, drafts }: PageProps = $props();
+	let { pulseState, busy, online, revision, user, theme, canInstall, mutate, createWidgetPairing, notifications, runNotificationAction, confirmAction, setTheme, onLogout, onExport, onImport, onInstall, drafts, settingsSection }: PageProps = $props();
 	let vehicleName = $state('');
 	let model = $state('');
 	let vehicleColor = $state<VehicleColor>(null);
@@ -30,9 +30,16 @@
 	let fileInput: HTMLInputElement;
 	let importPickerButton = $state<HTMLButtonElement | undefined>(undefined);
 	let importPickerRequest = 0;
+	let backupBusy = $state(false);
+	let backupError = $state('');
 	let widgetProfilesHeading: HTMLHeadingElement | undefined;
+	let widgetSection: HTMLElement | undefined;
+	let connectionSection: HTMLElement | undefined;
+	let connectionHeading: HTMLHeadingElement | undefined;
+	let widgetActionError = $state('');
 	let widgetProfileForm = $state<HTMLFormElement | undefined>(undefined);
 	let demoToggleBusy = $state(false);
+	let demoToggleError = $state('');
 	let widgetProfiles = $state<WidgetProfile[]>([]);
 	let widgetProfilesLoaded = $state(false);
 	let widgetProfilesLoading = $state(false);
@@ -480,22 +487,45 @@
 	}
 
 	async function revokeWidgetGrant(grant: WidgetGrant) {
-		if (!online || busy || widgetProfileBusy || widgetPairingBusy || grant.profile_id !== selectedWidgetProfileId) return;
-		const accepted = await confirmAction(
-			'Revocar dispositivo enlazado',
-			'La siguiente consulta quedará bloqueada; el widget sin conexión ocultará los datos al vencer su lectura.',
-			'Revocar dispositivo'
-		);
-		if (!accepted || !online || settingsDisposed || grant.profile_id !== selectedWidgetProfileId) return;
+		if (!online || busy || widgetProfileBusy || widgetPairingBusy || !grantsForSelectedProfile || grantsLoadingForSelectedProfile || grantsErrorForSelectedProfile || grant.profile_id !== selectedWidgetProfileId) return;
+		const previousFocus = captureSettingsActionFocus(widgetSection);
 		widgetProfileBusy = true;
-		await mutate(
-			`/api/widget-profiles/${encodeURIComponent(grant.profile_id)}/native-grants/${encodeURIComponent(grant.id)}`,
-			'DELETE',
-			{},
-			'El dispositivo se ha revocado.'
-		);
-		if (settingsDisposed) return;
-		widgetProfileBusy = false;
+		const errorMessage = `No se ha podido confirmar la revocación de «${grant.device_name}». Revisa los dispositivos enlazados antes de reintentarlo.`;
+		let revoked = false;
+		try {
+			const accepted = await confirmAction(
+				'Revocar dispositivo enlazado',
+				'La siguiente consulta quedará bloqueada; el widget sin conexión ocultará los datos al vencer su lectura.',
+				'Revocar dispositivo'
+			);
+			if (!accepted || !online || busy || settingsDisposed || widgetPairingBusy || !grantsForSelectedProfile || grantsLoadingForSelectedProfile || grantsErrorForSelectedProfile || grant.profile_id !== selectedWidgetProfileId || !displayedWidgetGrants.some((item) => item.id === grant.id)) return;
+			widgetActionError = '';
+			revoked = await mutate(
+				`/api/widget-profiles/${encodeURIComponent(grant.profile_id)}/native-grants/${encodeURIComponent(grant.id)}`,
+				'DELETE', {}, 'El dispositivo se ha revocado.'
+			);
+			if (!settingsDisposed && !revoked) widgetActionError = errorMessage;
+		} catch {
+			if (!settingsDisposed) widgetActionError = errorMessage;
+		} finally {
+			if (!settingsDisposed) {
+				widgetProfileBusy = false;
+				await restoreSettingsActionFocus(previousFocus, widgetProfilesHeading, revoked);
+			}
+		}
+	}
+
+	function captureSettingsActionFocus(section: HTMLElement | undefined): HTMLElement | null {
+		const active = document.activeElement;
+		return section && active instanceof HTMLElement && section.contains(active) ? active : null;
+	}
+
+	async function restoreSettingsActionFocus(previous: HTMLElement | null, fallback: HTMLElement | undefined, preferFallback = false) {
+		await tick();
+		if (!previous || settingsDisposed || !document.hasFocus() || document.activeElement !== document.body) return;
+		// A confirmed removal can reach the list after this tick. Its trigger is not a stable focus target.
+		const target = !preferFallback && previous.isConnected && !previous.matches(':disabled') ? previous : fallback;
+		if (target?.isConnected && !target.matches(':disabled')) target.focus();
 	}
 
 	function selectWidgetProfile(profileId: string) {
@@ -660,12 +690,19 @@
 		widgetProfileBusy = true;
 		const payload: WidgetProfileInput = { ...widgetProfileDraft, name, max_age_minutes: maxAge, fields: [...widgetProfileDraft.fields] };
 		const editingId = widgetProfileEditingId;
-		const saved = await mutate(
-			editingId ? `/api/widget-profiles/${encodeURIComponent(editingId)}` : '/api/widget-profiles',
-			editingId ? 'PUT' : 'POST',
-			payload,
-			editingId ? 'El perfil del widget se ha actualizado.' : 'El perfil del widget se ha creado.'
-		);
+		let saved = false;
+		try {
+			saved = await mutate(
+				editingId ? `/api/widget-profiles/${encodeURIComponent(editingId)}` : '/api/widget-profiles',
+				editingId ? 'PUT' : 'POST',
+				payload,
+				editingId ? 'El perfil del widget se ha actualizado.' : 'El perfil del widget se ha creado.'
+			);
+		} catch {
+			// Keep the draft if the caller cannot confirm the write.
+		} finally {
+			if (!settingsDisposed) widgetProfileBusy = false;
+		}
 		if (settingsDisposed) return;
 		const sameEditor = request === widgetProfileSwitchRequest
 			&& widgetProfileFormOpen
@@ -675,7 +712,6 @@
 		const shouldReturnFocus = focusWasInForm
 			&& (activeAtResponse === document.body || Boolean(formAtSubmit?.contains(activeAtResponse)));
 		if (saved && editingId === widgetPairingProfileId) clearWidgetPairing();
-		widgetProfileBusy = false;
 		if (!sameEditor) return;
 		if (saved) {
 			widgetProfileFormOpen = false;
@@ -686,6 +722,7 @@
 			if (shouldReturnFocus) void returnWidgetProfileFocus(request, focusOrigin);
 			return;
 		}
+		widgetProfileFormError = 'No se ha podido confirmar el guardado del perfil. Revisa los perfiles guardados antes de reintentarlo.';
 		if (!focusWasInForm || activeAtResponse !== document.body) return;
 		await tick();
 		if (
@@ -694,6 +731,7 @@
 			|| !widgetProfileFormOpen
 			|| widgetProfileForm !== formAtSubmit
 			|| widgetProfileEditingId !== editingId
+			|| !document.hasFocus()
 			|| document.activeElement !== document.body
 		) return;
 		const namedTarget = document.getElementById('widget-profile-name');
@@ -704,28 +742,42 @@
 	}
 
 	async function deleteWidgetProfile(profile: WidgetProfile) {
-		if (!online || busy || widgetProfileBusy) return;
-		const accepted = await confirmAction(
-			'Eliminar perfil de widget',
-			`Se eliminará «${profile.name}» del servidor. Esta acción no se puede deshacer.`,
-			'Eliminar perfil'
-		);
-		if (!accepted || settingsDisposed) return;
+		if (!online || busy || widgetProfileBusy || widgetPairingBusy) return;
+		const previousFocus = captureSettingsActionFocus(widgetSection);
 		widgetProfileBusy = true;
-		const deleted = await mutate(
-			`/api/widget-profiles/${encodeURIComponent(profile.id)}`,
-			'DELETE',
-			{},
-			'El perfil del widget se ha eliminado.'
-		);
-		if (settingsDisposed) return;
-		if (deleted && widgetProfileEditingId === profile.id) cancelWidgetProfileEdit();
-		widgetProfileBusy = false;
+		const errorMessage = `No se ha podido confirmar la eliminación de «${profile.name}». Revisa los perfiles guardados antes de reintentarlo.`;
+		let deleted = false;
+		try {
+			const accepted = await confirmAction(
+				'Eliminar perfil de widget',
+				`Se eliminará «${profile.name}» del servidor. Esta acción no se puede deshacer.`,
+				'Eliminar perfil'
+			);
+			if (!accepted || settingsDisposed || !online || busy || widgetPairingBusy || !widgetProfiles.some((item) => item.id === profile.id && item.revision === profile.revision)) return;
+			widgetActionError = '';
+			deleted = await mutate(
+				`/api/widget-profiles/${encodeURIComponent(profile.id)}`,
+				'DELETE', {}, 'El perfil del widget se ha eliminado.'
+			);
+			if (settingsDisposed) return;
+			if (!deleted) widgetActionError = errorMessage;
+			if (deleted && widgetProfileEditingId === profile.id) cancelWidgetProfileEdit();
+		} catch {
+			if (!settingsDisposed) widgetActionError = errorMessage;
+		} finally {
+			if (!settingsDisposed) {
+				widgetProfileBusy = false;
+				await restoreSettingsActionFocus(previousFocus, widgetProfilesHeading, deleted);
+			}
+		}
 	}
 
 	async function saveSettings(event: SubmitEvent) {
 		event.preventDefault();
 		if (preferencesSaving || busy) return;
+		const form = event.currentTarget as HTMLFormElement;
+		const previousFocus = document.activeElement instanceof HTMLElement && form.contains(document.activeElement)
+			? document.activeElement : null;
 		settingsError = '';
 		settingsErrorField = null;
 		const submittedDraft = currentPreferences();
@@ -768,11 +820,23 @@
 		preferencesSaving = true;
 		try {
 			const saved = await mutate('/api/settings', 'PUT', payload, 'Tus ajustes se han guardado.');
-			if (settingsDisposed || !saved) return;
+			if (settingsDisposed) return;
+			if (!saved) {
+				settingsError = 'No se ha podido confirmar el guardado de los ajustes. Tus cambios siguen en el formulario.';
+				return;
+			}
 			preferencesBaseline = savedDraft;
 			if (samePreferences(currentPreferences(), submittedDraft)) applyPreferences(savedDraft);
+		} catch {
+			if (!settingsDisposed) settingsError = 'No se ha podido confirmar el guardado de los ajustes. Tus cambios siguen en el formulario.';
 		} finally {
-			preferencesSaving = false;
+			if (!settingsDisposed) {
+				preferencesSaving = false;
+				await tick();
+				if (!settingsDisposed && settingsError && document.hasFocus() && document.activeElement === document.body && previousFocus?.isConnected) {
+					previousFocus.focus({ preventScroll: true });
+				}
+			}
 		}
 	}
 
@@ -790,37 +854,39 @@
 	}
 
 	async function toggleDemo() {
-		if (demoToggleBusy || busy) return;
+		if (!online || demoToggleBusy || busy) return;
+		const previousFocus = captureSettingsActionFocus(connectionSection);
+		const enabling = pulseState.mode !== 'demo';
 		demoToggleBusy = true;
-		if (pulseState.mode === 'demo') {
+		try {
 			const accepted = await confirmAction(
-				'Salir de la demostración',
-				'Pulse eliminará los datos ficticios de la demo. Tus cargas y tareas manuales se conservarán.',
-				'Salir de demo'
+				enabling ? 'Activar la demostración' : 'Salir de la demostración',
+				enabling ? 'Pulse añadirá datos ficticios y habilitará acciones simuladas. La conexión física seguirá pendiente.' : 'Pulse eliminará los datos ficticios de la demo. Tus cargas y tareas manuales se conservarán.',
+				enabling ? 'Activar demo' : 'Salir de demo'
 			);
-			if (settingsDisposed) return;
-			if (accepted) await mutate('/api/demo', 'POST', { enabled: false }, 'La demo se ha desactivado.');
-		} else {
-			const accepted = await confirmAction(
-				'Activar la demostración',
-				'Pulse añadirá datos ficticios y habilitará acciones simuladas. La conexión física seguirá pendiente.',
-				'Activar demo'
-			);
-			if (settingsDisposed) return;
-			if (accepted) await mutate('/api/demo', 'POST', { enabled: true }, 'La demostración está activa.');
+			if (!accepted || settingsDisposed || !online || busy || (pulseState.mode === 'demo') === enabling) return;
+			demoToggleError = '';
+			const saved = await mutate('/api/demo', 'POST', { enabled: enabling }, enabling ? 'La demostración está activa.' : 'La demo se ha desactivado.');
+			if (!settingsDisposed && !saved) demoToggleError = 'No se ha podido confirmar el cambio de modo. Revisa si Pulse está en demo antes de reintentarlo.';
+		} catch {
+			if (!settingsDisposed) demoToggleError = 'No se ha podido confirmar el cambio de modo. Revisa si Pulse está en demo antes de reintentarlo.';
+		} finally {
+			if (!settingsDisposed) {
+				demoToggleBusy = false;
+				await restoreSettingsActionFocus(previousFocus, connectionHeading);
+			}
 		}
-		if (!settingsDisposed) demoToggleBusy = false;
 	}
 
 	function openImportPicker() {
-		if (busy || !fileInput) return;
+		if (busy || backupBusy || !fileInput) return;
 		importPickerRequest += 1;
 		fileInput.click();
 	}
 
 	async function returnImportFocus(request: number) {
 		await tick();
-		if (settingsDisposed || request !== importPickerRequest) return;
+		if (settingsDisposed || request !== importPickerRequest || !document.hasFocus()) return;
 		const button = importPickerButton;
 		if (!button?.isConnected || button.disabled) return;
 		const active = document.activeElement;
@@ -838,11 +904,43 @@
 		const input = event.currentTarget as HTMLInputElement;
 		const file = input.files?.[0];
 		const request = importPickerRequest;
-		try {
-			if (file) await onImport(file);
-		} finally {
+		if (!file || backupBusy) {
 			input.value = '';
 			await returnImportFocus(request);
+			return;
+		}
+		backupBusy = true;
+		backupError = '';
+		try {
+			const result = await onImport(file);
+			if (!settingsDisposed && result.status === 'error') backupError = result.message;
+		} catch {
+			if (!settingsDisposed) backupError = 'No se ha podido confirmar la restauración. Revisa los datos actuales antes de reintentarlo.';
+		} finally {
+			input.value = '';
+			if (!settingsDisposed) backupBusy = false;
+			await returnImportFocus(request);
+		}
+	}
+
+	async function downloadBackup() {
+		if (busy || backupBusy) return;
+		const previousFocus = document.activeElement as HTMLElement | null;
+		backupBusy = true;
+		backupError = '';
+		try {
+			const result = await onExport();
+			if (!settingsDisposed && result.status === 'error') backupError = result.message;
+		} catch {
+			if (!settingsDisposed) backupError = 'No se pudo crear la copia. Revisa la conexión con Pulse antes de reintentarlo.';
+		} finally {
+			if (!settingsDisposed) {
+				backupBusy = false;
+				await tick();
+				if (!settingsDisposed && document.hasFocus() && document.activeElement === document.body && previousFocus?.isConnected) {
+					previousFocus.focus({ preventScroll: true });
+				}
+			}
 		}
 	}
 
@@ -895,8 +993,8 @@
 			</form>
 		</section>
 
-		<section class="settings-card card" aria-labelledby="connection-heading">
-			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="plug" size={18} /></span><div><h2 id="connection-heading">Vehículo y servicios</h2><p>El estado procede de la API de Pulse.</p></div></div>
+		<section bind:this={connectionSection} class="settings-card card" aria-labelledby="connection-heading">
+			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="plug" size={18} /></span><div><h2 bind:this={connectionHeading} id="connection-heading" tabindex="-1">Vehículo y servicios</h2><p>El estado procede de la API de Pulse.</p></div></div>
 			<div class="connection-status-card">
 				<span class="connection-status-mark"><Glyph name="plug" size={19} /></span>
 				<div><strong>{connectionHeadline()}</strong><p>{connectionDetail()}</p></div>
@@ -908,11 +1006,12 @@
 			<div class="notice connection-notice"><Glyph name="protection" size={17} /><span>{hasLatestTelemetry ? 'Lectura sin controles. La frescura física no está cualificada y los valores requieren validación. No hay un formulario para credenciales del fabricante.' : 'No hay un formulario para credenciales del fabricante. La integración dependerá de un proveedor autorizado y validado.'}</span></div>
 			<div class="demo-setting-row">
 				<div><strong>{pulseState.mode === 'demo' ? 'Salir de la demostración' : 'Explorar con datos ficticios'}</strong><span>{pulseState.mode === 'demo' ? 'Se eliminan los datos de demo; tus registros manuales siguen disponibles.' : 'La demo identifica todos sus datos y acciones como simulados.'}</span></div>
-				<button class="button button-secondary button-small" type="button" disabled={busy || demoToggleBusy} onclick={toggleDemo}>{demoToggleBusy ? 'Un momento…' : pulseState.mode === 'demo' ? 'Salir de demo' : 'Activar demo'}</button>
+				<button class="button button-secondary button-small" type="button" disabled={!online || busy || demoToggleBusy} onclick={toggleDemo}>{demoToggleBusy ? 'Un momento…' : pulseState.mode === 'demo' ? 'Salir de demo' : 'Activar demo'}</button>
 			</div>
+			{#if demoToggleError}<p class="form-error" role="alert">{demoToggleError}</p>{/if}
 		</section>
 
-		<details class="setup-disclosure"><summary>Comprobar preparación de Pulse <span class="setup-chevron"><Glyph name="chevron" size={18} /></span></summary><SetupPanel {pulseState} {online} /></details>
+		<SetupPanel {pulseState} {online} expanded={settingsSection === 'preparation'} />
 
 		<section class="settings-card card" aria-labelledby="home-integration-heading">
 			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="overview" size={18} /></span><div><h2 id="home-integration-heading">Home Assistant</h2><p>Consulta las lecturas de Pulse desde tu sistema de casa.</p></div></div>
@@ -928,13 +1027,15 @@
 			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="download" size={18} /></span><div><h2 id="backup-heading">Exportar o restaurar</h2><p>Los archivos se procesan en esta sesión y se envían al servidor solo al restaurar.</p></div></div>
 			<div class="backup-actions">
 				<div><strong>Descargar una copia</strong><span>El servidor prepara un JSON versionado con tus datos de Pulse.</span></div>
-				<button class="button button-secondary" type="button" onclick={onExport}><Glyph name="download" size={16} /> Exportar JSON</button>
+				<button class="button button-secondary" type="button" disabled={busy || backupBusy} onclick={downloadBackup}><Glyph name="download" size={16} /> Exportar JSON</button>
 			</div>
 			<div class="backup-actions backup-restore">
 				<div><strong>Restaurar una copia JSON</strong><span>Pulse valida el archivo y pide confirmación antes de sustituir los datos.</span></div>
-				<input hidden bind:this={fileInput} id="backup-file" type="file" accept="application/json,.json" disabled={busy} onchange={chooseImport} oncancel={cancelImportPicker} />
-				<button bind:this={importPickerButton} class="button button-secondary" type="button" disabled={busy} onclick={openImportPicker}><Glyph name="upload" size={16} /> Elegir archivo</button>
+				<input hidden bind:this={fileInput} id="backup-file" type="file" accept="application/json,.json" disabled={busy || backupBusy} onchange={chooseImport} oncancel={cancelImportPicker} />
+				<button bind:this={importPickerButton} class="button button-secondary" type="button" disabled={busy || backupBusy} onclick={openImportPicker}><Glyph name="upload" size={16} /> Elegir archivo</button>
 			</div>
+			{#if backupBusy}<p class="fine-print" role="status">Procesando la copia…</p>{/if}
+			{#if backupError}<p class="form-error" role="alert">{backupError}</p>{/if}
 			<p class="fine-print">No cargues archivos que contengan claves, contraseñas o datos que no quieras importar. No es posible restaurar un archivo SQL.</p>
 		</section>
 	</div>
@@ -960,9 +1061,10 @@
 
 		<PushNotificationsPanel {online} {revision} {busy} native={isNativeApp()} {notifications} {runNotificationAction} {confirmAction} {drafts} />
 
-		<section class="settings-card card" aria-labelledby="widgets-heading">
+		<section bind:this={widgetSection} class="settings-card card" aria-labelledby="widgets-heading">
 			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="activity" size={18} /></span><div><h2 id="widgets-heading" tabindex="-1" bind:this={widgetProfilesHeading}>Perfiles de widget</h2><p>{isNativeApp() ? 'Prepara vistas compactas para el widget de esta app.' : 'Prepara vistas compactas para una futura extensión móvil.'}</p></div></div>
 			<p class="muted-copy widget-intro">El editor guarda tus perfiles en el servidor. El widget consulta los campos que selecciones, sin conectar Pulse con el vehículo.</p>
+			{#if widgetActionError}<p class="form-error" role="alert">{widgetActionError}</p>{/if}
 			{#if isNativeApp()}<NativeWidgetPanel {online} {revision} {confirmAction} {drafts} />{/if}
 			<div class="widget-count"><span>Perfiles guardados</span><strong>{widgetProfilesLoaded ? `${count(widgetProfiles.length)} / 5` : '— / 5'}</strong></div>
 			{#if pulseState.mode === 'demo' && !widgetPreviewIsEnergy}<div class="widget-demo-note" role="status"><span class="widget-demo-dot"></span>Vista previa del coche con datos simulados.</div>{/if}
@@ -981,7 +1083,7 @@
 								<button class="widget-profile-choice" class:widget-profile-active={selectedWidgetProfile?.id === profile.id} type="button" aria-pressed={selectedWidgetProfile?.id === profile.id} onclick={() => selectWidgetProfile(profile.id)}>
 									<strong>{profile.name}</strong><span>{widgetProfileSummary(profile)}</span>
 								</button>
-								<div class="widget-profile-actions"><button class="button button-small button-quiet" type="button" disabled={!online || busy || widgetProfileBusy} onclick={(event) => editWidgetProfile(profile, event)}>Editar</button><button class="button button-small button-quiet widget-delete" type="button" aria-label={`Eliminar perfil ${profile.name}`} disabled={!online || busy || widgetProfileBusy} onclick={() => void deleteWidgetProfile(profile)}>Eliminar</button></div>
+								<div class="widget-profile-actions"><button class="button button-small button-quiet" type="button" disabled={!online || busy || widgetProfileBusy} onclick={(event) => editWidgetProfile(profile, event)}>Editar</button><button class="button button-small button-quiet widget-delete" type="button" aria-label={`Eliminar perfil ${profile.name}`} disabled={!online || busy || widgetProfileBusy || widgetPairingBusy} onclick={() => void deleteWidgetProfile(profile)}>Eliminar</button></div>
 							</li>
 						{/each}
 					</ul>
@@ -1055,7 +1157,7 @@
 									{#each displayedWidgetGrants as grant (grant.id)}
 										<li class="native-grant-row">
 											<div class="native-grant-details"><strong>{grant.device_name}</strong><span>Enlazado · {dateTime(grant.created_at)}</span><span>Caduca · {dateTime(grant.expires_at)}</span><span>Última consulta · {grant.last_seen_at ? dateTime(grant.last_seen_at) : 'No registrada'}</span></div>
-											<button class="button button-small button-quiet native-revoke" type="button" disabled={!online || busy || widgetProfileBusy || widgetPairingBusy} onclick={() => void revokeWidgetGrant(grant)}>Revocar</button>
+												<button class="button button-small button-quiet native-revoke" type="button" disabled={!online || busy || widgetProfileBusy || widgetPairingBusy || !grantsForSelectedProfile || grantsLoadingForSelectedProfile || Boolean(grantsErrorForSelectedProfile)} onclick={() => void revokeWidgetGrant(grant)}>Revocar</button>
 										</li>
 									{/each}
 								</ul>
@@ -1248,5 +1350,4 @@
 	@media(max-width:700px){.settings-layout{gap:0}.settings-card{padding:24px 0}.vehicle-color-options{gap:4px}.settings-form .field-hint{font-size:.8125rem}.settings-form .form-actions>.button{width:100%}}
 	@media(max-width:359px){.vehicle-color-options{grid-template-columns:minmax(0,1fr)}}
 
-	.setup-disclosure{margin:0 0 24px;border-top:1px solid var(--line);padding-top:12px}.setup-disclosure summary{display:flex;align-items:center;gap:8px;min-height:48px;cursor:pointer;color:var(--forest);font-size:.875rem;font-weight:600}.setup-chevron{margin-left:auto}.setup-disclosure[open] .setup-chevron{transform:rotate(90deg)}
 </style>

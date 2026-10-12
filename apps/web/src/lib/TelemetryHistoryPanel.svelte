@@ -2,6 +2,8 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { ApiError, getTelemetryHistory } from './api';
 	import { count, number } from './format';
+	import { securitySignalFields, validSecurityCode } from './security-signals';
+	import { sensorValue, telemetrySensorFields } from './telemetry-sensors';
 	import type { TemporalQuality, TelemetrySnapshot } from './types';
 
 	let { online, revision, quality, collector, onSessionExpired }: {
@@ -20,7 +22,9 @@
 		{ key: 'odometer_km', label: 'Odómetro' },
 		{ key: 'locked', label: 'Cierre' },
 		{ key: 'climate_on', label: 'Climatización' },
-		{ key: 'charging', label: 'Carga' }
+		{ key: 'charging', label: 'Carga' },
+		...securitySignalFields,
+		...telemetrySensorFields
 	] as const;
 
 	let expanded = $state(false);
@@ -176,6 +180,15 @@
 			case 'locked': return snapshot.vehicle.locked === null ? 'Sin dato' : snapshot.vehicle.locked ? 'Cerrado' : 'Abierto';
 			case 'climate_on': return snapshot.vehicle.climate_on === null ? 'Sin dato' : snapshot.vehicle.climate_on ? 'Activo' : 'Inactiva';
 			case 'charging': return snapshot.vehicle.charging === null ? 'Sin dato' : snapshot.vehicle.charging ? 'En curso' : 'Detenida';
+			case 'vehicle_security_code':
+			case 'sentry_code': {
+				const code = validSecurityCode(snapshot.vehicle[key]);
+				return code === null || snapshot.field_sources[key] !== key ? 'Sin dato' : String(code);
+			}
+			default: {
+				const field = telemetrySensorFields.find((item) => item.key === key);
+				return sensorValue(snapshot.vehicle[key], field?.unit ?? '');
+			}
 		}
 	}
 
@@ -267,7 +280,7 @@
 			<span class="telemetry-history-summary-state">{total ? `${count(total)} lecturas` : 'Ver historial'} <span aria-hidden="true">⌄</span></span>
 		</summary>
 		<div class="telemetry-history-content" aria-busy={loading}>
-			<p class="telemetry-history-note">Son lecturas comunicadas por el proveedor, no eventos ni una confirmación del estado físico actual. Los campos ausentes se muestran como “Sin dato”.</p>
+			<p class="telemetry-history-note">Son lecturas comunicadas por el proveedor, no eventos ni una confirmación del estado físico actual. Los campos ausentes se muestran como “Sin dato”. Los códigos de seguridad se muestran en decimal, sin interpretación.</p>
 			{#if quality || collectorStatus}
 				<details class="telemetry-diagnostics">
 					<summary>Diagnóstico de la lectura más reciente</summary>

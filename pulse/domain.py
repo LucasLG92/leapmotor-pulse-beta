@@ -60,8 +60,8 @@ from pulse.observed_events import (
     validate_observed_events_archive, validate_observed_event_future_dates,
 )
 
-SCHEMA_VERSION = 15
-EXPORT_VERSION = 13
+SCHEMA_VERSION = 17
+EXPORT_VERSION = 15
 MAX_IMPORT_BYTES = 1_000_000
 MAX_V3_IMPORT_BYTES = 5_000_000
 MAX_V4_IMPORT_BYTES = 5_000_000
@@ -74,6 +74,8 @@ MAX_V10_IMPORT_BYTES = 5_000_000
 MAX_V11_IMPORT_BYTES = 5_000_000
 MAX_V12_IMPORT_BYTES = 5_000_000
 MAX_V13_IMPORT_BYTES = 5_000_000
+MAX_V14_IMPORT_BYTES = 5_000_000
+MAX_V15_IMPORT_BYTES = 5_000_000
 MAX_ROWS_PER_COLLECTION = 100_000
 MAX_TEXT_LENGTH = 240
 MAX_STATE_CHARGES = 100
@@ -90,17 +92,44 @@ _TELEMETRY_NUMERIC_LIMITS = {
     "battery_pct": (0, 100),
     "range_km": (0, 5000),
     "odometer_km": (0, 10_000_000),
+    "interior_temperature_c": (-100, 100),
+    "battery_min_temperature_c": (-100, 150),
+    "front_left_pressure_kpa": (0, 1000),
+    "front_right_pressure_kpa": (0, 1000),
+    "rear_left_pressure_kpa": (0, 1000),
+    "rear_right_pressure_kpa": (0, 1000),
 }
 _TELEMETRY_BOOLEAN_FIELDS = ("locked", "climate_on", "charging")
+_TELEMETRY_SECURITY_CODE_FIELDS = ("vehicle_security_code", "sentry_code")
 _TELEMETRY_FIELD_SOURCES = {
     "battery_pct": frozenset({"precise_soc_percent", "soc_percent"}),
     "range_km": frozenset({"expected_range_km"}),
     "odometer_km": frozenset({"odometer_km"}),
+    "interior_temperature_c": frozenset({"interior_temperature_c"}),
+    "battery_min_temperature_c": frozenset({"battery_min_temperature_c"}),
+    "front_left_pressure_kpa": frozenset({"front_left_pressure_kpa"}),
+    "front_right_pressure_kpa": frozenset({"front_right_pressure_kpa"}),
+    "rear_left_pressure_kpa": frozenset({"rear_left_pressure_kpa"}),
+    "rear_right_pressure_kpa": frozenset({"rear_right_pressure_kpa"}),
+    "vehicle_security_code": frozenset({"vehicle_security_code"}),
+    "sentry_code": frozenset({"sentry_code"}),
     "locked": frozenset(),
     "climate_on": frozenset(),
     "charging": frozenset(),
 }
-_TELEMETRY_FIELDS = tuple(_TELEMETRY_NUMERIC_LIMITS) + _TELEMETRY_BOOLEAN_FIELDS
+_TELEMETRY_FIELDS = (
+    tuple(_TELEMETRY_NUMERIC_LIMITS)
+    + _TELEMETRY_SECURITY_CODE_FIELDS
+    + _TELEMETRY_BOOLEAN_FIELDS
+)
+_TELEMETRY_METRIC_FIELDS = frozenset({
+    "interior_temperature_c", "battery_min_temperature_c",
+    "front_left_pressure_kpa", "front_right_pressure_kpa",
+    "rear_left_pressure_kpa", "rear_right_pressure_kpa",
+})
+_TELEMETRY_LEGACY_FIELDS = frozenset({
+    "battery_pct", "range_km", "odometer_km", *_TELEMETRY_BOOLEAN_FIELDS,
+})
 
 _DEFAULT_SETTINGS: dict[str, Any] = {
     "vehicle_name": "Mi Leapmotor B10",
@@ -339,6 +368,14 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
         if version == 14:
             self._migrate_v14_to_v15(connection)
             connection.execute("PRAGMA user_version = 15")
+            version = 15
+        if version == 15:
+            self._migrate_v15_to_v16(connection)
+            connection.execute("PRAGMA user_version = 16")
+            version = 16
+        if version == 16:
+            self._migrate_v16_to_v17(connection)
+            connection.execute("PRAGMA user_version = 17")
 
     def _migrate_v14_to_v15(self, connection: sqlite3.Connection) -> None:
         connection.execute(
@@ -347,6 +384,101 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                    'starry_night_blue', 'midnight_purple', 'tundra_grey',
                    'metallic_black', 'stellar_silver', 'lunar_white'
                ))"""
+        )
+
+    def _migrate_v15_to_v16(self, connection: sqlite3.Connection) -> None:
+        legacy_sources: list[tuple[str, str]] = []
+        try:
+            rows = connection.execute(
+                """SELECT id, battery_pct, range_km, odometer_km, locked, climate_on,
+                          charging, field_sources_json
+                   FROM telemetry_snapshots ORDER BY rowid"""
+            ).fetchall()
+            for row in rows:
+                source_map = json.loads(row["field_sources_json"])
+                if not isinstance(source_map, Mapping):
+                    raise DomainError("La base contiene fuentes de telemetría corruptas.", 500)
+                _, normalized_sources = _normalize_telemetry_values(
+                    {
+                        "battery_pct": row["battery_pct"],
+                        "range_km": row["range_km"],
+                        "odometer_km": row["odometer_km"],
+                        "locked": _nullable_int_to_bool(row["locked"]),
+                        "climate_on": _nullable_int_to_bool(row["climate_on"]),
+                        "charging": _nullable_int_to_bool(row["charging"]),
+                    },
+                    source_map,
+                    allow_missing_fields=_TELEMETRY_METRIC_FIELDS
+                    | frozenset(_TELEMETRY_SECURITY_CODE_FIELDS),
+                )
+                legacy_sources.append((row["id"], _encode_json(normalized_sources)))
+        except DomainError:
+            raise
+        except (json.JSONDecodeError, TypeError, KeyError, ValueError):
+            raise DomainError("La base contiene fuentes de telemetría corruptas.", 500) from None
+
+        for field, (minimum, maximum) in _TELEMETRY_NUMERIC_LIMITS.items():
+            if field in {"battery_pct", "range_km", "odometer_km"}:
+                continue
+            connection.execute(
+                f"ALTER TABLE telemetry_snapshots ADD COLUMN {field} REAL "
+                f"CHECK ({field} IS NULL OR {field} BETWEEN {minimum} AND {maximum})"
+            )
+        connection.executemany(
+            "UPDATE telemetry_snapshots SET field_sources_json = ? WHERE id = ?",
+            [(sources_json, snapshot_id) for snapshot_id, sources_json in legacy_sources],
+        )
+
+    def _migrate_v16_to_v17(self, connection: sqlite3.Connection) -> None:
+        """Add nullable security-code observations without inferring history."""
+        normalized_sources: list[tuple[str, str]] = []
+        try:
+            rows = connection.execute(
+                """SELECT id, battery_pct, range_km, odometer_km, locked, climate_on,
+                          charging, interior_temperature_c, battery_min_temperature_c,
+                          front_left_pressure_kpa, front_right_pressure_kpa,
+                          rear_left_pressure_kpa, rear_right_pressure_kpa, field_sources_json
+                   FROM telemetry_snapshots ORDER BY rowid"""
+            ).fetchall()
+            for row in rows:
+                source_map = json.loads(row["field_sources_json"])
+                if not isinstance(source_map, Mapping):
+                    raise DomainError("La base contiene fuentes de telemetría corruptas.", 500)
+                _, sources = _normalize_telemetry_values(
+                    {
+                        "battery_pct": row["battery_pct"],
+                        "range_km": row["range_km"],
+                        "odometer_km": row["odometer_km"],
+                        "interior_temperature_c": row["interior_temperature_c"],
+                        "battery_min_temperature_c": row["battery_min_temperature_c"],
+                        "front_left_pressure_kpa": row["front_left_pressure_kpa"],
+                        "front_right_pressure_kpa": row["front_right_pressure_kpa"],
+                        "rear_left_pressure_kpa": row["rear_left_pressure_kpa"],
+                        "rear_right_pressure_kpa": row["rear_right_pressure_kpa"],
+                        "vehicle_security_code": None,
+                        "sentry_code": None,
+                        "locked": _nullable_int_to_bool(row["locked"]),
+                        "climate_on": _nullable_int_to_bool(row["climate_on"]),
+                        "charging": _nullable_int_to_bool(row["charging"]),
+                    },
+                    source_map,
+                    allow_missing_fields=frozenset(_TELEMETRY_SECURITY_CODE_FIELDS),
+                )
+                normalized_sources.append((row["id"], _encode_json(sources)))
+        except DomainError:
+            raise
+        except (json.JSONDecodeError, TypeError, KeyError, ValueError):
+            raise DomainError("La base contiene fuentes de telemetría corruptas.", 500) from None
+
+        for field in _TELEMETRY_SECURITY_CODE_FIELDS:
+            connection.execute(
+                f"ALTER TABLE telemetry_snapshots ADD COLUMN {field} INTEGER "
+                f"CHECK ({field} IS NULL OR (typeof({field}) = 'integer' "
+                f"AND {field} BETWEEN 0 AND 255))"
+            )
+        connection.executemany(
+            "UPDATE telemetry_snapshots SET field_sources_json = ? WHERE id = ?",
+            [(sources_json, snapshot_id) for snapshot_id, sources_json in normalized_sources],
         )
 
     def _migrate_v10_to_v11(self, connection: sqlite3.Connection) -> None:
@@ -1091,8 +1223,11 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                 """INSERT INTO telemetry_snapshots
                    (id, source, observed_at, provider_received_at, server_received_at,
                     battery_pct, range_km, odometer_km, locked, climate_on, charging,
-                    field_sources_json)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    interior_temperature_c, battery_min_temperature_c,
+                    front_left_pressure_kpa, front_right_pressure_kpa,
+                    rear_left_pressure_kpa, rear_right_pressure_kpa,
+                    vehicle_security_code, sentry_code, field_sources_json)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     snapshot_id, normalized["source"], normalized["observed_at"],
                     normalized["provider_received_at"], received_at,
@@ -1100,6 +1235,14 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                     _nullable_bool_to_int(vehicle["locked"]),
                     _nullable_bool_to_int(vehicle["climate_on"]),
                     _nullable_bool_to_int(vehicle["charging"]),
+                    vehicle["interior_temperature_c"],
+                    vehicle["battery_min_temperature_c"],
+                    vehicle["front_left_pressure_kpa"],
+                    vehicle["front_right_pressure_kpa"],
+                    vehicle["rear_left_pressure_kpa"],
+                    vehicle["rear_right_pressure_kpa"],
+                    vehicle["vehicle_security_code"],
+                    vehicle["sentry_code"],
                     _encode_json(normalized["field_sources"]),
                 ),
             )
@@ -1841,7 +1984,7 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                 ).encode("utf-8")
             except (TypeError, ValueError, UnicodeEncodeError):
                 raise DomainError("No se pudo validar el documento de exportación.", 500) from None
-            if len(encoded) > MAX_V13_IMPORT_BYTES:
+            if len(encoded) > MAX_V15_IMPORT_BYTES:
                 raise DomainError(
                     "La exportación supera el tamaño máximo admitido para una restauración.", 413
                 )
@@ -1970,8 +2113,11 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                     """INSERT INTO telemetry_snapshots
                        (id, source, observed_at, provider_received_at, server_received_at,
                         battery_pct, range_km, odometer_km, locked, climate_on, charging,
-                        field_sources_json)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        interior_temperature_c, battery_min_temperature_c,
+                        front_left_pressure_kpa, front_right_pressure_kpa,
+                        rear_left_pressure_kpa, rear_right_pressure_kpa,
+                        vehicle_security_code, sentry_code, field_sources_json)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
                         item["id"], item["source"], item["observed_at"],
                         item["provider_received_at"], item["server_received_at"],
@@ -1979,6 +2125,14 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                         _nullable_bool_to_int(vehicle["locked"]),
                         _nullable_bool_to_int(vehicle["climate_on"]),
                         _nullable_bool_to_int(vehicle["charging"]),
+                        vehicle["interior_temperature_c"],
+                        vehicle["battery_min_temperature_c"],
+                        vehicle["front_left_pressure_kpa"],
+                        vehicle["front_right_pressure_kpa"],
+                        vehicle["rear_left_pressure_kpa"],
+                        vehicle["rear_right_pressure_kpa"],
+                        vehicle["vehicle_security_code"],
+                        vehicle["sentry_code"],
                         _encode_json(item["field_sources"]),
                     ),
                 )
@@ -2661,8 +2815,35 @@ def _widget_profile_export(row: sqlite3.Row) -> dict[str, Any]:
 
 
 def _normalize_telemetry_values(
-    vehicle_raw: Any, field_sources_raw: Any
+    vehicle_raw: Any,
+    field_sources_raw: Any,
+    *,
+    allow_missing_fields: frozenset[str] = frozenset(),
 ) -> tuple[dict[str, Any], dict[str, str | None]]:
+    if allow_missing_fields:
+        if not allow_missing_fields <= set(_TELEMETRY_FIELDS):
+            raise DomainError("vehicle no contiene campos permitidos.")
+        if not isinstance(vehicle_raw, Mapping) or not isinstance(field_sources_raw, Mapping):
+            raise DomainError("vehicle y field_sources deben ser objetos.")
+        required_fields = set(_TELEMETRY_FIELDS) - allow_missing_fields
+        if (
+            not required_fields <= set(vehicle_raw)
+            or set(vehicle_raw) - set(_TELEMETRY_FIELDS)
+        ):
+            raise DomainError("vehicle no contiene campos permitidos.")
+        if (
+            not required_fields <= set(field_sources_raw)
+            or set(field_sources_raw) - set(_TELEMETRY_FIELDS)
+        ):
+            raise DomainError("field_sources no contiene campos permitidos.")
+        vehicle_raw = {
+            **vehicle_raw,
+            **{field: None for field in allow_missing_fields if field not in vehicle_raw},
+        }
+        field_sources_raw = {
+            **field_sources_raw,
+            **{field: None for field in allow_missing_fields if field not in field_sources_raw},
+        }
     vehicle = _exact_object(vehicle_raw, set(_TELEMETRY_FIELDS), "vehicle")
     source_map = _exact_object(field_sources_raw, set(_TELEMETRY_FIELDS), "field_sources")
     normalized_vehicle: dict[str, Any] = {}
@@ -2685,6 +2866,25 @@ def _normalize_telemetry_values(
             normalized_vehicle[field] = _number(
                 value, field, minimum=minimum, maximum=maximum
             )
+        normalized_sources[field] = source
+
+    for field in _TELEMETRY_SECURITY_CODE_FIELDS:
+        value = vehicle[field]
+        source = source_map[field]
+        if source is not None and (
+            type(source) is not str or source not in _TELEMETRY_FIELD_SOURCES[field]
+        ):
+            raise DomainError(f"field_sources.{field} no es un origen permitido.")
+        if value is None:
+            if source is not None:
+                raise DomainError(f"field_sources.{field} requiere un valor disponible.")
+            normalized_vehicle[field] = None
+        else:
+            if type(value) is not int or not 0 <= value <= 255:
+                raise DomainError(f"{field} debe ser un entero entre 0 y 255.")
+            if source is None:
+                raise DomainError(f"{field} requiere un origen de proveedor reconocido.")
+            normalized_vehicle[field] = value
         normalized_sources[field] = source
 
     for field in _TELEMETRY_BOOLEAN_FIELDS:
@@ -2715,7 +2915,10 @@ def _normalize_provider_snapshot(snapshot: Mapping[str, Any]) -> dict[str, Any]:
         else _parse_datetime(root["provider_received_at"], "provider_received_at")
     )
     vehicle, field_sources = _normalize_telemetry_values(
-        root["vehicle"], root["field_sources"]
+        root["vehicle"],
+        root["field_sources"],
+        allow_missing_fields=_TELEMETRY_METRIC_FIELDS
+        | frozenset(_TELEMETRY_SECURITY_CODE_FIELDS),
     )
     return {
         "source": _TELEMETRY_SOURCE,
@@ -2726,7 +2929,9 @@ def _normalize_provider_snapshot(snapshot: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _validate_telemetry_export(raw: Any) -> dict[str, Any]:
+def _validate_telemetry_export(
+    raw: Any, *, schema_version: int = EXPORT_VERSION
+) -> dict[str, Any]:
     item = _exact_object(
         raw,
         {
@@ -2749,8 +2954,25 @@ def _validate_telemetry_export(raw: Any) -> dict[str, Any]:
         else _parse_datetime(item["provider_received_at"], "provider_received_at")
     )
     server_received_at = _parse_datetime(item["server_received_at"], "server_received_at")
+    vehicle_raw = item["vehicle"]
+    sources_raw = item["field_sources"]
+    if schema_version < 14:
+        expected_fields = set(_TELEMETRY_LEGACY_FIELDS)
+    elif schema_version == 14:
+        expected_fields = set(_TELEMETRY_FIELDS) - set(_TELEMETRY_SECURITY_CODE_FIELDS)
+    else:
+        expected_fields = set(_TELEMETRY_FIELDS)
+    if (
+        not isinstance(vehicle_raw, Mapping)
+        or not isinstance(sources_raw, Mapping)
+        or set(vehicle_raw) != expected_fields
+        or set(sources_raw) != expected_fields
+    ):
+        raise DomainError("El snapshot de telemetría no es válido.")
     vehicle, field_sources = _normalize_telemetry_values(
-        item["vehicle"], item["field_sources"]
+        vehicle_raw,
+        sources_raw,
+        allow_missing_fields=frozenset(set(_TELEMETRY_FIELDS) - expected_fields),
     )
     return {
         "id": snapshot_id,
@@ -2784,6 +3006,14 @@ def _telemetry_snapshot_item(row: sqlite3.Row) -> dict[str, Any]:
                     "battery_pct": row["battery_pct"],
                     "range_km": row["range_km"],
                     "odometer_km": row["odometer_km"],
+                    "interior_temperature_c": row["interior_temperature_c"],
+                    "battery_min_temperature_c": row["battery_min_temperature_c"],
+                    "front_left_pressure_kpa": row["front_left_pressure_kpa"],
+                    "front_right_pressure_kpa": row["front_right_pressure_kpa"],
+                    "rear_left_pressure_kpa": row["rear_left_pressure_kpa"],
+                    "rear_right_pressure_kpa": row["rear_right_pressure_kpa"],
+                    "vehicle_security_code": row["vehicle_security_code"],
+                    "sentry_code": row["sentry_code"],
                     "locked": _nullable_int_to_bool(row["locked"]),
                     "climate_on": _nullable_int_to_bool(row["climate_on"]),
                     "charging": _nullable_int_to_bool(row["charging"]),
@@ -3233,6 +3463,10 @@ def _validate_import(data: Any) -> dict[str, Any]:
         raise DomainError("La importación supera el tamaño permitido para la versión 12.")
     if version == 13 and encoded_size > MAX_V13_IMPORT_BYTES:
         raise DomainError("La importación supera el tamaño permitido para la versión 13.")
+    if version == 14 and encoded_size > MAX_V14_IMPORT_BYTES:
+        raise DomainError("La importación supera el tamaño permitido para la versión 14.")
+    if version == 15 and encoded_size > MAX_V15_IMPORT_BYTES:
+        raise DomainError("La importación supera el tamaño permitido para la versión 15.")
     mode = decoded.get("mode")
     if mode not in ("demo", "unconfigured"):
         raise DomainError("El modo del documento no es válido.")
@@ -3533,7 +3767,7 @@ def _validate_import(data: Any) -> dict[str, Any]:
             raise DomainError("telemetry_snapshots supera el límite de 1000 registros.")
         snapshot_ids: set[str] = set()
         for raw in snapshot_rows:
-            item = _validate_telemetry_export(raw)
+            item = _validate_telemetry_export(raw, schema_version=version)
             if item["id"] in snapshot_ids:
                 raise DomainError("La importación contiene identificadores de snapshot duplicados.")
             snapshot_ids.add(item["id"])

@@ -229,6 +229,75 @@ async def _test_startup_publishes_only_selected_fields_and_poll_deduplicates():
     assert not any("host" in key.lower() for key in bridge.status())
 
 
+def test_startup_announces_all_nine_selected_entities_with_read_only_freshness_contract():
+    asyncio.run(_test_startup_announces_all_nine_selected_entities_with_read_only_freshness_contract())
+
+
+async def _test_startup_announces_all_nine_selected_entities_with_read_only_freshness_contract():
+    fields = (
+        "battery_pct", "range_km", "charging", "interior_temperature_c",
+        "battery_min_temperature_c", "front_left_pressure_kpa", "front_right_pressure_kpa",
+        "rear_left_pressure_kpa", "rear_right_pressure_kpa",
+    )
+    values = {
+        "battery_pct": 74.5,
+        "range_km": 321,
+        "charging": False,
+        "interior_temperature_c": 22.5,
+        "battery_min_temperature_c": -8.25,
+        "front_left_pressure_kpa": 245.0,
+        "front_right_pressure_kpa": 246.0,
+        "rear_left_pressure_kpa": 247.0,
+        "rear_right_pressure_kpa": 248.0,
+        "vin": "TEST-PRIVATE-VIN",
+        "location": {"latitude": 40.0, "longitude": -3.0},
+    }
+    source = context()
+    source["snapshot"]["id"] = "TEST-PRIVATE-SNAPSHOT"
+    source["snapshot"]["source"] = "TEST-PRIVATE-PROVIDER"
+    source["snapshot"]["vehicle"] = values
+    coordinator = FakeCoordinator(source)
+    transport = FakeTransport()
+    bridge = MqttBridge(config(fields=fields), coordinator, transport=transport, clock=ManualClock())
+
+    await bridge.start()
+    await wait_until(lambda: bridge.status()["status"] == "connected")
+
+    discovery = [message for message in transport.messages if message["topic"].endswith("/config")]
+    state_messages = [message for message in transport.messages if "/state/" in message["topic"]]
+    assert len(discovery) == len(fields)
+    assert {message["topic"].rsplit("/", 2)[-2] for message in discovery} == set(fields)
+    assert all(message["qos"] == 1 and message["retain"] for message in discovery)
+    assert all(json.loads(message["payload"])["expire_after"] == 890 for message in discovery)
+    assert len(state_messages) == len(fields)
+    assert all(message["qos"] == 1 and not message["retain"] for message in state_messages)
+
+    decoded = {message["topic"].rsplit("/", 1)[-1]: json.loads(message["payload"]) for message in state_messages}
+    assert set(decoded) == set(fields)
+    for field_name in fields:
+        assert decoded[field_name] == {
+            "value": "not_charging" if field_name == "charging" else values[field_name],
+            "observed_at": "2026-10-08T12:00:00Z",
+            "source": "telemetry",
+            "physical_freshness": "unknown",
+        }
+
+    rendered = "".join(message["payload"] for message in (*discovery, *state_messages))
+    for private_value in ("TEST-PRIVATE-VIN", "TEST-PRIVATE-SNAPSHOT", "TEST-PRIVATE-PROVIDER", "latitude", "longitude"):
+        assert private_value not in rendered
+    for message in discovery:
+        assert "command_topic" not in json.loads(message["payload"])
+    assert not any("command_topic" in message["payload"] for message in (*discovery, *state_messages))
+    assert any(
+        message["topic"] == "pulse/garage/availability/bridge"
+        and message["payload"] == "online"
+        and message["qos"] == 1
+        and message["retain"]
+        for message in transport.messages
+    )
+    await bridge.close()
+
+
 def test_future_and_expired_observations_publish_only_field_unavailability():
     asyncio.run(_test_future_and_expired_observations_publish_only_field_unavailability())
 

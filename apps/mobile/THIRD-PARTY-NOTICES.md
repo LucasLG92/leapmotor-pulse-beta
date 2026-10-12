@@ -1,6 +1,6 @@
 # Dependencias de la app nativa
 
-El código original de Pulse se publica bajo MIT. Los assets, fuentes y componentes compartidos se atribuyen en `../web/THIRD-PARTY-NOTICES.md`.
+El código de Pulse es original y conserva su licencia propia. Los assets, fuentes y componentes compartidos se atribuyen en `../web/THIRD-PARTY-NOTICES.md`. No se ha copiado código de Mate o LPB10.
 
 - Capacitor core, CLI, Android e iOS 8.5.3: MIT, Ionic Team; https://github.com/ionic-team/capacitor. Los targets iniciales Android y Xcode proceden de sus plantillas, después adaptadas para Pulse. Texto completo en `LICENSES/Capacitor-MIT.txt`; `CapApp-SPM` fija exactamente 8.5.3. Bridge/cache, PulseCore y renderer WidgetKit nuevos son originales.
 - AppAuth Android 0.11.1: Apache-2.0, OpenID Foundation; https://github.com/openid/AppAuth-Android. Dependencia de autenticación en navegador del sistema, sin código vendorizado.

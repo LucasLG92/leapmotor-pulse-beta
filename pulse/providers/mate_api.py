@@ -163,6 +163,26 @@ class MateApiB10Provider:
         odometer_km, odometer_source = _first_number(
             values, ("odometer_km",), minimum=0, maximum=10_000_000
         )
+        interior_temperature_c, interior_temperature_source = _first_number(
+            values, ("interior_temperature_c",), minimum=-100, maximum=100
+        )
+        battery_min_temperature_c, battery_min_temperature_source = _first_number(
+            values, ("battery_min_temperature_c",), minimum=-100, maximum=150
+        )
+        front_left_pressure_kpa, front_left_pressure_source = _first_number(
+            values, ("front_left_pressure_kpa",), minimum=0, maximum=1000
+        )
+        front_right_pressure_kpa, front_right_pressure_source = _first_number(
+            values, ("front_right_pressure_kpa",), minimum=0, maximum=1000
+        )
+        rear_left_pressure_kpa, rear_left_pressure_source = _first_number(
+            values, ("rear_left_pressure_kpa",), minimum=0, maximum=1000
+        )
+        rear_right_pressure_kpa, rear_right_pressure_source = _first_number(
+            values, ("rear_right_pressure_kpa",), minimum=0, maximum=1000
+        )
+        vehicle_security_code, vehicle_security_source = _diagnostic_code(values, "vehicle_security_code")
+        sentry_code, sentry_source = _diagnostic_code(values, "sentry_code")
         observed_at = _iso_datetime(getattr(telemetry, "observed_at", None))
         provider_received_at = _iso_datetime(getattr(telemetry, "received_at", None))
         configuration_observed_at = _iso_datetime(getattr(configuration, "observed_at", None))
@@ -173,6 +193,14 @@ class MateApiB10Provider:
                 "battery_pct": battery_pct,
                 "range_km": range_km,
                 "odometer_km": odometer_km,
+                "interior_temperature_c": interior_temperature_c,
+                "battery_min_temperature_c": battery_min_temperature_c,
+                "front_left_pressure_kpa": front_left_pressure_kpa,
+                "front_right_pressure_kpa": front_right_pressure_kpa,
+                "rear_left_pressure_kpa": rear_left_pressure_kpa,
+                "rear_right_pressure_kpa": rear_right_pressure_kpa,
+                "vehicle_security_code": vehicle_security_code,
+                "sentry_code": sentry_code,
                 "locked": None,
                 "climate_on": None,
                 "charging": None,
@@ -181,6 +209,14 @@ class MateApiB10Provider:
                 "battery_pct": battery_source,
                 "range_km": range_source,
                 "odometer_km": odometer_source,
+                "interior_temperature_c": interior_temperature_source,
+                "battery_min_temperature_c": battery_min_temperature_source,
+                "front_left_pressure_kpa": front_left_pressure_source,
+                "front_right_pressure_kpa": front_right_pressure_source,
+                "rear_left_pressure_kpa": rear_left_pressure_source,
+                "rear_right_pressure_kpa": rear_right_pressure_source,
+                "vehicle_security_code": vehicle_security_source,
+                "sentry_code": sentry_source,
                 "locked": None,
                 "climate_on": None,
                 "charging": None,
@@ -192,6 +228,19 @@ class MateApiB10Provider:
             "capabilities": unknown_capabilities(),
             "source": "MATE-API B10ReadClient",
         }
+
+
+def _diagnostic_code(values: Mapping[str, Any], name: str) -> tuple[int | None, str | None]:
+    """Preserve a normalized SDK enumeration without assigning physical meaning."""
+    value = values.get(name)
+    if type(value) not in (int, float):
+        return None, None
+    try:
+        if not math.isfinite(value) or not 0 <= value <= 255 or value != int(value):
+            return None, None
+    except (ValueError, OverflowError):
+        return None, None
+    return int(value), name
 
 
 def _first_number(

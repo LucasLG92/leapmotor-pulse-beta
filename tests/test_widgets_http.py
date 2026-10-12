@@ -11,7 +11,7 @@ from pulse.config import Config
 def owners(tmp_path):
     config = Config(auth_mode="oidc", public_url="https://pulse.example.org",
                     oidc_issuer="https://id.example.org", oidc_client_id="pulse-test",
-                    oidc_client_secret="synthetic-fixture", allowed_users=("operator",),
+                    oidc_client_secret="synthetic-fixture", allowed_users=("lucas",),
                     hosts=("pulse.example.org",))
     app = create_app(tmp_path / "pulse.sqlite3", config=config)
     # OIDC criptográfico se prueba por separado; aquí aislamos la autorización de recurso.
@@ -79,7 +79,7 @@ def test_backup_restore_cannot_replace_or_export_another_owners_profiles(owners)
 def test_anonymous_profile_api_closed(tmp_path):
     config = Config(auth_mode="oidc", public_url="https://pulse.example.org",
                     oidc_issuer="https://id.example.org", oidc_client_id="pulse-test",
-                    oidc_client_secret="synthetic-fixture", allowed_users=("operator",),
+                    oidc_client_secret="synthetic-fixture", allowed_users=("lucas",),
                     hosts=("pulse.example.org",))
     with TestClient(create_app(tmp_path / "pulse.sqlite3", config=config), base_url=config.public_url) as client:
         assert client.get("/api/widget-profiles").status_code == 401

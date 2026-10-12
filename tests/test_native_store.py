@@ -15,6 +15,7 @@ import pytest
 
 from pulse.domain import DomainError, Store
 from pulse.native_store import MAX_WIDGET_GRANTS_PER_PROFILE
+from schema_helpers import downgrade_telemetry_to_v15
 
 
 UTC = timezone.utc
@@ -128,6 +129,7 @@ def test_v4_to_current_migration_preserves_pvpc_profiles_and_adds_cascading_tabl
 
     # A V4 database has the exact same domain/export tables and no native tables.
     with sqlite3.connect(path) as connection:
+        downgrade_telemetry_to_v15(connection)
         connection.execute("DROP TABLE widget_grants")
         connection.execute("DROP TABLE widget_pairings")
         connection.execute("DROP TABLE push_subscriptions")
@@ -148,7 +150,7 @@ def test_v4_to_current_migration_preserves_pvpc_profiles_and_adds_cascading_tabl
     assert migrated.get_settings()["pricing_method"] == "pvpc"
     assert migrated.list_widget_profiles("owner-a")["items"] == [profile]
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 17
         assert connection.execute("SELECT COUNT(*) FROM push_subscriptions").fetchone()[0] == 0
         for table in ("widget_pairings", "widget_grants"):
             foreign_keys = connection.execute(

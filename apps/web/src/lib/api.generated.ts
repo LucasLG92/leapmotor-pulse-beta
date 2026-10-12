@@ -1345,7 +1345,7 @@ export interface components {
              */
             data_status: "no_data" | "demo" | "unavailable" | "published";
             /** Fields */
-            fields: ("battery_pct" | "range_km" | "charging")[];
+            fields: ("battery_pct" | "range_km" | "charging" | "interior_temperature_c" | "battery_min_temperature_c" | "front_left_pressure_kpa" | "front_right_pressure_kpa" | "rear_left_pressure_kpa" | "rear_right_pressure_kpa")[];
             /** Max Age Seconds */
             max_age_seconds: number;
             /** Observed At */
@@ -1925,6 +1925,22 @@ export interface components {
             range_km: number | null;
             /** Odometer Km */
             odometer_km: number | null;
+            /** Interior Temperature C */
+            interior_temperature_c?: number | null;
+            /** Battery Min Temperature C */
+            battery_min_temperature_c?: number | null;
+            /** Front Left Pressure Kpa */
+            front_left_pressure_kpa?: number | null;
+            /** Front Right Pressure Kpa */
+            front_right_pressure_kpa?: number | null;
+            /** Rear Left Pressure Kpa */
+            rear_left_pressure_kpa?: number | null;
+            /** Rear Right Pressure Kpa */
+            rear_right_pressure_kpa?: number | null;
+            /** Vehicle Security Code */
+            vehicle_security_code?: number | null;
+            /** Sentry Code */
+            sentry_code?: number | null;
             /** Locked */
             locked: boolean | null;
             /** Climate On */
@@ -2032,6 +2048,22 @@ export interface components {
             range_km: number | null;
             /** Odometer Km */
             odometer_km: number | null;
+            /** Interior Temperature C */
+            interior_temperature_c?: number | null;
+            /** Battery Min Temperature C */
+            battery_min_temperature_c?: number | null;
+            /** Front Left Pressure Kpa */
+            front_left_pressure_kpa?: number | null;
+            /** Front Right Pressure Kpa */
+            front_right_pressure_kpa?: number | null;
+            /** Rear Left Pressure Kpa */
+            rear_left_pressure_kpa?: number | null;
+            /** Rear Right Pressure Kpa */
+            rear_right_pressure_kpa?: number | null;
+            /** Vehicle Security Code */
+            vehicle_security_code?: number | null;
+            /** Sentry Code */
+            sentry_code?: number | null;
             /** Locked */
             locked: boolean | null;
             /** Climate On */

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Glyph from '../lib/Glyph.svelte';
 	import ObservedEventsPanel from '../lib/ObservedEventsPanel.svelte';
+	import SecuritySignalsPanel from '../lib/SecuritySignalsPanel.svelte';
 	import TelemetryHistoryPanel from '../lib/TelemetryHistoryPanel.svelte';
 	import { count, dateTime } from '../lib/format';
 	import type { PageProps } from '../lib/types';
@@ -103,6 +104,12 @@
 </section>
 </section>
 {#if pulseState.mode !== 'demo'}
+	<SecuritySignalsPanel
+		snapshot={pulseState.telemetry?.latest ?? null}
+		quality={pulseState.telemetry?.quality ?? null}
+		mode={pulseState.mode}
+		{online}
+	/>
 	<TelemetryHistoryPanel
 		{online}
 		{revision}

@@ -20,8 +20,15 @@ _NUMERIC_FIELDS: dict[str, tuple[float, float, frozenset[str]]] = {
     "battery_pct": (0, 100, frozenset({"precise_soc_percent", "soc_percent"})),
     "range_km": (0, 5000, frozenset({"expected_range_km"})),
     "odometer_km": (0, 10_000_000, frozenset({"odometer_km"})),
+    "interior_temperature_c": (-100, 100, frozenset({"interior_temperature_c"})),
+    "battery_min_temperature_c": (-100, 150, frozenset({"battery_min_temperature_c"})),
+    "front_left_pressure_kpa": (0, 1000, frozenset({"front_left_pressure_kpa"})),
+    "front_right_pressure_kpa": (0, 1000, frozenset({"front_right_pressure_kpa"})),
+    "rear_left_pressure_kpa": (0, 1000, frozenset({"rear_left_pressure_kpa"})),
+    "rear_right_pressure_kpa": (0, 1000, frozenset({"rear_right_pressure_kpa"})),
 }
 _BOOLEAN_FIELDS = ("locked", "climate_on", "charging")
+_SECURITY_CODE_FIELDS = ("vehicle_security_code", "sentry_code")
 _REASON_CODES = frozenset(
     {
         "no_snapshot",
@@ -447,6 +454,24 @@ def _normalize_snapshot(raw_snapshot: object) -> dict[str, Any]:
             source if number is not None and isinstance(source, str) and source in allowed_sources
             else None
         )
+
+    for field in _SECURITY_CODE_FIELDS:
+        value = raw_vehicle.get(field)
+        source = raw_sources.get(field)
+        normalized: int | None = None
+        if type(value) in (int, float):
+            try:
+                candidate = float(value)
+                if math.isfinite(candidate) and candidate.is_integer() and 0 <= candidate <= 255:
+                    normalized = int(candidate)
+            except (OverflowError, ValueError):
+                pass
+        if normalized is not None and type(source) is str and source == field:
+            vehicle[field] = normalized
+            field_sources[field] = source
+        else:
+            vehicle[field] = None
+            field_sources[field] = None
 
     for field in _BOOLEAN_FIELDS:
         value = raw_vehicle.get(field)

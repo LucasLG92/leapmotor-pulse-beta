@@ -29,7 +29,7 @@ def test_analysis_empty_is_unknown_and_personal_api_is_not_cached(tmp_path):
         assert data["bucket_timezone"] == "UTC"
         for days in ("0", "366", "true", "not-a-number"):
             assert client.get(f"/api/analytics/energy?days={days}").status_code == 422
-        assert client.get("/api/analytics/energy", headers={"Remote-User": "operator"}).status_code == 403
+        assert client.get("/api/analytics/energy", headers={"Remote-User": "lucas"}).status_code == 403
 
 
 def test_analysis_includes_all_manual_records_and_keeps_demo_separate(tmp_path):

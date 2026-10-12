@@ -1,0 +1,11 @@
+[Unit]
+Description=Hourly metadata check for the external archive backup
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=5m
+Unit=application-backup-monitor@archive.service
+
+[Install]
+WantedBy=timers.target

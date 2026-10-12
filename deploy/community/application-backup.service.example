@@ -1,0 +1,8 @@
+[Unit]
+Description=Example database backup job
+OnFailure=application-backup-monitor-failure@sqlite.service
+
+[Service]
+Type=oneshot
+# Replace this placeholder with the backup program supplied by the operator.
+ExecStart=/usr/local/sbin/application-backup

@@ -24,7 +24,7 @@ CLIENT = "pulse-test"
 def test_signed_oidc_pkce_and_claim_validation(tmp_path, fault, expected):
     config = Config(auth_mode="oidc", public_url="https://pulse.example.org", oidc_issuer=ISSUER,
                     oidc_client_id=CLIENT, oidc_client_secret="synthetic-secret",
-                    allowed_users=("operator",), hosts=("pulse.example.org",))
+                    allowed_users=("lucas",), hosts=("pulse.example.org",))
     key = jwk.RSAKey.generate_key(2048)
     public = key.as_dict(private=False)
     public["kid"] = "pulse-test-key"
@@ -63,7 +63,7 @@ def test_signed_oidc_pkce_and_claim_validation(tmp_path, fault, expected):
         if path == "/userinfo":
             assert request.headers["authorization"] == "Bearer synthetic-access"
             return httpx2.Response(200, json={"sub": "different-sub" if fault == "userinfo_sub" else "test-owner",
-                "preferred_username": "intruder" if fault == "user_denied" else "operator", "name": "Test User"})
+                "preferred_username": "intruder" if fault == "user_denied" else "lucas", "name": "Usuario local"})
         raise AssertionError(f"Unexpected synthetic IdP endpoint {path}")
 
     oidc = build_oidc(config)
@@ -84,7 +84,7 @@ def test_signed_oidc_pkce_and_claim_validation(tmp_path, fault, expected):
         assert client.get("/api/state").status_code == (200 if expected == 303 else 401)
         if expected == 303:
             assert client.cookies.get(config.cookie_name) != old_sid
-            assert client.get("/api/session").json()["user"] == {"id": "test-owner", "name": "Test User"}
+            assert client.get("/api/session").json()["user"] == {"id": "test-owner", "name": "Usuario local"}
         # El state queda consumido incluso si la validación falla.
         assert client.get(callback, follow_redirects=False).status_code == 401
 
@@ -92,7 +92,7 @@ def test_signed_oidc_pkce_and_claim_validation(tmp_path, fault, expected):
 def test_anonymous_capacity_does_not_evict_authenticated_session():
     config = Config(max_sessions=3)
     sessions = Sessions(config)
-    owner_sid, owner = sessions.create({"id": "owner", "name": "Test User"})
+    owner_sid, owner = sessions.create({"id": "owner", "name": "Usuario local"})
     for _ in range(20):
         sessions.create()
     assert len(sessions.records) == 3

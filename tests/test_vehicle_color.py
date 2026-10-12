@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from pulse.app import create_app
 from pulse.domain import DomainError, EXPORT_VERSION, SCHEMA_VERSION, Store
+from schema_helpers import downgrade_telemetry_to_v15
 
 
 COLORS = (
@@ -49,7 +50,7 @@ def test_current_export_round_trip_and_historical_v12_import(tmp_path):
     source.add_charge({"started_at": "2026-10-08T08:00:00Z", "kwh": 5})
     exported = source.export_data()
 
-    assert exported["schema_version"] == EXPORT_VERSION == 13
+    assert exported["schema_version"] == EXPORT_VERSION == 15
     assert exported["settings"]["vehicle_color"] == "lunar_white"
     destination = Store(tmp_path / "destination.sqlite3")
     assert destination.import_data(exported) == {"ok": True, "mode": "unconfigured"}
@@ -61,7 +62,7 @@ def test_current_export_round_trip_and_historical_v12_import(tmp_path):
     historical["settings"].pop("vehicle_color")
     assert destination.import_data(historical) == {"ok": True, "mode": "unconfigured"}
     restored = destination.export_data()
-    assert restored["schema_version"] == 13
+    assert restored["schema_version"] == 15
     assert restored["settings"]["vehicle_color"] is None
     assert restored["settings"]["vehicle_name"] == "Coche guardado"
     assert len(restored["charges"]) == 1
@@ -82,18 +83,19 @@ def test_schema_14_migration_adds_null_color_and_preserves_existing_settings_and
     prior_settings.pop("vehicle_color")
 
     with sqlite3.connect(path) as connection:
+        downgrade_telemetry_to_v15(connection)
         connection.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
         connection.execute("PRAGMA user_version = 14")
 
     migrated = Store(path)
     settings = migrated.get_settings()
-    assert SCHEMA_VERSION == 15
+    assert SCHEMA_VERSION == 17
     assert settings["vehicle_color"] is None
     settings.pop("vehicle_color")
     assert settings == prior_settings
     assert migrated.get_charge(charge["id"])["id"] == charge["id"]
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 17
 
 
 def test_settings_api_returns_and_persists_vehicle_color(tmp_path):

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, untrack } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import { ApiError, getCharges, getEnergyAnalytics } from '../lib/api';
 	import ChargerPanel from '../lib/ChargerPanel.svelte';
 	import Glyph from '../lib/Glyph.svelte';
@@ -500,6 +500,9 @@
 
 	async function saveCharge(event: SubmitEvent) {
 		event.preventDefault();
+		const form = event.currentTarget as HTMLFormElement;
+		const previousFocus = document.activeElement instanceof HTMLElement && form.contains(document.activeElement)
+			? document.activeElement : null;
 		const values = validateCharge(true);
 		if (!values) return;
 		const appliedTariff = Number(tariff);
@@ -533,13 +536,23 @@
 			const saved = await mutate(path, editing ? 'PUT' : 'POST', payload, editing ? 'La carga se ha actualizado.' : 'La carga se ha guardado.');
 			if (!mounted) return;
 			if (saved) cancelEdit();
-			else offset = previousOffset;
+			else {
+				saveError = 'No se ha podido confirmar el guardado. El formulario sigue intacto. Revisa el historial antes de reintentarlo.';
+				offset = previousOffset;
+			}
 		} catch {
 			if (!mounted) return;
-			saveError = 'No se pudo guardar la carga. El formulario sigue intacto; inténtalo de nuevo.';
+			saveError = 'No se ha podido confirmar el guardado. El formulario sigue intacto. Revisa el historial antes de reintentarlo.';
 			offset = previousOffset;
 		} finally {
-			if (mounted) savingCharge = false;
+			if (mounted) {
+				savingCharge = false;
+				await tick();
+				// Restore only focus lost when the submitting control was disabled.
+				if (mounted && saveError && document.hasFocus() && document.activeElement === document.body && previousFocus?.isConnected) {
+					previousFocus.focus({ preventScroll: true });
+				}
+			}
 		}
 	}
 

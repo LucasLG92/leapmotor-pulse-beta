@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, tick } from 'svelte';
 	import { ApiError } from './api';
 	import type { PageProps, PushCapabilities, PushDevice, WebPushSubscriptionInput } from './types';
 
@@ -27,6 +27,8 @@
 	let permission: NotificationPermission | 'unsupported' = $state('unsupported');
 	let secureContext = $state(false);
 	let supported = $state(false);
+	let panelElement = $state<HTMLElement>();
+	let headingElement = $state<HTMLHeadingElement>();
 	let currentEndpointHash: string | null = $state(null);
 	let disposed = false;
 	let requestId = 0;
@@ -37,6 +39,19 @@
 	}
 
 	onMount(() => drafts.register('push-device', isPushDeviceDirty));
+
+	function capturePanelFocus(): HTMLElement | null {
+		if (typeof document === 'undefined' || !panelElement) return null;
+		const active = document.activeElement;
+		return active instanceof HTMLElement && panelElement.contains(active) ? active : null;
+	}
+
+	async function restorePanelFocus(previous: HTMLElement | null): Promise<void> {
+		await tick();
+		if (!previous || disposed || !document.hasFocus() || document.activeElement !== document.body) return;
+		const target = previous.isConnected && !previous.matches(':disabled') ? previous : headingElement;
+		if (target?.isConnected && !target.matches(':disabled')) target.focus();
+	}
 
 	$effect(() => {
 		const serverDeviceName = currentDevice?.name;
@@ -203,7 +218,8 @@
 	}
 
 	async function activate() {
-		if (!canActivate || !deviceName.trim() || deviceName.trim().length > 60) return;
+		if (loading || !canActivate || !deviceName.trim() || deviceName.trim().length > 60) return;
+		const previousFocus = capturePanelFocus();
 		actionMessage = '';
 		actionError = '';
 		actionBusy = true;
@@ -231,12 +247,16 @@
 		} catch (error) {
 			if (!disposed) actionError = fixedActionError(error, 'No se pudo activar esta suscripción. Comprueba la lista antes de volver a intentarlo.');
 		} finally {
-			if (!disposed) actionBusy = false;
+			if (!disposed) {
+				actionBusy = false;
+				await restorePanelFocus(previousFocus);
+			}
 		}
 	}
 
 	async function renewSubscription() {
-		if (busy || actionBusy || !online || !deviceName.trim() || deviceName.trim().length > 60 || !capabilities?.enabled || permission === 'denied') return;
+		if (busy || actionBusy || loading || !online || !deviceName.trim() || deviceName.trim().length > 60 || !capabilities?.enabled || permission === 'denied') return;
+		const previousFocus = capturePanelFocus();
 		actionMessage = '';
 		actionError = '';
 		actionBusy = true;
@@ -253,7 +273,7 @@
 					'Pulse revocará la suscripción anterior, la quitará de este navegador y creará una nueva con la clave actual.',
 					'Renovar suscripción'
 				);
-				if (!confirmed || disposed) return;
+				if (!confirmed || disposed || loading) return;
 				const subscription = await getOrCreateSubscription(true);
 				if (disposed) return;
 				try {
@@ -266,18 +286,24 @@
 			if (disposed) return;
 		} catch (error) {
 			if (!disposed) actionError = fixedActionError(error, 'No se pudo renovar esta suscripción. Comprueba la lista antes de volver a intentarlo.');
-		} finally { if (!disposed) actionBusy = false; }
+		} finally {
+			if (!disposed) {
+				actionBusy = false;
+				await restorePanelFocus(previousFocus);
+			}
+		}
 	}
 
 	async function revokeDevice(device: PushDevice) {
-		if (busy || actionBusy || !online) return;
+		if (busy || actionBusy || loading || !online) return;
+		const previousFocus = capturePanelFocus();
 		actionMessage = '';
 		actionError = '';
 		actionBusy = true;
 		try {
 			await runNotificationAction(async () => {
 				const confirmed = await confirmAction('Desactivar notificaciones', `Se desactivarán los avisos en «${device.name}». El permiso del navegador seguirá activo.`, 'Desactivar');
-				if (!confirmed || disposed) return;
+				if (!confirmed || disposed || loading) return;
 				await notifications.revoke(device.id);
 				if (disposed) return;
 				if (device.endpoint_hash === currentEndpointHash && supported) {
@@ -295,24 +321,30 @@
 				}
 				await loadData(true);
 				if (disposed) return;
-				actionMessage = 'Suscripción desactivada. El permiso del navegador sigue activo.';
+				actionMessage = 'Suscripción desactivada. Esta acción no cambia el permiso del navegador.';
 			});
 			if (disposed) return;
 		} catch (error) {
 			if (canReconcile(error)) try { await loadData(true); } catch { /* A fixed error remains visible if reconciliation also fails. */ }
 			if (!disposed) actionError = fixedActionError(error, 'No se pudo desactivar este dispositivo. Inténtalo de nuevo.');
-		} finally { if (!disposed) actionBusy = false; }
+		} finally {
+			if (!disposed) {
+				actionBusy = false;
+				await restorePanelFocus(previousFocus);
+			}
+		}
 	}
 
 	async function sendTest(device: PushDevice) {
-		if (busy || actionBusy || !online || device.state !== 'active') return;
+		if (busy || actionBusy || loading || !online || device.state !== 'active') return;
+		const previousFocus = capturePanelFocus();
 		actionMessage = '';
 		actionError = '';
 		actionBusy = true;
 		try {
 			await runNotificationAction(async () => {
 				const confirmed = await confirmAction('Enviar prueba', `Pulse enviará un aviso de prueba a «${device.name}».`, 'Enviar prueba');
-				if (!confirmed || disposed) return;
+				if (!confirmed || disposed || loading) return;
 				await notifications.test(device.id);
 				if (disposed) return;
 				actionMessage = 'Pulse aceptó la solicitud de prueba. Comprueba el dispositivo.';
@@ -324,7 +356,12 @@
 			if (!disposed) actionError = error instanceof ApiError && error.status === 429
 				? 'Las pruebas están limitadas a una por minuto. Espera antes de enviar otra.'
 				: fixedActionError(error, 'No se pudo enviar la prueba. El servidor no confirma la entrega física.');
-		} finally { if (!disposed) actionBusy = false; }
+		} finally {
+			if (!disposed) {
+				actionBusy = false;
+				await restorePanelFocus(previousFocus);
+			}
+		}
 	}
 
 	function deviceState(device: PushDevice): string {
@@ -351,8 +388,8 @@
 		<p class="push-copy">Las notificaciones Web Push no están disponibles dentro de la app nativa.</p>
 	</section>
 {:else}
-	<section class="push-panel" aria-labelledby="push-heading">
-		<div class="push-heading"><div><h3 id="push-heading">Avisos de Pulse</h3></div>{#if loaded}<span class="push-limit">{devices.length} / {maxDevices}</span>{/if}</div>
+		<section bind:this={panelElement} class="push-panel" aria-labelledby="push-heading">
+			<div class="push-heading"><div><h3 bind:this={headingElement} id="push-heading" tabindex="-1">Avisos de Pulse</h3></div>{#if loaded}<span class="push-limit">{devices.length} / {maxDevices}</span>{/if}</div>
 		<p class="push-copy">Activa avisos genéricos en esta PWA. Pulse no incluye datos del vehículo en las notificaciones. Desactivar una suscripción no cambia el permiso del navegador.</p>
 		<p class="push-note">Los envíos dependen de la sesión que autorizó cada dispositivo: dura 8 horas por defecto y nunca más de 24. Al caducar, los envíos se detienen; abrir Ajustes no renueva la sesión. Reactiva el dispositivo manualmente.</p>
 		{#if !secureContext && supported === false}<p class="push-note" role="status">El navegador requiere una conexión segura para activar avisos.</p>{/if}
@@ -367,7 +404,7 @@
 				{#if currentDevice?.state !== 'active'}<div class="push-name-field"><label for="push-device-name">Nombre de este dispositivo</label><input id="push-device-name" bind:value={deviceName} maxlength="60" autocomplete="off" aria-describedby="push-name-hint" disabled={busy || actionBusy} /><span id="push-name-hint">Máximo 60 caracteres. Solo se usa para reconocerlo aquí.</span></div>{/if}
 				{#if currentSubscriptionNeedsRenewal}
 					<p class="push-note" role="status">La clave pública cambió. Renueva la suscripción para seguir usando este navegador.</p>
-					<button class="button button-secondary button-block" type="button" disabled={busy || actionBusy || !online || !deviceName.trim() || deviceName.trim().length > 60} onclick={() => void renewSubscription()}>{actionBusy ? 'Renovando…' : 'Renovar suscripción'}</button>
+					<button class="button button-secondary button-block" type="button" disabled={busy || actionBusy || loading || !online || !deviceName.trim() || deviceName.trim().length > 60} onclick={() => void renewSubscription()}>{actionBusy ? 'Renovando…' : 'Renovar suscripción'}</button>
 				{:else if currentDevice?.state === 'session_required'}
 					<p class="push-note" role="status">La sesión que autorizó los avisos ha caducado. Reactiva este navegador de forma explícita.</p>
 					<button class="button button-secondary button-block" type="button" disabled={!canActivate} onclick={() => void activate()}>{actionBusy ? 'Reactivando…' : 'Reactivar notificaciones'}</button>
@@ -385,8 +422,8 @@
 					<li class="push-device-row">
 						<div class="push-device-info"><strong>{device.name}</strong><span>{expiryLabel(device.expires_at)}</span><span>{deviceState(device)}</span></div>
 						<div class="push-device-actions">
-							{#if device.state === 'active'}<button class="button button-small button-secondary" type="button" disabled={!online || busy || actionBusy} onclick={() => void sendTest(device)}>{actionBusy ? 'Enviando…' : 'Enviar prueba'}</button>{/if}
-							<button class="button button-small button-quiet push-revoke" type="button" disabled={!online || busy || actionBusy} onclick={() => void revokeDevice(device)}>Desactivar</button>
+							{#if device.state === 'active'}<button class="button button-small button-secondary" type="button" disabled={!online || busy || actionBusy || loading} onclick={() => void sendTest(device)}>{actionBusy ? 'Enviando…' : 'Enviar prueba'}</button>{/if}
+							<button class="button button-small button-quiet push-revoke" type="button" disabled={!online || busy || actionBusy || loading} onclick={() => void revokeDevice(device)}>Desactivar</button>
 						</div>
 					</li>
 				{/each}

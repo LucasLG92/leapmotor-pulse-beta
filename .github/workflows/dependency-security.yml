@@ -8,6 +8,8 @@ on:
       - 'apps/**/pnpm-workspace.yaml'
       - 'apps/mobile/android/app/gradle.lockfile'
       - 'scripts/check-dependencies.sh'
+      - 'scripts/check-dependency-report.py'
+      - 'tests/test_dependency_security.py'
       - '.github/workflows/dependency-security.yml'
   pull_request:
   workflow_dispatch:
@@ -31,4 +33,14 @@ jobs:
           persist-credentials: false
 
       - name: Check all pinned dependency locks
-        run: bash scripts/check-dependencies.sh
+        id: dependency-scan
+        run: bash scripts/check-dependencies.sh --report-dir "$RUNNER_TEMP/pulse-dependency-security"
+
+      - name: Retain public dependency scan evidence
+        if: ${{ always() && steps.dependency-scan.outcome != 'skipped' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: dependency-security-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/pulse-dependency-security/
+          if-no-files-found: error
+          retention-days: 30

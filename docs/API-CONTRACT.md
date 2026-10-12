@@ -1,5 +1,7 @@
 # Contrato HTTP Pulse 0.1
 
+El candidato local de fase 3 usa SQLite 16 y exporta JSON 14. `Vehicle` y `TelemetryValues` incorporan temperaturas interior/mínima de batería (°C) y cuatro presiones de neumáticos (kPa), nullable y con fuentes permitidas. Se conserva la separación de fechas y la caducidad del estado actual. JSON 1–13 restaura las magnitudes nuevas a `null`. [Contrato y recuperación](TELEMETRY.md). Las notas de apariencia y V42 siguientes describen incrementos anteriores.
+
 Actualización de apariencia: SQLite15 y JSON13 añaden `settings.vehicle_color`, nullable y limitado a seis colores del B10. Importar JSON1–12 asigna el color a `null`; actualizar ajustes sin ese campo conserva la elección. [Guía](VEHICLE-APPEARANCE.md). Las referencias V42 siguientes documentan el incremento previo.
 
 V42: `ChargeQuote.pricing` discrimina por `accuracy` entre `estimated_uniform` y `estimated_intervals`. El segundo incluye `energy_distribution` con fuente/versión/base/intervalos; omite vínculo privado `scope`/`session_id`. Aparece en las cotizaciones guardadas de sesiones y su historial. Ningún payload HTTP acepta curvas ni habilita una fuente; las cargas manuales siguen uniformes. Export/import usan JSON12 y DB14, con compatibilidad1–11 bajo su semántica anterior.
@@ -38,7 +40,7 @@ Toda mutación requiere cookie, `X-Pulse-CSRF` y JSON del mismo origen. Campos d
 | GET `/api/telemetry/history?limit=100&offset=0` | Snapshots observados separados de demo, máximo100 por página; retención actual1000 por orden local de ingestión. No constituye todavía historial de viajes/energía completo. |
 | GET `/api/charger` | Estado del lector evcc y última observación mínima guardada. Apagado por defecto; nunca inicia una lectura externa. Recepción local y cualificación física explícitas. |
 | GET `/api/charger/sessions?limit=20&offset=0` | `{items,total,limit,offset}` del ámbito seleccionado; solo historial local. Límite1–100, offset0–1000, retención global1000. |
-| GET `/api/export` | JSON formato13, con el color opcional del B10, con historial del cargador y revisiones de cotización y sin permisos/códigos/hashes nativos; descarga explícita. Perfiles limitados al propietario de sesión, conservando su subject en el archivo para integridad al restaurar. |
+| GET `/api/export` | JSON formato14, con el color opcional y las nuevas magnitudes de telemetría, historial del cargador y revisiones de cotización; sin permisos/códigos/hashes nativos. Descarga explícita. Perfiles limitados al propietario de sesión, conservando su subject en el archivo para integridad al restaurar. |
 | POST `/api/import` | `{confirmed:true,data:documento}`; acepta formatos1–13, validación íntegra y transacción atómica. Valida documento/propietario/fechas/identidad del cargador antes del backup. Backup e importación son un solo trabajo; poda a cinco copias privadas tras restauración correcta. Rechazos no alteran recuperación ni perfiles ajenos; restaurar perfiles revoca sus dispositivos. Una copia anterior a6 reemplaza el historial del cargador por vacío. |
 | GET `/api/events` | SSE `event: state`, `data: {revision:int}`; sin datos personales, heartbeat 15s, máximo 32 suscriptores. Se cierra al caducar/invalidad la sesión. |
 

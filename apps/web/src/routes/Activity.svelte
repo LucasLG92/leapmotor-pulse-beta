@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { onDestroy, onMount, tick } from 'svelte';
+	import { onDestroy, onMount, tick, untrack } from 'svelte';
 	import { ApiError, getCommandHistory } from '../lib/api';
 	import Glyph from '../lib/Glyph.svelte';
 	import { count, dateOnly, dateTime, number } from '../lib/format';
 	import type { CommandHistoryEntry, MaintenanceItem, PageProps } from '../lib/types';
 
-	let { pulseState, busy, revision, mutate, confirmAction, drafts }: PageProps = $props();
+	let { pulseState, busy, online, revision, mutate, confirmAction, drafts, onSessionExpired }: PageProps = $props();
 	let commandHistory = $state<CommandHistoryEntry[]>([]);
 	let loadingCommands = $state(true);
 	let commandError = $state('');
@@ -14,11 +14,13 @@
 	let dueDate = $state('');
 	let formError = $state('');
 	let formErrorField = $state<'title' | 'date' | null>(null);
+	let maintenanceSaving = $state(false);
 	let maintenanceBaseline = { title: '', dueDate: '' };
 	let disposed = false;
 	let commandHistoryRequest = 0;
 	let maintenanceEditRequest = 0;
 	let observedRevision: number | undefined;
+	let observedOnline: boolean | undefined;
 	let journeys = $derived(pulseState.journeys);
 	let maintenance = $derived(pulseState.maintenance);
 
@@ -27,7 +29,7 @@
 	}
 
 	async function loadCommandHistory() {
-		if (disposed) return;
+		if (disposed || !online) return;
 		const request = ++commandHistoryRequest;
 		loadingCommands = true;
 		commandError = '';
@@ -37,6 +39,10 @@
 			commandHistory = result;
 		} catch (error) {
 			if (disposed || request !== commandHistoryRequest) return;
+			if (error instanceof ApiError && error.status === 401) {
+				onSessionExpired();
+				return;
+			}
 			commandError = error instanceof ApiError ? error.message : !navigator.onLine
 				? 'La conexión no está disponible. El historial no se conserva sin red en este dispositivo.'
 				: 'No se pudo cargar el historial de acciones.';
@@ -47,7 +53,6 @@
 
 	onMount(() => {
 		const unregisterDraft = drafts.register('maintenance', isMaintenanceDirty);
-		void loadCommandHistory();
 		return unregisterDraft;
 	});
 
@@ -58,13 +63,18 @@
 
 	$effect(() => {
 		const currentRevision = revision;
-		if (observedRevision === undefined) {
-			observedRevision = currentRevision;
+		const connected = online;
+		const shouldRefresh = connected && (observedOnline !== true || currentRevision !== observedRevision);
+		observedRevision = currentRevision;
+		observedOnline = connected;
+		if (!connected) {
+			commandHistoryRequest += 1;
+			commandHistory = [];
+			loadingCommands = false;
+			commandError = 'La conexión no está disponible. El historial no se conserva sin red en este dispositivo.';
 			return;
 		}
-		if (currentRevision === observedRevision) return;
-		observedRevision = currentRevision;
-		void loadCommandHistory();
+		if (shouldRefresh) untrack(() => { void loadCommandHistory(); });
 	});
 
 	async function beginEdit(item: MaintenanceItem) {
@@ -114,6 +124,10 @@
 
 	async function saveMaintenance(event: SubmitEvent) {
 		event.preventDefault();
+		if (disposed || busy || maintenanceSaving) return;
+		const form = event.currentTarget as HTMLFormElement;
+		const previousFocus = document.activeElement instanceof HTMLElement && form.contains(document.activeElement)
+			? document.activeElement : null;
 		formError = '';
 		formErrorField = null;
 		const cleanTitle = title.trim();
@@ -127,8 +141,28 @@
 			return;
 		}
 		const path = editing ? `/api/maintenance/${encodeURIComponent(editing.id)}` : '/api/maintenance';
-		const saved = await mutate(path, editing ? 'PUT' : 'POST', { title: cleanTitle, due_date: dueDate }, editing ? 'El mantenimiento se ha actualizado.' : 'El mantenimiento se ha añadido.');
-		if (saved && !disposed) cancelEdit();
+		const request = maintenanceEditRequest;
+		const submittedTitle = title;
+		const submittedDate = dueDate;
+		maintenanceSaving = true;
+		try {
+			const saved = await mutate(path, editing ? 'PUT' : 'POST', { title: cleanTitle, due_date: submittedDate }, editing ? 'El mantenimiento se ha actualizado.' : 'El mantenimiento se ha añadido.');
+			if (disposed || request !== maintenanceEditRequest) return;
+			if (saved) {
+				if (title === submittedTitle && dueDate === submittedDate) cancelEdit();
+				else maintenanceBaseline = { title: submittedTitle, dueDate: submittedDate };
+			} else formError = 'No se ha podido confirmar el guardado del recordatorio. Revisa las tareas guardadas antes de reintentarlo.';
+		} catch {
+			if (!disposed && request === maintenanceEditRequest) formError = 'No se ha podido confirmar el guardado del recordatorio. Revisa las tareas guardadas antes de reintentarlo.';
+		} finally {
+			if (!disposed) {
+				maintenanceSaving = false;
+				await tick();
+				if (!disposed && request === maintenanceEditRequest && formError && document.hasFocus() && document.activeElement === document.body && previousFocus?.isConnected) {
+					previousFocus.focus({ preventScroll: true });
+				}
+			}
+		}
 	}
 
 	async function toggleMaintenance(item: MaintenanceItem) {
@@ -168,7 +202,7 @@
 		<section aria-labelledby="journeys-heading">
 			<div class="section-heading"><div><h2 id="journeys-heading">Trayectos</h2><p class="activity-section-copy">Distancia, duración y energía que conserva cada registro.</p></div><span class="badge">{count(journeys.length)} disponibles</span></div>
 			{#if journeys.length === 0}
-				<div class="empty-state"><span class="empty-mark"><Glyph name="activity" /></span><h3>No hay trayectos recibidos</h3><p>{pulseState.mode === 'demo' ? 'El servidor no entrega recorridos en este momento.' : 'Pulse aún no tiene una integración que reciba recorridos del vehículo.'}</p></div>
+				<div class="empty-state"><span class="empty-mark"><Glyph name="activity" /></span><h3>No hay trayectos recibidos</h3><p>{pulseState.mode === 'demo' ? 'El servidor no entrega recorridos en este momento.' : 'Pulse aún no tiene una integración que reciba recorridos del vehículo.'}</p>{#if pulseState.mode !== 'demo'}<a class="button button-secondary" href="/settings#preparation">Revisar preparación</a>{/if}</div>
 			{:else}
 				<div class="journey-list card">
 					{#each journeys as journey (journey.id)}
@@ -187,7 +221,7 @@
 			{#if loadingCommands}
 				<div class="card loading-card" role="status">Cargando historial…</div>
 			{:else if commandError}
-				<div class="empty-state"><h3>No se pudo abrir el historial</h3><p>{commandError}</p><button class="button button-secondary" type="button" onclick={loadCommandHistory}>Reintentar</button></div>
+				<div class="empty-state"><h3>{online ? 'No se pudo abrir el historial' : 'Historial sin conexión'}</h3><p role="alert" aria-atomic="true">{commandError}</p><button class="button button-secondary" type="button" disabled={busy || !online || loadingCommands} onclick={loadCommandHistory}>Reintentar</button></div>
 			{:else if commandHistory.length === 0}
 				<div class="empty-state"><span class="empty-mark"><Glyph name="settings" /></span><h3>No hay acciones registradas</h3><p>Cuando se active una acción de demostración, aparecerá aquí con su resultado.</p></div>
 			{:else}
@@ -233,7 +267,7 @@
 				<div class="field"><label for="maintenance-title">Tarea</label><input id="maintenance-title" maxlength="120" bind:value={title} oninput={() => clearMaintenanceError('title')} placeholder="Por ejemplo, revisar neumáticos" required aria-invalid={formErrorField === 'title' ? 'true' : undefined} aria-describedby={formErrorField === 'title' ? 'maintenance-title-error' : undefined} />{#if formError && formErrorField === 'title'}<p id="maintenance-title-error" class="form-error" role="alert">{formError}</p>{/if}</div>
 				<div class="field"><label for="maintenance-date">Fecha prevista</label><input id="maintenance-date" type="date" bind:value={dueDate} oninput={() => clearMaintenanceError('date')} required aria-invalid={formErrorField === 'date' ? 'true' : undefined} aria-describedby={formErrorField === 'date' ? 'maintenance-date-error' : undefined} />{#if formError && formErrorField === 'date'}<p id="maintenance-date-error" class="form-error" role="alert">{formError}</p>{/if}</div>
 				{#if formError && formErrorField === null}<p id="maintenance-general-error" class="form-error" role="alert">{formError}</p>{/if}
-				<div class="form-actions"><button class="button button-primary button-block" type="submit" disabled={busy}>{busy ? 'Guardando…' : editing ? 'Guardar cambios' : 'Añadir tarea'}</button>{#if editing}<button class="button button-quiet button-block" type="button" onclick={cancelEdit}>Cancelar edición</button>{/if}</div>
+				<div class="form-actions"><button class="button button-primary button-block" type="submit" disabled={busy || maintenanceSaving}>{busy || maintenanceSaving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Añadir tarea'}</button>{#if editing}<button class="button button-quiet button-block" type="button" onclick={cancelEdit}>Cancelar edición</button>{/if}</div>
 			</form>
 			<p class="fine-print">Los recordatorios son datos de Pulse. No se envían al fabricante ni activan una revisión.</p>
 		</section>

@@ -9,6 +9,7 @@ import sqlite3
 import pytest
 
 from pulse.domain import DomainError, EXPORT_VERSION, SCHEMA_VERSION, Store
+from schema_helpers import downgrade_telemetry_to_v15
 from pulse.charger_store import (
     MAX_CHARGER_ACTIVE_SECONDS,
     MAX_CHARGER_SCOPES,
@@ -88,6 +89,7 @@ def test_v6_to_v7_migration_preserves_domain_data_and_creates_charger_tables(tmp
 
     # Recreate the exact pre-V7 shape while keeping the existing domain rows.
     with sqlite3.connect(path) as connection:
+        downgrade_telemetry_to_v15(connection)
         connection.execute("DROP TABLE abrp_preference")
         connection.execute("DROP TABLE observed_events")
         connection.execute("DROP TABLE IF EXISTS charger_pricing_history")
@@ -107,11 +109,11 @@ def test_v6_to_v7_migration_preserves_domain_data_and_creates_charger_tables(tmp
         "items": [], "total": 0, "limit": 20, "offset": 0,
     }
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 17
         assert {row[0] for row in connection.execute(
             "SELECT name FROM sqlite_master WHERE type='table'"
         )} >= {"charger_observations", "charger_sessions"}
-    assert SCHEMA_VERSION == 15
+    assert SCHEMA_VERSION == 17
 
 
 def test_observation_and_sessions_persist_dedupe_and_accept_newer_corrections(tmp_path):
@@ -329,7 +331,7 @@ def test_export_import_roundtrip_and_rejection_are_atomic(tmp_path):
         sessions=[session(active_seconds=3_599.5)],
     )
     archive = source.export_data()
-    assert archive["schema_version"] == EXPORT_VERSION == 13
+    assert archive["schema_version"] == EXPORT_VERSION == 15
     assert archive["charger"] == [{
         "scope": scope(), "observation": observation() | {
             "received_at": "2026-10-08T14:00:00.000000Z",

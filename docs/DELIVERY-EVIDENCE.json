@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "classification": "documentation_summary_no_external_receipts",
+  "verified_from_local_receipts_at": "2026-10-12",
+  "note": "This checked-in summary contains no server identifiers, external receipt paths, package files, signing hashes, private configuration or credentials. It records local stage checks only; no new CI run or physical acceptance is claimed.",
+  "web": {
+    "increment": "startup-recovery-20261011",
+    "completed_at_utc": "2026-10-11",
+    "image": null,
+    "public_commit": null,
+    "web_delivered": true,
+    "postflight_passed": true,
+    "tests_passed": 36,
+    "native_rebuilt": false,
+    "physical_acceptance": false,
+    "authenticated_ui_after_restart": false,
+    "push_after_restart": false,
+    "original_receipt_sha256": null,
+    "summary": "Historical web delivery; its scope does not qualify the current local candidate."
+  },
+  "android": {
+    "increment": "brand-continuity-r14-20261011",
+    "completed_at_utc": "2026-10-11",
+    "revision": "historical",
+    "version_name": "0.1.0",
+    "version_code": 1,
+    "artifact_sha256": null,
+    "physical_acceptance": false,
+    "original_receipt_sha256": null,
+    "authenticated_download_verified": false,
+    "protected_route_postflight": true,
+    "summary": "Historical delivery record. Current Android 0.1.1/versionCode 2 is a local unsigned candidate."
+  },
+  "ios": {
+    "increment": "brand-continuity-ios-20261011",
+    "completed_at_utc": "2026-10-11",
+    "run_id": null,
+    "app_widget_compilation": true,
+    "simulator_startup": true,
+    "widget_runtime": false,
+    "signed_distribution": false,
+    "physical_acceptance": false,
+    "original_receipt_sha256": null,
+    "summary": "Historical simulator result. Current iOS 0.1.1/build 2 completed Capacitor sync only."
+  },
+  "current_candidate": {
+    "date": "2026-10-12",
+    "status": "local_candidate_not_delivered",
+    "physical_acceptance": false,
+    "android": {
+      "version_name": "0.1.1",
+      "version_code": 2,
+      "release_assembly": "completed_unsigned",
+      "artifact_included": false
+    },
+    "ios": {
+      "marketing_version": "0.1.1",
+      "build_number": 2,
+      "capacitor_sync": true,
+      "xcode_build": false,
+      "new_ci_run": false
+    },
+    "software_checks": {
+      "python_tests_passed": 1174,
+      "python_subtests_passed": 87,
+      "web_tests_passed": 43,
+      "mobile_tests_passed": 7,
+      "web_mobile_types_passed": true,
+      "web_mobile_builds_passed": true,
+      "svelte_errors": 0,
+      "svelte_warnings": 0,
+      "source_parity_across_stages": true,
+      "ci_run": false,
+      "python_fixture_note": "The clean checkout exposed test_navigation_http depending on a prebuilt dist directory. A test-only fixture now creates temporary static files; focused checks and the complete Python suite passed in both stages. Runtime code was unchanged."
+    },
+    "storage": {
+      "sqlite_schema": 17,
+      "json_export_format": 15,
+      "legacy_import_formats": "1–14"
+    },
+    "phase_count": 9,
+    "real_gates_pending": 7,
+    "summary_pointer": "docs/VALIDATION.md#candidato-y-suite-python"
+  }
+}

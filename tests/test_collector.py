@@ -25,6 +25,8 @@ def snapshot(**updates):
             "battery_pct": 72.5,
             "range_km": 320,
             "odometer_km": 1250,
+            "vehicle_security_code": 42,
+            "sentry_code": 0,
             "locked": True,
             "climate_on": False,
             "charging": False,
@@ -33,6 +35,8 @@ def snapshot(**updates):
             "battery_pct": "precise_soc_percent",
             "range_km": "expected_range_km",
             "odometer_km": "odometer_km",
+            "vehicle_security_code": "vehicle_security_code",
+            "sentry_code": "sentry_code",
         },
         "freshness": "fresh",
         "capabilities": {"availability": "available"},
@@ -342,6 +346,14 @@ def test_invalid_observation_and_values_are_not_replaced_with_zero():
             "battery_pct": None,
             "range_km": None,
             "odometer_km": 1250.0,
+            "interior_temperature_c": None,
+            "battery_min_temperature_c": None,
+            "front_left_pressure_kpa": None,
+            "front_right_pressure_kpa": None,
+            "rear_left_pressure_kpa": None,
+            "rear_right_pressure_kpa": None,
+            "vehicle_security_code": 42,
+            "sentry_code": 0,
             "locked": None,
             "climate_on": False,
             "charging": False,
@@ -350,6 +362,14 @@ def test_invalid_observation_and_values_are_not_replaced_with_zero():
             "battery_pct": None,
             "range_km": None,
             "odometer_km": "odometer_km",
+            "interior_temperature_c": None,
+            "battery_min_temperature_c": None,
+            "front_left_pressure_kpa": None,
+            "front_right_pressure_kpa": None,
+            "rear_left_pressure_kpa": None,
+            "rear_right_pressure_kpa": None,
+            "vehicle_security_code": "vehicle_security_code",
+            "sentry_code": "sentry_code",
             "locked": None,
             "climate_on": None,
             "charging": None,
@@ -359,6 +379,63 @@ def test_invalid_observation_and_values_are_not_replaced_with_zero():
         assert "capabilities" not in persisted
         assert "server_received_at" not in persisted
         await collector.close()
+
+    run(scenario())
+
+
+def test_security_codes_accept_boundaries_and_integral_floats_as_integers():
+    async def scenario():
+        for raw_value, expected in ((0, 0), (255, 255), (12.0, 12)):
+            raw = snapshot()
+            raw["vehicle"]["vehicle_security_code"] = raw_value
+            coordinator = FakeCoordinator()
+            collector = Collector(FakeProvider(result=raw), coordinator, clock=FixedClock())
+            try:
+                assert await collector.request_refresh() == {"status": "stored", "error_code": None}
+                stored = coordinator.calls[0][1][0]
+                assert stored["vehicle"]["vehicle_security_code"] == expected
+                assert type(stored["vehicle"]["vehicle_security_code"]) is int
+                assert stored["field_sources"]["vehicle_security_code"] == "vehicle_security_code"
+            finally:
+                await collector.close()
+
+    run(scenario())
+
+
+def test_security_codes_reject_non_normalized_values_and_unmatched_sources():
+    async def scenario():
+        invalid_values = (
+            True, False, "12", 12.5, math.nan, math.inf, -math.inf, -1, 256, 10**400,
+        )
+        for field in ("vehicle_security_code", "sentry_code"):
+            for invalid in invalid_values:
+                raw = snapshot()
+                raw["vehicle"][field] = invalid
+                coordinator = FakeCoordinator()
+                collector = Collector(FakeProvider(result=raw), coordinator, clock=FixedClock())
+                try:
+                    assert await collector.request_refresh() == {"status": "stored", "error_code": None}
+                    stored = coordinator.calls[0][1][0]
+                    assert stored["vehicle"][field] is None
+                    assert stored["field_sources"][field] is None
+                finally:
+                    await collector.close()
+
+            wrong_source = (
+                "sentry_code" if field == "vehicle_security_code" else "vehicle_security_code"
+            )
+            for invalid_source in (None, wrong_source):
+                raw = snapshot()
+                raw["field_sources"][field] = invalid_source
+                coordinator = FakeCoordinator()
+                collector = Collector(FakeProvider(result=raw), coordinator, clock=FixedClock())
+                try:
+                    assert await collector.request_refresh() == {"status": "stored", "error_code": None}
+                    stored = coordinator.calls[0][1][0]
+                    assert stored["vehicle"][field] is None
+                    assert stored["field_sources"][field] is None
+                finally:
+                    await collector.close()
 
     run(scenario())
 

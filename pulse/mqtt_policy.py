@@ -13,7 +13,27 @@ from collections.abc import Mapping
 from typing import Any
 
 
-_ALLOWED_FIELDS = ("battery_pct", "range_km", "charging")
+_ALLOWED_FIELDS = (
+    "battery_pct",
+    "range_km",
+    "charging",
+    "interior_temperature_c",
+    "battery_min_temperature_c",
+    "front_left_pressure_kpa",
+    "front_right_pressure_kpa",
+    "rear_left_pressure_kpa",
+    "rear_right_pressure_kpa",
+)
+_NUMERIC_RANGES = {
+    "battery_pct": (0, 100),
+    "range_km": (0, 5000),
+    "interior_temperature_c": (-100, 100),
+    "battery_min_temperature_c": (-100, 150),
+    "front_left_pressure_kpa": (0, 1000),
+    "front_right_pressure_kpa": (0, 1000),
+    "rear_left_pressure_kpa": (0, 1000),
+    "rear_right_pressure_kpa": (0, 1000),
+}
 _FIELD_SET = frozenset(_ALLOWED_FIELDS)
 _SLUG_RE = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,46}[a-z0-9])?\Z")
 _DNS_LABEL_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\Z")
@@ -218,8 +238,8 @@ def _selected_value(field_name: str, value: Any) -> tuple[bool, int | float | bo
             return False, None
     except OverflowError:
         return False, None
-    maximum = 100 if field_name == "battery_pct" else 5000
-    if value < 0 or value > maximum:
+    minimum, maximum = _NUMERIC_RANGES[field_name]
+    if value < minimum or value > maximum:
         return False, None
     return True, value
 
@@ -292,6 +312,12 @@ def _sensor_payload(config: MqttConfig, field_name: str, remaining_seconds: int)
             "battery_pct": "Batería",
             "range_km": "Autonomía",
             "charging": "Carga",
+            "interior_temperature_c": "Temperatura interior",
+            "battery_min_temperature_c": "Temperatura mínima de batería",
+            "front_left_pressure_kpa": "Presión rueda delantera izquierda",
+            "front_right_pressure_kpa": "Presión rueda delantera derecha",
+            "rear_left_pressure_kpa": "Presión rueda trasera izquierda",
+            "rear_right_pressure_kpa": "Presión rueda trasera derecha",
         }[field_name],
         "unique_id": f"pulse_{config.instance}_{field_name}",
         "device": {
@@ -312,8 +338,12 @@ def _sensor_payload(config: MqttConfig, field_name: str, remaining_seconds: int)
         payload.update(device_class="battery", state_class="measurement", unit_of_measurement="%")
     elif field_name == "range_km":
         payload.update(device_class="distance", state_class="measurement", unit_of_measurement="km")
-    else:
+    elif field_name == "charging":
         payload.update(device_class="enum", options=["charging", "not_charging"])
+    elif field_name in {"interior_temperature_c", "battery_min_temperature_c"}:
+        payload.update(device_class="temperature", state_class="measurement", unit_of_measurement="°C")
+    else:
+        payload.update(device_class="pressure", state_class="measurement", unit_of_measurement="kPa")
     return payload
 
 
@@ -334,7 +364,7 @@ def discovery_messages(config: MqttConfig, remaining_seconds: int) -> list[tuple
 
 
 def discovery_tombstones(config: MqttConfig) -> list[tuple[str, str]]:
-    """Limpia solo los topics propios de los tres campos que no están seleccionados."""
+    """Limpia solo los topics propios de los campos no seleccionados."""
     if type(config) is not MqttConfig:
         raise ValueError(_ERROR_INPUT)
     if not config.enabled:

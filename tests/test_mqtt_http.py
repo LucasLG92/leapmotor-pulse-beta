@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 
+import pytest
 from fastapi.testclient import TestClient
 
 from pulse.app import create_app
@@ -18,10 +19,16 @@ class NeverStarted:
         raise AssertionError("MQTT desactivado no debe usar un transporte")
 
 
-def test_disabled_bridge_uses_no_network_and_public_status_has_no_credentials(tmp_path):
+@pytest.mark.parametrize("fields", [
+    ("battery_pct",),
+    ("interior_temperature_c", "battery_min_temperature_c", "rear_left_pressure_kpa"),
+    ("battery_pct", "range_km", "charging", "interior_temperature_c", "battery_min_temperature_c",
+     "front_left_pressure_kpa", "front_right_pressure_kpa", "rear_left_pressure_kpa", "rear_right_pressure_kpa"),
+])
+def test_disabled_bridge_uses_no_network_and_public_status_has_no_credentials(tmp_path, fields):
     mqtt = MqttConfig(host="broker.example", username="TEST_ONLY_USER",
                       password="TEST_ONLY_PASSWORD", instance="test-house",
-                      fields=("battery_pct",))
+                      fields=fields)
     app = create_app(tmp_path / "pulse.sqlite3", config=Config(hosts=("testserver",), mqtt=mqtt),
                      mqtt_transport=NeverStarted())
     with TestClient(app) as client:
@@ -30,14 +37,14 @@ def test_disabled_bridge_uses_no_network_and_public_status_has_no_credentials(tm
         state = response.json()
         assert state["integrations"]["mqtt"] == {
             "enabled": False, "status": "disabled", "data_status": "no_data",
-            "fields": ["battery_pct"], "max_age_seconds": 900,
+            "fields": list(fields), "max_age_seconds": 900,
             "observed_at": None, "last_published_at": None, "reason_code": "disabled",
         }
         assert response.headers["cache-control"] == "no-store"
         csrf = client.get("/api/session").json()["csrf_token"]
         export = client.get("/api/export")
         assert export.status_code == 200
-        assert export.json()["schema_version"] == 13
+        assert export.json()["schema_version"] == 15
         for value in ("broker.example", "TEST_ONLY_USER", "TEST_ONLY_PASSWORD", "test-house"):
             assert value not in response.text
             assert value not in export.text

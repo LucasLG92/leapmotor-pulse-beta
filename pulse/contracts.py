@@ -90,6 +90,14 @@ class Vehicle(BaseModel):
     battery_pct: float | None
     range_km: float | None
     odometer_km: float | None
+    interior_temperature_c: float | None = None
+    battery_min_temperature_c: float | None = None
+    front_left_pressure_kpa: float | None = None
+    front_right_pressure_kpa: float | None = None
+    rear_left_pressure_kpa: float | None = None
+    rear_right_pressure_kpa: float | None = None
+    vehicle_security_code: int | None = Field(default=None, ge=0, le=255, strict=True)
+    sentry_code: int | None = Field(default=None, ge=0, le=255, strict=True)
     locked: bool | None
     climate_on: bool | None
     charging: bool | None
@@ -337,6 +345,14 @@ class TelemetryValues(BaseModel):
     battery_pct: float | None
     range_km: float | None
     odometer_km: float | None
+    interior_temperature_c: float | None = None
+    battery_min_temperature_c: float | None = None
+    front_left_pressure_kpa: float | None = None
+    front_right_pressure_kpa: float | None = None
+    rear_left_pressure_kpa: float | None = None
+    rear_right_pressure_kpa: float | None = None
+    vehicle_security_code: int | None = Field(default=None, ge=0, le=255, strict=True)
+    sentry_code: int | None = Field(default=None, ge=0, le=255, strict=True)
     locked: bool | None
     climate_on: bool | None
     charging: bool | None
@@ -377,7 +393,11 @@ class MqttStatus(BaseModel):
     enabled: bool
     status: Literal["disabled", "connecting", "connected", "error"]
     data_status: Literal["no_data", "demo", "unavailable", "published"]
-    fields: list[Literal["battery_pct", "range_km", "charging"]]
+    fields: list[Literal[
+        "battery_pct", "range_km", "charging", "interior_temperature_c",
+        "battery_min_temperature_c", "front_left_pressure_kpa", "front_right_pressure_kpa",
+        "rear_left_pressure_kpa", "rear_right_pressure_kpa",
+    ]]
     max_age_seconds: int
     observed_at: str | None
     last_published_at: str | None

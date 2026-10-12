@@ -1,0 +1,6 @@
+# Generic examples only. Replace paths and filesystem values for your own setup.
+BACKUP_MONITOR_SQLITE_DIRECTORY=/var/backups/application/daily
+BACKUP_MONITOR_ARCHIVE_MOUNT=/mnt/external-backup
+BACKUP_MONITOR_ARCHIVE_DIRECTORY=/mnt/external-backup/application
+BACKUP_MONITOR_ARCHIVE_FSTYPE=ext4
+BACKUP_MONITOR_ARCHIVE_UUID=replace-with-the-volume-uuid

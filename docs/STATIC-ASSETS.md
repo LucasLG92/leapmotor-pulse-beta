@@ -1,0 +1,9 @@
+# Activos estáticos y compresión
+
+El build web conserva sus ficheros originales y puede generar representaciones gzip para activos de texto mediante `scripts/compress-assets.mjs`, usando Node estándar después de Vite. El helper contempla HTML, JavaScript, CSS, SVG y manifest, conserva únicamente una representación menor que el original, comprueba su descompresión y rechaza enlaces simbólicos. PNG se sirven sin compresión adicional.
+
+`pulse/static.py` negocia las representaciones para rutas públicas del shell, worker, manifest, iconos y `/assets`. Respeta las preferencias `Accept-Encoding`, añade `Vary`, conserva el MIME del original y rechaza sidecars ausentes o antiguos. Sin gzip aceptable se sirve el original cuando `identity` está permitido; si ninguna variante se acepta, se devuelve 406. HEAD no envía cuerpo y las peticiones Range usan el original cuando corresponde. API, autenticación, SSE y exportaciones mantienen sus controles y `no-store`; no se aplica compresión global a respuestas privadas.
+
+Una medición local histórica de una PWA contó 21 recursos únicos: 359.221 bytes identity y 121.860 bytes gzip, con 18 respuestas comprimidas y tres PNG identity. Es una medida de transferencia local de aquella versión, no CI, producción, latencia o dispositivo físico. Véase [PERFORMANCE.md](PERFORMANCE.md) y el resumen actual en [VALIDATION.md](VALIDATION.md).
+
+La negociación sigue las reglas de [HTTP](https://www.rfc-editor.org/rfc/rfc9110.html#section-12.5.3), los validadores por representación de [HTTP](https://www.rfc-editor.org/rfc/rfc9110.html#section-8.8.3.3) y la entrega segura de [Starlette](https://www.starlette.io/staticfiles/). El build debe producir originales y sidecars juntos; los scripts de copia deben conservar su relación de antigüedad. No se documenta la configuración ni el estado de una instalación individual.

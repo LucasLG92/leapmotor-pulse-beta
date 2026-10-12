@@ -16,6 +16,7 @@ from pulse.domain import DomainError, Store
 from pulse.electricity import Electricity
 from pulse import pvpc
 from pulse.app import create_app
+from schema_helpers import downgrade_telemetry_to_v15
 from pulse.config import Config
 from pulse.evcc import EvccConfig
 from pulse.temporal_pvpc import quote_charge_intervals
@@ -101,7 +102,7 @@ def test_temporal_identity_export_and_private_response_fields(tmp_path):
     quote = temporal(item)
     store.save_charger_temporal_pricing(scope(), item, quote, None)
     document = store.export_data()
-    assert document["schema_version"] == 13
+    assert document["schema_version"] == 15
     assert document["charger_pricing"][0]["quote"] == quote
     public = ChargeQuote.model_validate(quote).model_dump()
     distribution = public["pricing"]["energy_distribution"]
@@ -112,7 +113,7 @@ def test_temporal_identity_export_and_private_response_fields(tmp_path):
     assert restored.priced_charger_sessions(scope())["items"][0]["pvpc"] == quote
     assert restored.charger_pricing_history(scope(), item["id"])["total"] == 1
     with sqlite3.connect(restored.path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 17
     for version in (11, 10, 9, 8):
         old = deepcopy(document)
         old["schema_version"] = version
@@ -310,18 +311,21 @@ def test_semantic_migration_preserves_db13_uniform_data(tmp_path):
     store.save_charger_pricing(scope(), item, uniform(item))
     before = store.export_data()
     with sqlite3.connect(path) as db:
+        downgrade_telemetry_to_v15(db)
         db.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
         db.execute("PRAGMA user_version = 13")
         tables_before = db.execute(
-            "SELECT name,sql FROM sqlite_master WHERE name != 'settings' ORDER BY name"
+            "SELECT name,sql FROM sqlite_master "
+            "WHERE name NOT IN ('settings', 'telemetry_snapshots') ORDER BY name"
         ).fetchall()
     migrated = Store(path, clock=lambda: NOW)
     assert migrated.export_data() == before
     assert migrated.get_settings()["vehicle_color"] is None
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 17
         assert db.execute(
-            "SELECT name,sql FROM sqlite_master WHERE name != 'settings' ORDER BY name"
+            "SELECT name,sql FROM sqlite_master "
+            "WHERE name NOT IN ('settings', 'telemetry_snapshots') ORDER BY name"
         ).fetchall() == tables_before
         assert "vehicle_color" in {
             row[1] for row in db.execute("PRAGMA table_info(settings)")

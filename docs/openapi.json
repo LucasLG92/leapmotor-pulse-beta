@@ -3428,7 +3428,13 @@
               "enum": [
                 "battery_pct",
                 "range_km",
-                "charging"
+                "charging",
+                "interior_temperature_c",
+                "battery_min_temperature_c",
+                "front_left_pressure_kpa",
+                "front_right_pressure_kpa",
+                "rear_left_pressure_kpa",
+                "rear_right_pressure_kpa"
               ]
             },
             "type": "array",
@@ -5081,6 +5087,98 @@
             ],
             "title": "Odometer Km"
           },
+          "interior_temperature_c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interior Temperature C"
+          },
+          "battery_min_temperature_c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Battery Min Temperature C"
+          },
+          "front_left_pressure_kpa": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Front Left Pressure Kpa"
+          },
+          "front_right_pressure_kpa": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Front Right Pressure Kpa"
+          },
+          "rear_left_pressure_kpa": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rear Left Pressure Kpa"
+          },
+          "rear_right_pressure_kpa": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rear Right Pressure Kpa"
+          },
+          "vehicle_security_code": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 255.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle Security Code"
+          },
+          "sentry_code": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 255.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentry Code"
+          },
           "locked": {
             "anyOf": [
               {
@@ -5377,6 +5475,98 @@
               }
             ],
             "title": "Odometer Km"
+          },
+          "interior_temperature_c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interior Temperature C"
+          },
+          "battery_min_temperature_c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Battery Min Temperature C"
+          },
+          "front_left_pressure_kpa": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Front Left Pressure Kpa"
+          },
+          "front_right_pressure_kpa": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Front Right Pressure Kpa"
+          },
+          "rear_left_pressure_kpa": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rear Left Pressure Kpa"
+          },
+          "rear_right_pressure_kpa": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rear Right Pressure Kpa"
+          },
+          "vehicle_security_code": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 255.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle Security Code"
+          },
+          "sentry_code": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 255.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentry Code"
           },
           "locked": {
             "anyOf": [

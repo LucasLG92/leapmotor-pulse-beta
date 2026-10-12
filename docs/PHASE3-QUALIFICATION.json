@@ -1,0 +1,70 @@
+{
+  "classification": "local_software_increment_not_delivered",
+  "phase": "phase-3",
+  "phase_status": "in_progress",
+  "sdk_commit": "5b7d30c30ae10eb18677214e36a9d42398a769e6",
+  "metrics": [
+    "interior_temperature_c",
+    "battery_min_temperature_c",
+    "front_left_pressure_kpa",
+    "front_right_pressure_kpa",
+    "rear_left_pressure_kpa",
+    "rear_right_pressure_kpa"
+  ],
+  "sqlite_schema": 16,
+  "export_format": 14,
+  "legacy_import_formats": "1-13",
+  "python_unique_tests_passed": 1075,
+  "python_subtests_passed": 16,
+  "python_execution": "Full rerun:1073 passed,2 fixture failures; subsequent targeted runs proved both final fixtures. Logs preserve initial failures.",
+  "web_tests_passed": 38,
+  "svelte_errors": 0,
+  "svelte_warnings": 0,
+  "mobile_tests_passed": 7,
+  "web_mobile_types_and_builds_passed": true,
+  "migration_old_source_to_current_and_backup_rollback_verified": true,
+  "synthetic_qa": [
+    "fresh units and six values",
+    "partial missing values",
+    "expired current values hidden",
+    "expired history retains values/source/times",
+    "font32px at390 viewport in light/dark without horizontal overflow"
+  ],
+  "android": {
+    "apk_sha256": null,
+    "size_bytes": 6530512,
+    "version": "0.1.1",
+    "version_code": 2,
+    "generic_release_and_lint_passed": true,
+    "signed": false,
+    "operational_configuration": false,
+    "dist_files_exact": 44,
+    "native_sources_unchanged": 60,
+    "native_tests_reused": 75
+  },
+  "ios": {
+    "sync_assets_exact": 44,
+    "source_files_unchanged": 42,
+    "native_build_verified": false,
+    "signed_distribution": false
+  },
+  "independent_static_review": "No material findings remaining",
+  "delivered": false,
+  "real_vehicle_read": false,
+  "physical_acceptance": false,
+  "full_objective_complete": false,
+  "real_gates_remaining": 7,
+  "rollback": "Restore old artifact and coherent SQLite15 backup together; old code refuses schema16. No production database migrated.",
+  "remaining": [
+    "B10 authorized config/login/refresh and per-signal physical units/freshness qualification",
+    "Other signal codes and actual availability",
+    "Operational signed mobile clients/iOS build/devices",
+    "All seven real gates; final centinela/cameras phase preserved"
+  ],
+  "evidence_sha256": null,
+  "limits": [
+    "Fixtures and software contracts do not establish actual B10 signal availability.",
+    "First font200 fixture attempts measured16px; only final external-CSS/gzip fixture measured32px. CSP unchanged.",
+    "No offline browser emulation; denial remains open."
+  ]
+}

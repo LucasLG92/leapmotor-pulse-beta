@@ -5,6 +5,7 @@
 	import VehicleArtwork from '../lib/VehicleArtwork.svelte';
 	import { count, dateOnly, euros, number } from '../lib/format';
 	import { vehicleColors } from '../lib/vehicle-colors';
+	import { sensorValue, telemetrySensorFields } from '../lib/telemetry-sensors';
 	import type { ChargerSession, ChargerStatus, Command, PageProps } from '../lib/types';
 
 	let { pulseState, busy, online, revision, mutate, confirmAction, toast, onSessionExpired }: PageProps = $props();
@@ -15,7 +16,8 @@
 		{ key: 'odometer_km', label: 'Odómetro' },
 		{ key: 'locked', label: 'Cierre' },
 		{ key: 'climate_on', label: 'Climatización' },
-		{ key: 'charging', label: 'Carga' }
+		{ key: 'charging', label: 'Carga' },
+		...telemetrySensorFields
 	] as const;
 
 	type ControlAction = { id: string; label: string; icon: string; command?: Command };
@@ -38,7 +40,13 @@
 				odometer_km: vehicle.odometer_km,
 				locked: vehicle.locked,
 				climate_on: vehicle.climate_on,
-				charging: vehicle.charging
+				charging: vehicle.charging,
+				interior_temperature_c: null,
+				battery_min_temperature_c: null,
+				front_left_pressure_kpa: null,
+				front_right_pressure_kpa: null,
+				rear_left_pressure_kpa: null,
+				rear_right_pressure_kpa: null
 			} : null;
 		}
 		// The state response applies temporal availability; history retains expired snapshots.
@@ -351,6 +359,7 @@
 								type="button"
 								disabled={pulseState.mode !== 'demo' || !action.command?.enabled || busy || !online}
 								title={pulseState.mode === 'demo' ? action.command?.reason : connectionReason}
+								aria-describedby="vehicle-controls-help"
 								onclick={() => runCommand(action)}
 							>
 								<span class="control-circle"><Glyph name={action.icon} size={21} /></span>
@@ -373,6 +382,7 @@
 									type="button"
 									disabled={pulseState.mode !== 'demo' || !action.command?.enabled || busy || !online}
 									title={pulseState.mode === 'demo' ? action.command?.reason : connectionReason}
+									aria-describedby="vehicle-controls-help"
 									onclick={() => runCommand(action)}
 								>
 									<span class="control-circle"><Glyph name={action.icon} size={19} /></span>
@@ -381,11 +391,24 @@
 							{/each}
 						</div>
 					</details>
-					<p class="control-footnote">{pulseState.mode === 'demo' ? 'Acciones de ejemplo · requieren confirmación.' : 'Pulse no envía órdenes físicas al vehículo.'}</p>
+					<p class="control-footnote" id="vehicle-controls-help">
+						{#if !online}Sin conexión. Vuelve a conectar Pulse para utilizar las acciones disponibles.
+						{:else if pulseState.mode === 'demo'}Acciones de ejemplo · requieren confirmación.
+						{:else}Controles físicos bloqueados: cada orden requiere una conexión compatible y una comprobación con el coche. <a href="/settings#preparation">Revisar preparación</a>{/if}
+					</p>
 
 				</section>
 
 				{#if latestTelemetry && pulseState.mode === 'telemetry_read_only'}
+					<details class="sensor-readings">
+						<summary>Temperaturas y neumáticos</summary>
+						<dl>
+							{#each telemetrySensorFields as field (field.key)}
+								<div><dt>{field.label}</dt><dd>{sensorValue(vehicleValues?.[field.key], field.unit)}</dd></div>
+							{/each}
+						</dl>
+						<p>Estas magnitudes usan la misma hora de observación y disponibilidad temporal que la lectura del vehículo. La vigencia física sigue pendiente de comprobar con el coche.</p>
+					</details>
 					<details class="field-source-details">
 						<summary>Fuentes por campo y fechas completas</summary>
 						<dl class="field-source-list">
@@ -488,7 +511,7 @@
 				<div><dt>Controles físicos</dt><dd>Pendientes de validación</dd></div>
 			</dl>
 			<details class="charger-details"><summary>Detalles de conexión</summary><p class="context-copy">{connectionReason}</p></details>
-			<a class="context-link" href="/settings">Revisar integración y perfil <Glyph name="arrow" size={16} /></a>
+			<a class="context-link" href="/settings#preparation">Preparar la conexión <Glyph name="arrow" size={16} /></a>
 		</section>
 	</article>
 
@@ -599,6 +622,13 @@
  .alternate-action-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; padding: 10px 0; }
  .control-footnote { color: var(--muted); text-align: center; font-size: .6875rem; line-height: 1.5; margin: 0; }
  .field-source-details { margin-top: 6px; }
+ .sensor-readings { margin-top: 6px; }
+ .sensor-readings summary { min-height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted-strong); font-size: .75rem; font-weight: 600; list-style: revert; }
+ .sensor-readings dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 20px; margin: 12px 0; }
+ .sensor-readings dl > div { min-width: 0; }
+ .sensor-readings dt { color: var(--muted); font-size: .75rem; }
+ .sensor-readings dd { margin: 5px 0 0; font-size: .875rem; font-weight: 650; overflow-wrap: anywhere; }
+ .sensor-readings p { color: var(--muted); font-size: .75rem; line-height: 1.6; }
  .field-source-details summary { justify-content: center; }
  .field-source-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin: 8px 0; }
  .field-source-list div { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }

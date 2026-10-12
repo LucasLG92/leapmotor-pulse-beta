@@ -26,6 +26,26 @@ Para reproducirlo en Linux x86_64 con Bash, curl, sha256sum y Python 3:
 bash scripts/check-dependencies.sh
 ```
 
+Para conservar evidencia, indica un directorio **nuevo** cuyo padre ya exista:
+
+```sh
+bash scripts/check-dependencies.sh --report-dir /tmp/pulse-dependency-security-run
+```
+
+El checker rechaza un destino existente para no sobrescribir ni mezclar ejecuciones.
+Guarda los hashes iniciales de los seis locks y de ambos checkers, el log del scanner,
+su informe JSON y un resumen con el código de salida, inventario y avisos. Comprueba
+que los locks no hayan cambiado durante la consulta. Un resumen `passed` exige
+inventario completo, respuesta válida y código cero del scanner; `advisories`,
+`failed` o `incomplete` nunca acreditan aprobación. Un fallo de descarga o de hash
+conserva el diagnóstico y un resumen `failed` con etapa y código, sin inventar un
+informe OSV. Si se interrumpe antes de finalizar, permanece `incomplete`.
+
+El workflow conserva esa carpeta durante 30 días con una acción fijada por commit,
+también cuando el check falla. Solo contiene evidencia de las dependencias públicas;
+no incorpora el ejecutable descargado, configuraciones privadas, caches ni archivos
+del servidor. Preparar este workflow localmente no acredita una ejecución de CI.
+
 Solo usa los locks indicados y una configuración vacía de OSV. No analiza el
 directorio del servidor, almacenes de secretos o configuraciones personales.
 La consulta remite identificadores/versiones de dependencias públicas a OSV.

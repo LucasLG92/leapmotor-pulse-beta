@@ -1,0 +1,293 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-12",
+  "phase": "sentinel9final",
+  "phase_status": "in_progress",
+  "classification": "source_feasibility_and_local_diagnostic_candidate",
+  "research_hito_complete": true,
+  "software_implementation_complete": false,
+  "delivered": false,
+  "physical_acceptance": false,
+  "target": {
+    "model": "B10",
+    "reference_market": "European",
+    "unit_market_verified": false,
+    "trim": null,
+    "firmware_build": null,
+    "vehicle_availability": null,
+    "official_app_sentry_camera_options": null,
+    "account_rights_qualified": false,
+    "data_requested_async": true
+  },
+  "capabilities": {
+    "onboard_360_parking": {
+      "documented_in_official_source": true,
+      "qualified_on_target": false,
+      "remote_access_implied": false
+    },
+    "onboard_dashcam_usb": {
+      "documented_in_official_source": true,
+      "source_language_market": "NL",
+      "printed_pages": [
+        186,
+        187
+      ],
+      "qualified_on_target": false,
+      "clip_format_qualified": false,
+      "remote_access_implied": false,
+      "parked_surveillance_implied": false
+    },
+    "native_sentry_220": {
+      "public_sdk_contract_identified": true,
+      "command_id": "220",
+      "right": 220,
+      "ability_code": null,
+      "actuation_verified": false,
+      "enabled_in_pulse": false,
+      "cloud_acceptance_proves_actuation": false
+    },
+    "sentinel_400": {
+      "examined_sdk_availability_path": "disabled",
+      "applies_to_220": false,
+      "enabled_in_pulse": false
+    },
+    "sentry_signal_3636": {
+      "sdk_name": "sentry_code",
+      "raw_code_range": [
+        0,
+        255
+      ],
+      "target_availability": null,
+      "target_semantics_qualified": false,
+      "extracted_by_pulse": true,
+      "treated_as_boolean_or_intrusion": false
+    },
+    "remote_camera": {
+      "supported_on_target": null,
+      "public_transport_contract_identified": false,
+      "qualified_on_target": false,
+      "viewer_implemented": false
+    },
+    "recording_retention_download_delete": {
+      "qualified_source": false,
+      "implemented_in_pulse": false
+    },
+    "passive_surveillance_alerts": {
+      "implemented": false,
+      "notification_delivered": false,
+      "existing_observed_log_is_intrusion_detection": false
+    },
+    "security_signal_1255": {
+      "sdk_name": "vehicle_security_code",
+      "raw_code_range": [
+        0,
+        255
+      ],
+      "target_availability": null,
+      "target_semantics_qualified": false,
+      "extracted_by_pulse": true,
+      "treated_as_boolean_or_intrusion": false
+    }
+  },
+  "author_reports": {
+    "mate": "README offers sentry according to account rights; not physical validation for the target B10 or a video API.",
+    "lpb10": "README reports acceptance of220 with no observed vehicle-state change in the tested vehicle; app-side watchdog is its principal fallback. Not a universal firmware conclusion.",
+    "sdk": "220 contract/gates with unverified actuation;400 disabled on examined availability path;3636 is a raw enumeration. No stream contract identified in reviewed interfaces."
+  },
+  "implementation_sequence": [
+    {
+      "id": "9.1",
+      "name": "Primary-source and interface feasibility",
+      "status": "complete"
+    },
+    {
+      "id": "9.2",
+      "name": "Target firmware, passive signals and source qualification",
+      "status": "pending",
+      "local_software_increment": "Diagnostic raw-code collection/storage/UI candidate; physical/source qualification pending."
+    },
+    {
+      "id": "9.3",
+      "name": "Qualified passive events, coverage and delivered alerts",
+      "status": "pending"
+    },
+    {
+      "id": "9.4",
+      "name": "Authorised native-control physical acceptance if supported",
+      "status": "pending"
+    },
+    {
+      "id": "9.5",
+      "name": "Authenticated viewer from qualified remote interface or chosen USB clip source",
+      "status": "pending"
+    },
+    {
+      "id": "9.6",
+      "name": "Conditional recording/retention and physical acceptance",
+      "status": "pending"
+    }
+  ],
+  "references": [
+    {
+      "repository": "ProtossBlaster/leapmotor-mate",
+      "commit": "a28901d4cf16703ecb02096398ba25088100331c",
+      "commit_date": "2026-10-12T08:00:53Z",
+      "readme_url": "https://github.com/ProtossBlaster/leapmotor-mate/blob/a28901d4cf16703ecb02096398ba25088100331c/README.md",
+      "readme_sha256": null,
+      "readme_line_count": 678,
+      "readme_camera_mentions": 0,
+      "readme_sentry_mentions": 1,
+      "public_metadata_and_readme_only": true,
+      "source_code_incorporated": false,
+      "private_material_requested": false
+    },
+    {
+      "repository": "txurtxil/LPB10",
+      "commit": "38cd101f8790e9c71085557e9d0ad3b03221b6fe",
+      "commit_date": "2026-10-09T22:54:54Z",
+      "readme_url": "https://github.com/txurtxil/LPB10/blob/38cd101f8790e9c71085557e9d0ad3b03221b6fe/README.md",
+      "readme_sha256": null,
+      "readme_line_count": 622,
+      "readme_camera_mentions": 3,
+      "readme_sentry_mentions": 13,
+      "public_metadata_and_readme_only": true,
+      "source_code_incorporated": false,
+      "private_material_requested": false
+    },
+    {
+      "repository": "ProtossBlaster/MATE-API",
+      "commit": "5b7d30c30ae10eb18677214e36a9d42398a769e6",
+      "commit_date": "2026-10-05T23:57:49Z",
+      "readme_url": "https://github.com/ProtossBlaster/MATE-API/blob/5b7d30c30ae10eb18677214e36a9d42398a769e6/README.md",
+      "readme_sha256": null,
+      "readme_line_count": 116,
+      "readme_camera_mentions": 0,
+      "readme_sentry_mentions": 0,
+      "public_metadata_and_readme_only": true,
+      "source_code_incorporated": false,
+      "private_material_requested": false
+    }
+  ],
+  "official_sources": [
+    {
+      "url": "https://apps.leapmotor.net/res/files/assistance/Gebruikshandleiding_B10.pdf",
+      "scope": "NL B10 manual; onboard dashcam pages186/187. Version/build of target vehicle not supplied."
+    },
+    {
+      "url": "https://www.media.stellantis.com/uploads/pt/attachment/portasabertas_lancamentodoleapmotorb10-6900922c59e03.pdf",
+      "scope": "Portugal launch28Oct2025; 360parking camera, no remote stream contract."
+    },
+    {
+      "url": "https://www.leapmotor.net/nl-nl/technologie/leapmotor-app",
+      "scope": "NL official App product/FAQ. Omission of video/sentry is limited to this description."
+    },
+    {
+      "url": "https://www.media.stellantis.com/es-es/leapmotor/press/leapmotor-presenta-la-actualizacion-inalambrica-para-el-b10-que-incorpora-la-conduccion-con-un-solo-pedal-una-conectividad-mejorada-y-una-interfaz-mas-inteligente",
+      "scope": "Spain OTA11Mar2026; does not identify target installed build or remote camera contract."
+    },
+    {
+      "url": "https://www.leapmotor.net/es-es/tecnologias/actualizaciones-ota",
+      "scope": "Spanish official instructions for checking software version; no upgrade invoked."
+    }
+  ],
+  "pinned_sdk_public_files": [
+    {
+      "path": "leapmotor_cloud/command_contracts.py",
+      "commit": "5b7d30c30ae10eb18677214e36a9d42398a769e6",
+      "sha256": null,
+      "cached_public_file_matches_pinned_source": true,
+      "url": "https://github.com/ProtossBlaster/MATE-API/blob/5b7d30c30ae10eb18677214e36a9d42398a769e6/leapmotor_cloud/command_contracts.py"
+    },
+    {
+      "path": "leapmotor_cloud/mate_compat.py",
+      "commit": "5b7d30c30ae10eb18677214e36a9d42398a769e6",
+      "sha256": null,
+      "cached_public_file_matches_pinned_source": true,
+      "url": "https://github.com/ProtossBlaster/MATE-API/blob/5b7d30c30ae10eb18677214e36a9d42398a769e6/leapmotor_cloud/mate_compat.py"
+    },
+    {
+      "path": "leapmotor_cloud/sensor_catalog.py",
+      "commit": "5b7d30c30ae10eb18677214e36a9d42398a769e6",
+      "sha256": null,
+      "cached_public_file_matches_pinned_source": true,
+      "url": "https://github.com/ProtossBlaster/MATE-API/blob/5b7d30c30ae10eb18677214e36a9d42398a769e6/leapmotor_cloud/sensor_catalog.py"
+    },
+    {
+      "path": "PROTOCOL.md",
+      "commit": "5b7d30c30ae10eb18677214e36a9d42398a769e6",
+      "sha256": null,
+      "cached_public_file_matches_pinned_source": true,
+      "url": "https://github.com/ProtossBlaster/MATE-API/blob/5b7d30c30ae10eb18677214e36a9d42398a769e6/PROTOCOL.md"
+    }
+  ],
+  "local_evidence": {
+    "directory": "docs/VALIDATION.md#fases-puertas-y-aceptacion",
+    "public_references_sha256": null,
+    "sdk_verification_sha256": null
+  },
+  "invariants": {
+    "sdk_pin_unchanged": true,
+    "runtime_code_unchanged": false,
+    "new_provider_or_cloud_requests": false,
+    "physical_commands_disabled": true,
+    "production_mutations": false,
+    "private_material_read": false,
+    "notification_delivered": false,
+    "camera_accessed": false,
+    "phases_preserved": 9,
+    "real_gates_pending": 7,
+    "centinela_cameras_final_phase": 9,
+    "full_goal_complete": false
+  },
+  "remaining": [
+    "Firmware/build and actual camera/sentry options on target; no availability inference from silence.",
+    "Authorised passive source, signal meaning/observation time/coverage in target B10; native-control effect/permissions/preconditions qualified individually if supported.",
+    "Remote media transport/authentication/session operations or chosen USB clip format must be demonstrated before implementing viewer/recording/retention. Keep remote requirement pending without its interface.",
+    "Real delivered alerts, access by user, stopped/restarted/disconnected coverage, consumption and physical acceptance; earlier phase gates remain pending."
+  ],
+  "local_diagnostic_increment": {
+    "status": "software_verified_not_delivered",
+    "delivered": false,
+    "sqlite_schema": 17,
+    "export_format": 15,
+    "legacy_import_formats": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "signals": [
+      "vehicle_security_code",
+      "sentry_code"
+    ],
+    "raw_code_semantics": "unknown",
+    "demo_fabricates_codes": false,
+    "observed_events_or_push_extended": false,
+    "mqtt_widgets_abrp_extended": false,
+    "provider_activated": false,
+    "qualified_on_target": false,
+    "evidence": "docs/VALIDATION.md#fases-puertas-y-aceptacion",
+    "backend_tests_passed": 1174,
+    "backend_subtests_passed": 87,
+    "web_tests_passed": 43,
+    "mobile_tests_passed": 7,
+    "migration_proof": "docs/VALIDATION.md#fases-puertas-y-aceptacion",
+    "browser_qa": "docs/VALIDATION.md#fases-puertas-y-aceptacion",
+    "review": "docs/VALIDATION.md#fases-puertas-y-aceptacion",
+    "android_receipt": "docs/VALIDATION.md#fases-puertas-y-aceptacion",
+    "ios_sync_receipt": "docs/VALIDATION.md#fases-puertas-y-aceptacion",
+    "rollback": "For a rollback, pair the previous compatible application artifact with a matching database copy; the documented compatibility check used synthetic data only.",
+    "final_review": "docs/VALIDATION.md#fases-puertas-y-aceptacion"
+  },
+  "diagnostic_increment_software_complete": true
+}

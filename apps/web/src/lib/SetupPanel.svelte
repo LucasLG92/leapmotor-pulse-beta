@@ -2,7 +2,7 @@
 	import type { PulseState } from './types';
 	import Glyph from './Glyph.svelte';
 
-	let { pulseState, online }: { pulseState: PulseState; online: boolean } = $props();
+	let { pulseState, online, expanded = false }: { pulseState: PulseState; online: boolean; expanded?: boolean } = $props();
 	let setup = $derived(pulseState.setup ?? null);
 
 	let setupRows = $derived(setup ? [
@@ -76,18 +76,20 @@
 			]
 		}
 	] : []);
+	let setupItems = $derived(setupRows.flatMap((group) => group.items));
+	let nextSetupStep = $derived(setupItems.find((item) => !item.enabled) ?? setupItems[0] ?? null);
 </script>
 
 <section class="setup-card card" aria-labelledby="setup-heading">
-	<details class="setup-disclosure">
-		<summary>
+	<details class="setup-disclosure" open={expanded}>
+		<summary id="pulse-preparation">
 			<span class="setup-summary-copy"><strong id="setup-heading">Preparar Pulse</strong><span>Conexiones y próximos pasos</span></span>
 			<span class="setup-chevron" aria-hidden="true"><Glyph name="chevron" size={18} /></span>
 		</summary>
 		{#if !online}
-			<p class="setup-offline" role="status">Sin conexión. Vuelve a conectar Pulse para consultar la configuración actual y el estado de las conexiones.</p>
+			<p class="setup-offline" role="status"><strong>Preparación sin conexión</strong><span>Vuelve a conectar Pulse para consultar la configuración actual y el estado de las conexiones.</span></p>
 		{:else if !setup}
-			<p class="setup-offline" role="status">La información de preparación no está disponible en esta versión del servidor.</p>
+			<p class="setup-offline" role="status"><strong>Configuración no disponible</strong><span>Esta versión del servidor no ofrece información de preparación.</span></p>
 		{:else}
 			<div class="setup-content">
 				<p class="setup-explanation">Esta vista muestra la configuración del servidor. El funcionamiento con el coche, servicios y dispositivos requiere una comprobación real.</p>
@@ -95,13 +97,16 @@
 					<strong>Acceso</strong>
 					<span>{setup.auth_mode === 'oidc' ? 'Inicio de sesión configurado' : 'Acceso local: configurar HTTPS e inicio de sesión antes de publicar'}</span>
 				</div>
+				{#if nextSetupStep}
+					<div class="setup-next-step"><strong>Próximo paso · {nextSetupStep.label}</strong><p>{nextSetupStep.enabled ? nextSetupStep.on : nextSetupStep.off}</p></div>
+				{/if}
 				{#each setupRows as group (group.group)}
 					<section class="setup-group" aria-label={group.group}>
 						<h3>{group.group}</h3>
 						<ul>
 							{#each group.items as item (item.label)}
 								<li>
-									<div class="setup-row-heading"><strong>{item.label}</strong><span>{item.enabled ? 'Habilitado' : 'Por configurar'}</span>{#if item.enabled}<small>Pendiente de comprobación</small>{/if}</div>
+									<div class="setup-row-heading"><strong>{item.label}</strong><span>{item.enabled ? 'Configurado en el servidor' : 'Sin configurar'}</span><small>{item.enabled ? 'Comprobación real pendiente' : 'Pendiente de configuración'}</small></div>
 									<p>{item.enabled ? item.on : `Siguiente paso: ${item.off}`}</p>
 								</li>
 							{/each}
@@ -118,8 +123,8 @@
 </section>
 
 <style>
-	.setup-card { overflow: hidden; }
-	.setup-disclosure > summary { display: flex; min-height: 70px; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 19px; cursor: pointer; list-style: none; }
+	.setup-card { overflow: hidden; margin: 0 0 24px; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; padding-top: 12px; }
+	.setup-disclosure > summary { display: flex; min-height: 70px; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 19px; cursor: pointer; list-style: none; scroll-margin-block-start: 100px; }
 	.setup-disclosure > summary::-webkit-details-marker { display: none; }
 	.setup-summary-copy { display: grid; gap: 3px; }
 	.setup-summary-copy strong { font-size: 1rem; font-weight: 680; letter-spacing: -.02em; }
@@ -128,6 +133,9 @@
 	.setup-disclosure[open] .setup-chevron { transform: rotate(90deg); }
 	.setup-content { display: grid; gap: 14px; padding: 0 19px 18px; }
 	.setup-access { display: grid; gap: 3px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
+	.setup-next-step { display: grid; gap: 4px; padding: 12px 14px; border-left: 3px solid var(--accent); border-radius: 8px; background: var(--surface-soft); }
+	.setup-next-step strong { font-size: var(--text-label); }
+	.setup-next-step p { margin: 0; color: var(--muted-strong); font-size: var(--text-label); line-height: 1.5; }
 	.setup-access strong { font-size: var(--text-label); }
 	.setup-access span, .setup-group li p, .setup-note, .setup-offline, .setup-explanation { margin: 0; color: var(--muted-strong); font-size: var(--text-label); line-height: 1.5; }
 	.setup-group { display: grid; gap: 6px; }
@@ -139,7 +147,8 @@
 	.setup-row-heading span { color: var(--muted); font-size: var(--text-caption); font-weight: 650; }
 	.setup-row-heading small { color: var(--accent); font-size: var(--text-caption); font-weight: 650; }
 	.setup-note { padding-top: 3px; }
-	.setup-offline { margin: 0; padding: 0 19px 18px; }
+	.setup-offline { display: grid; gap: 4px; margin: 0; padding: 0 19px 18px; }
+	.setup-offline strong { color: var(--ink); font-size: var(--text-label); }
 	.setup-disclosure > summary:focus-visible { outline: 3px solid var(--focus); outline-offset: -4px; }
 	@media (max-width: 700px) { .setup-disclosure > summary { padding: 15px 16px; } .setup-content { padding: 0 16px 16px; } .setup-offline { padding: 0 16px 16px; } }
 </style>

@@ -35,7 +35,11 @@ def application(tmp_path, *, enabled=True):
         return httpx2.Response(200, content=png(), headers={"Content-Type": "image/png", "Cache-Control": "max-age=604800"})
     config = Config(hosts=("testserver",), navigation=NavigationConfig(
         enabled=enabled, contact="https://pulse.example.invalid/contact" if enabled else ""))
-    return create_app(tmp_path / "pulse.sqlite3", config=config,
+    # The HTTP contract must work in a clean checkout before the web build.
+    static = tmp_path / "static"
+    static.mkdir(exist_ok=True)
+    (static / "index.html").write_text("<!doctype html><title>Pulse navigation fixture</title>")
+    return create_app(tmp_path / "pulse.sqlite3", config=config, static_dir=static,
                       navigation_transport=httpx2.MockTransport(handler)), calls
 
 
@@ -72,7 +76,7 @@ def test_oidc_anonymous_navigation_is_closed_before_provider_io(tmp_path):
     # Explicit synthetic configuration; no discovery or login is invoked.
     config = Config(auth_mode="oidc", public_url="https://pulse.example.invalid",
         oidc_issuer="https://identity.example.invalid", oidc_client_id="test",
-        oidc_client_secret="synthetic-secret", allowed_users=("operator",), hosts=("pulse.example.invalid",),
+        oidc_client_secret="synthetic-secret", allowed_users=("lucas",), hosts=("pulse.example.invalid",),
         navigation=NavigationConfig(enabled=True, contact="https://pulse.example.invalid/contact"))
     def forbidden(_request):
         raise AssertionError("Anonymous requests must never reach the provider")

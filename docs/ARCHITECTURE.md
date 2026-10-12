@@ -1,11 +1,11 @@
 # Arquitectura
 
-Leapmotor Pulse combina una interfaz web, una API y una base SQLite local. La interfaz se construye con Svelte 5, TypeScript y Vite; FastAPI sirve los archivos resultantes y expone la API. El código de servidor vive en `pulse/`, la web en `apps/web/` y el cliente nativo en `apps/mobile/`.
+Leapmotor Pulse combina una interfaz web, una API y una base SQLite local. La interfaz se construye con Svelte 5, TypeScript y Vite; FastAPI sirve los archivos y expone la API. El cliente móvil comparte la interfaz mediante Capacitor y añade extensiones nativas.
 
-El contenedor ejecuta un proceso Pulse y guarda la base en `/data/pulse.sqlite3`. La instalación local usa un volumen Docker propio del proyecto. El Compose beta emplea red de host y fija el servidor a `127.0.0.1:8780`, para que el modo de autenticación local solo acepte el mismo equipo.
+El contenedor guarda la base en un volumen de datos propio. Las lecturas externas pasan por adaptadores acotados y se normalizan antes de entrar al estado persistente. Una lectura reciente describe lo que devolvió una fuente y cuándo; no demuestra por sí sola el estado físico del vehículo o cargador.
 
-Las lecturas externas pasan por adaptadores acotados. Sus resultados se normalizan antes de entrar en el estado persistente; una lectura reciente indica qué devolvió una fuente y cuándo, no demuestra por sí sola el estado físico del vehículo o el cargador. Los conectores opcionales permanecen desactivados en la beta local.
+El candidato local documentado conserva esquema SQLite 17 y exportación JSON 15. El diagnóstico de fase final mantiene códigos crudos, fuente y tiempo de observación cuando están disponibles, sin interpretarlos como intrusión, vigilancia o activación física. La guía de migración y aceptación conserva los criterios previos.
 
-Las peticiones de la interfaz usan la misma ruta de origen. La API valida sesión, origen y protección CSRF para las operaciones que modifican datos. El modo remoto es una configuración diferente: requiere HTTPS y OIDC y debe seguir [la guía de alojamiento](HOSTING.md).
+Las peticiones de interfaz usan el mismo origen. La API valida sesión, origen y protección CSRF en las operaciones que modifican datos. El modo local se limita a loopback; el modo remoto necesita HTTPS y autenticación apropiada. Las integraciones opcionales requieren elección y configuración explícitas.
 
-La aplicación móvil reutiliza la interfaz web mediante Capacitor y añade un puente nativo para autenticación, lecturas y widgets. El cliente móvil no hace que la instalación local sea accesible desde una red: sus funciones remotas dependen de un servidor configurado con HTTPS y autenticación OIDC.
+Las órdenes físicas permanecen bloqueadas mientras sus permisos, precondiciones y efectos no estén cualificados. El modo demo usa datos sintéticos separados de los datos reales.

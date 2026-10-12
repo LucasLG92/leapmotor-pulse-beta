@@ -6,6 +6,7 @@ import sqlite3
 import pytest
 
 from pulse.domain import DomainError, Store
+from schema_helpers import downgrade_telemetry_to_v15
 
 
 PROFILE_INPUT = {"name": "Panel semanal", "fields": ["battery_pct", "charging"]}
@@ -220,7 +221,7 @@ def test_export_v7_round_trips_new_fields_but_v6_rejects_them_atomically(tmp_pat
         "user-a", {"name": "Energía", "fields": ["energy_kwh", "energy_cost_eur"]}
     )
     archive = source.export_data(owner_id="user-a")
-    assert archive["schema_version"] == 13
+    assert archive["schema_version"] == 15
 
     destination = make_store(tmp_path, "v7-destination.sqlite3")
     destination.import_data(archive, owner_id="user-a")
@@ -271,6 +272,7 @@ def test_v7_to_current_migration_preserves_widget_profiles_and_grants(tmp_path):
         "Synthetic tablet",
     )
     with sqlite3.connect(path) as connection:
+        downgrade_telemetry_to_v15(connection)
         connection.execute("DROP TABLE abrp_preference")
         connection.execute("DROP TABLE observed_events")
         connection.execute("DROP TABLE IF EXISTS charger_pricing_history")
@@ -286,7 +288,7 @@ def test_v7_to_current_migration_preserves_widget_profiles_and_grants(tmp_path):
 
     migrated = Store(path, clock=lambda: datetime(2026, 10, 8, 15, 0, tzinfo=timezone.utc))
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 17
         tables_after = connection.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
         ).fetchall()

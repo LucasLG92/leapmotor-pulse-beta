@@ -3,7 +3,12 @@
 	import type { MqttStatus } from './types';
 
 	let { mqtt, online }: { mqtt: MqttStatus | undefined; online: boolean } = $props();
-	const fieldLabels = { battery_pct: 'Batería', range_km: 'Autonomía', charging: 'Estado de carga' };
+	const fieldLabels = {
+		battery_pct: 'Batería', range_km: 'Autonomía', charging: 'Estado de carga',
+		interior_temperature_c: 'Temperatura interior', battery_min_temperature_c: 'Temperatura mínima de batería',
+		front_left_pressure_kpa: 'Presión delantera izquierda', front_right_pressure_kpa: 'Presión delantera derecha',
+		rear_left_pressure_kpa: 'Presión trasera izquierda', rear_right_pressure_kpa: 'Presión trasera derecha',
+	};
 	let headline = $derived(!online ? 'Sin conexión a Pulse' : !mqtt ? 'Estado pendiente' :
 		mqtt.status === 'disabled' ? 'Desactivado' : mqtt.status === 'connecting' ? 'Conectando' :
 		mqtt.status === 'error' ? 'Conexión interrumpida' : 'Puente conectado');
@@ -31,7 +36,7 @@
 		</dl>
 		<p class="integration-limit">Se comparten lecturas guardadas, sin ubicación ni identidad. Su antigüedad no acredita el estado físico actual del coche.</p>
 	{:else}
-		<p class="integration-limit">Batería, autonomía y carga, solo con tu selección explícita. La integración permanece apagada por defecto.</p>
+		<p class="integration-limit">Batería, autonomía, carga, temperaturas y presiones, solo con tu selección explícita. La integración permanece apagada por defecto.</p>
 	{/if}
 	<p class="integration-charging">El cálculo PVPC está disponible en Energía. Para registrar una carga automáticamente necesitamos una integración validada con tu cargador.</p>
 </div>

@@ -89,6 +89,7 @@ export interface PageProps {
 	busy: boolean;
 	online: boolean;
 	revision: number;
+	settingsSection?: 'preparation' | null;
 	user: string | null;
 	theme: ThemePreference;
 	canInstall: boolean;
@@ -114,7 +115,11 @@ export interface PageProps {
 	toast: (message: string, tone?: 'info' | 'success' | 'error') => void;
 	setTheme: (theme: ThemePreference) => void;
 	onLogout: () => Promise<void>;
-	onExport: () => Promise<void>;
-	onImport: (file: File) => Promise<void>;
+	onExport: () => Promise<BackupActionResult>;
+	onImport: (file: File) => Promise<BackupActionResult>;
 	onInstall: () => Promise<void>;
 }
+
+export type BackupActionResult =
+	| { status: 'success' | 'cancelled' }
+	| { status: 'error'; message: string };

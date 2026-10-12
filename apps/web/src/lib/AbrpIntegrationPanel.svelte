@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onDestroy, tick } from 'svelte';
 	import { dateTime } from './format';
 	import type { AbrpStatus, PageProps } from './types';
 
@@ -20,12 +21,31 @@
 
 	let saving = $state(false);
 	let actionError = $state('');
+	let panelElement: HTMLDivElement | undefined;
+	let headingElement: HTMLHeadingElement | undefined;
+	let disposed = false;
 	let statusLabel = $derived(!online ? 'Sin conexión a Pulse' : !abrp ? 'Estado pendiente' :
 		!abrp.enabled ? 'No configurado en el servidor' : abrp.reason_code === 'consent_required' ? 'Desconectado' : mode === 'demo' ? 'Pausado durante la demo' :
 		abrp.status === 'sharing' ? 'Enviando una lectura' : abrp.status === 'shared' ? 'Última lectura confirmada' :
 		abrp.status === 'error' ? 'Envío sin confirmar' : abrp.status === 'waiting' ? 'Esperando una lectura válida' :
 		abrp.status === 'paused' ? 'Pausado' : abrp.consent ? 'Enlace activo' : 'Desconectado');
 	let actionDisabled = $derived(!online || busy || saving || !abrp || !abrp.enabled || (mode === 'demo' && !abrp.consent));
+
+	function capturePanelFocus(): HTMLElement | null {
+		const active = document.activeElement;
+		return panelElement && active instanceof HTMLElement && panelElement.contains(active) ? active : null;
+	}
+
+	async function restorePanelFocus(previous: HTMLElement | null) {
+		await tick();
+		if (!previous || disposed || !document.hasFocus() || document.activeElement !== document.body) return;
+		const target = previous.isConnected && !previous.matches(':disabled') ? previous : headingElement;
+		if (target?.isConnected && !target.matches(':disabled')) target.focus();
+	}
+
+	onDestroy(() => {
+		disposed = true;
+	});
 
 	function explanation(): string {
 		if (!online) return 'Conéctate para comprobar y cambiar el consentimiento.';
@@ -47,6 +67,7 @@
 
 	async function toggleConsent() {
 		if (actionDisabled || !abrp) return;
+		const previousFocus = capturePanelFocus();
 		const enabling = !abrp.consent;
 		saving = true;
 		try {
@@ -58,6 +79,7 @@
 				);
 				if (!accepted) return;
 			}
+			if (disposed) return;
 
 			// Recheck the live props after the dialog; demo and connection state may have changed meanwhile.
 			if (!online || busy || !abrp?.enabled || abrp.consent === enabling || (enabling && mode === 'demo')) return;
@@ -68,18 +90,22 @@
 				{ enabled: enabling },
 				enabling ? 'Consentimiento guardado.' : 'ABRP desconectado.'
 			);
-			if (!saved) actionError = enabling ? 'No se pudo guardar el consentimiento. Comprueba el estado antes de volver a intentarlo.' : 'No se pudo desconectar ABRP. Comprueba el estado antes de volver a intentarlo.';
+			if (disposed) return;
+			if (!saved) actionError = enabling ? 'No se pudo confirmar si se guardó el consentimiento. Revisa el estado antes de volver a intentarlo.' : 'No se pudo confirmar si ABRP quedó desconectado. Revisa el estado antes de volver a intentarlo.';
 		} catch {
-			actionError = enabling ? 'No se pudo guardar el consentimiento. Comprueba el estado antes de volver a intentarlo.' : 'No se pudo desconectar ABRP. Comprueba el estado antes de volver a intentarlo.';
+			if (!disposed) actionError = enabling ? 'No se pudo confirmar si se guardó el consentimiento. Revisa el estado antes de volver a intentarlo.' : 'No se pudo confirmar si ABRP quedó desconectado. Revisa el estado antes de volver a intentarlo.';
 		} finally {
-			saving = false;
+			if (!disposed) {
+				saving = false;
+				await restorePanelFocus(previousFocus);
+			}
 		}
 	}
 </script>
 
-<div class="abrp-panel">
+<div class="abrp-panel" bind:this={panelElement}>
 	<div class="abrp-status-row" role="status" aria-live="polite" aria-atomic="true">
-		<strong>{statusLabel}</strong>
+		<h3 bind:this={headingElement} tabindex="-1">{statusLabel}</h3>
 		<span class="badge" class:badge-success={abrp?.status === 'shared' && online && mode !== 'demo'} class:badge-demo={mode === 'demo'}>{abrp?.status === 'shared' && online && mode !== 'demo' ? 'Recepción confirmada' : 'Solo batería y hora'}</span>
 	</div>
 	<p class="abrp-explanation">{explanation()}</p>
@@ -119,7 +145,7 @@
 
 <style>
 	.abrp-status-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-	.abrp-status-row strong { color: var(--ink); font-size: 1rem; font-weight: 650; }
+	.abrp-status-row h3 { margin: 0; color: var(--ink); font-size: 1rem; font-weight: 650; }
 	.abrp-explanation { margin: 10px 0 0; max-width: 66ch; color: var(--muted); font-size: 1rem; line-height: 1.6; }
 	.abrp-fields { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 16px; }
 	.abrp-fields span { padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); font-size: .875rem; }

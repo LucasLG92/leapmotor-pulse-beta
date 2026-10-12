@@ -1,9 +1,11 @@
-# Estado de la beta pública
+# Estado de la beta
 
-Leapmotor Pulse se publica como software experimental bajo licencia MIT. La beta permite revisar la interfaz y el código y evaluar una instalación local. No es un producto terminado ni está certificada para supervisar o controlar un vehículo.
+Leapmotor Pulse es software experimental y no oficial. La licencia aplicable se indica en la raíz de cada distribución. La beta permite revisar la interfaz y evaluar una instalación local; no es un producto terminado ni está certificada para supervisar o controlar un vehículo.
 
-La primera instalación se limita a Linux con Docker Engine nativo y Compose v2, escucha en `127.0.0.1:8780` y usa autenticación local. No conecta un B10, no configura cloud, login OIDC, push, comandos físicos ni la aplicación móvil. La guía de [instalación](INSTALL.md) describe ese alcance; los despliegues remotos se documentan por separado en [alojamiento](HOSTING.md).
+La instalación local genérica se limita a Linux con Docker Engine nativo y Compose v2; escucha en loopback y no conecta un vehículo, configura servicios externos, activa push, órdenes físicas ni autenticación remota. La [guía de instalación](INSTALL.md) describe ese alcance. La [guía comunitaria](../deploy/community/README.md) ofrece ejemplos genéricos; no describe instalaciones individuales.
 
-La interfaz web, los puentes móviles y los adaptadores están implementados en el repositorio. Los builds de simulador y las pruebas automatizadas comprueban contratos de software, no una instalación completa en un iPhone, un Android, un coche o un cargador físico. El workflow iOS del repositorio es manual; las ejecuciones de CI del nuevo repositorio público deben revisarse antes de afirmar su estado.
+El candidato local actual se identifica como Android 0.1.1/versionCode 2 e iOS 0.1.1/build 2. La suite Python final pasó localmente en ambos stages con 1.174 pruebas y 87 subcasos; la validación web/móvil compartida pasó 43 pruebas web, 7 móviles, Svelte 0/0, TypeScript y builds. No es CI nueva. El estado nativo y sus límites se detallan en [VALIDATION.md](VALIDATION.md).
 
-La lectura B10 está preparada para un cliente SDK opcional y callbacks autorizados, pero la beta no tiene wizard de login ni conexión real. Los comandos físicos permanecen deshabilitados. No uses esta versión para tomar decisiones de seguridad o como sustituto de la información del vehículo, cargador o comercializadora.
+La base del candidato usa SQLite 17 y exportación JSON 15. El diagnóstico conserva códigos crudos sin atribuirles significado físico. Las selecciones MQTT son optativas y están desactivadas por defecto. Las pruebas automatizadas y sintéticas no prueban un servicio, teléfono, vehículo o cargador real.
+
+Las nueve fases de trabajo y siete puertas reales permanecen abiertas. La [aceptación](ACCEPTANCE.md) y el [registro estructurado](DELIVERY-STATUS.json) separan resultados históricos, candidatos locales y requisitos físicos pendientes. No uses esta versión para decisiones de seguridad ni como sustituto de la información del fabricante o la comercializadora.

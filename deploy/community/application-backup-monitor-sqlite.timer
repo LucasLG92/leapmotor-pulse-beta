@@ -1,0 +1,11 @@
+[Unit]
+Description=Hourly metadata check for the local database backup
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=5m
+Unit=application-backup-monitor@sqlite.service
+
+[Install]
+WantedBy=timers.target

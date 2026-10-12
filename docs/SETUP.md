@@ -13,7 +13,3 @@ Si el panel del widget nativo falla al consultar el estado de la app, **Reintent
 ## Comprobaciones pendientes
 
 La configuración y los errores recuperables pueden comprobarse con datos ficticios. La instalación, retorno OAuth, widgets, accesibilidad y consumo deben probarse en teléfonos físicos. La lectura B10, las cargas y sus costes necesitan el coche y el cargador; las integraciones necesitan cuentas y servicios reales. Mantener estos requisitos pendientes hasta guardar evidencia de esas pruebas.
-
-## Preparación técnica de lectura B10
-
-El transporte opcional original de Pulse permite preparar la configuración TLS y las rutas de sesión/lectura con el SDK fijado. Consulta [la guía del vehículo](VEHICLE.md#transporte-opcional-preparado-por-pulse). No instala material privado ni conecta el coche desde Ajustes; la validación con el vehículo y certificados legítimos sigue pendiente.

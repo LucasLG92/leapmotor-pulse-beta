@@ -15,6 +15,7 @@ from pulse.observed_events import (
     validate_observed_event_future_dates,
     validate_observed_events_archive,
 )
+from schema_helpers import downgrade_telemetry_to_v15
 
 
 UTC = timezone.utc
@@ -373,7 +374,7 @@ def test_store_records_paginates_and_roundtrips_observed_changes(tmp_path):
         source.observed_events(limit=101)
 
     exported = source.export_data()
-    assert exported["schema_version"] == EXPORT_VERSION == 13
+    assert exported["schema_version"] == EXPORT_VERSION == 15
     assert exported["observed_events"] == source.observed_events(limit=100)["items"]
     destination = make_store(tmp_path, "destination.sqlite3", clock)
     destination.import_data(json.dumps(exported, allow_nan=False))
@@ -416,6 +417,7 @@ def test_legacy_exports_and_v9_database_migration_start_with_empty_history(tmp_p
     )
 
     with sqlite3.connect(path) as connection:
+        downgrade_telemetry_to_v15(connection)
         connection.execute("DROP TABLE abrp_preference")
         connection.execute("DROP TABLE observed_events")
         connection.execute("DROP TABLE IF EXISTS charger_pricing_history")
@@ -424,19 +426,27 @@ def test_legacy_exports_and_v9_database_migration_start_with_empty_history(tmp_p
         connection.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
         connection.execute("PRAGMA user_version = 9")
     migrated = Store(path, clock=clock)
-    assert SCHEMA_VERSION == 15
+    assert SCHEMA_VERSION == 17
     assert migrated.telemetry_latest()["id"] != stored["id"]
     assert migrated.observed_events() == {
         "items": [], "total": 0, "limit": 20, "offset": 0,
     }
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 17
         assert connection.execute(
             "SELECT COUNT(*) FROM telemetry_snapshots"
         ).fetchone()[0] == 2
 
     legacy = migrated.export_data()
     legacy["schema_version"] = 8
+    for item in legacy["telemetry_snapshots"]:
+        for field in (
+            "interior_temperature_c", "battery_min_temperature_c", "front_left_pressure_kpa",
+            "front_right_pressure_kpa", "rear_left_pressure_kpa", "rear_right_pressure_kpa",
+            "vehicle_security_code", "sentry_code",
+        ):
+            item["vehicle"].pop(field)
+            item["field_sources"].pop(field)
     legacy["settings"].pop("vehicle_color")
     legacy.pop("observed_events")
     legacy.pop("charger_pricing_history")

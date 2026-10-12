@@ -142,6 +142,13 @@ def test_snapshot_maps_only_known_fields_and_keeps_provider_timestamps_separate(
                 "soc_percent": 77,
                 "expected_range_km": 328,
                 "odometer_km": 912,
+                "interior_temperature_c": 21.5,
+                "battery_min_temperature_c": 18.25,
+                "front_left_pressure_kpa": 245,
+                "front_right_pressure_kpa": 246,
+                "rear_left_pressure_kpa": 247,
+                "rear_right_pressure_kpa": 248,
+                "session_token": "SYNTHETIC_SECRET_SENTINEL",
                 "vehicle_locked": True,
                 "charging": True,
             },
@@ -160,6 +167,14 @@ def test_snapshot_maps_only_known_fields_and_keeps_provider_timestamps_separate(
         "battery_pct": 78.5,
         "range_km": 328,
         "odometer_km": 912,
+        "interior_temperature_c": 21.5,
+        "battery_min_temperature_c": 18.25,
+        "front_left_pressure_kpa": 245,
+        "front_right_pressure_kpa": 246,
+        "rear_left_pressure_kpa": 247,
+        "rear_right_pressure_kpa": 248,
+        "vehicle_security_code": None,
+        "sentry_code": None,
         "locked": None,
         "climate_on": None,
         "charging": None,
@@ -168,6 +183,14 @@ def test_snapshot_maps_only_known_fields_and_keeps_provider_timestamps_separate(
         "battery_pct": "precise_soc_percent",
         "range_km": "expected_range_km",
         "odometer_km": "odometer_km",
+        "interior_temperature_c": "interior_temperature_c",
+        "battery_min_temperature_c": "battery_min_temperature_c",
+        "front_left_pressure_kpa": "front_left_pressure_kpa",
+        "front_right_pressure_kpa": "front_right_pressure_kpa",
+        "rear_left_pressure_kpa": "rear_left_pressure_kpa",
+        "rear_right_pressure_kpa": "rear_right_pressure_kpa",
+        "vehicle_security_code": None,
+        "sentry_code": None,
         "locked": None,
         "climate_on": None,
         "charging": None,
@@ -176,8 +199,74 @@ def test_snapshot_maps_only_known_fields_and_keeps_provider_timestamps_separate(
     assert snapshot["provider_received_at"] == "2026-10-08T08:21:00+00:00"
     assert snapshot["configuration_observed_at"] == "2026-10-08T08:19:00+00:00"
     assert snapshot["freshness"] == "unknown"
+    assert "SYNTHETIC_SECRET_SENTINEL" not in repr(snapshot)
     assert provider.connection_status()["status"] == "connected"
     assert provider.connection_status()["last_observed_at"] == snapshot["observed_at"]
+
+
+def test_new_metrics_reject_bool_text_nonfinite_out_of_range_and_unlisted_sources():
+    reader = FakeReadClient(make_bundle(values={
+        "interior_temperature_c": True,
+        "battery_min_temperature_c": "18",
+        "front_left_pressure_kpa": float("inf"),
+        "front_right_pressure_kpa": 1001,
+        "rear_left_pressure_kpa": 247,
+    }))
+    snapshot = MateApiB10Provider(reader, VEHICLE_ID).fetch_snapshot()
+
+    for field in (
+        "interior_temperature_c", "battery_min_temperature_c", "front_left_pressure_kpa",
+        "front_right_pressure_kpa", "rear_right_pressure_kpa",
+    ):
+        assert snapshot["vehicle"][field] is None
+        assert snapshot["field_sources"][field] is None
+    assert snapshot["vehicle"]["rear_left_pressure_kpa"] == 247
+    assert snapshot["field_sources"]["rear_left_pressure_kpa"] == "rear_left_pressure_kpa"
+
+
+@pytest.mark.parametrize("value", [0, 1, 255, 0.0, 255.0])
+def test_security_codes_preserve_integer_sdk_enumerations_without_enabling_commands(value):
+    reader = FakeReadClient(make_bundle(values={"vehicle_security_code": value, "sentry_code": value}))
+    provider = MateApiB10Provider(reader, VEHICLE_ID)
+    snapshot = provider.fetch_snapshot()
+    for field in ("vehicle_security_code", "sentry_code"):
+        assert type(snapshot["vehicle"][field]) is int
+        assert snapshot["vehicle"][field] == int(value)
+        assert snapshot["field_sources"][field] == field
+    assert snapshot["vehicle"]["locked"] is None
+    assert provider.connection_status()["commands_enabled"] is False
+    assert provider.connection_status()["capabilities"]["availability"] == "unknown"
+    with pytest.raises(ProviderUnavailable):
+        provider.execute_command("sentry_mode_on", confirmed=True)
+    assert reader.command_calls == []
+
+
+@pytest.mark.parametrize("value", [None, True, False, "1", -1, 256, 1.5, float("nan"), float("inf"), 10**1000])
+def test_security_codes_discard_invalid_or_missing_values_and_sources(value):
+    reader = FakeReadClient(make_bundle(values={"vehicle_security_code": value, "sentry_code": value}))
+    snapshot = MateApiB10Provider(reader, VEHICLE_ID).fetch_snapshot()
+    for field in ("vehicle_security_code", "sentry_code"):
+        assert snapshot["vehicle"][field] is None
+        assert snapshot["field_sources"][field] is None
+
+
+def test_security_codes_from_actual_sdk_normalizer_use_only_public_signal_catalog():
+    sdk_data = pytest.importorskip("leapmotor_cloud.vehicle_data")
+    sdk_reads = pytest.importorskip("leapmotor_cloud.b10_reads")
+    from types import MappingProxyType
+
+    received = datetime(2026, 10, 8, 8, 21, tzinfo=timezone.utc)
+    telemetry = sdk_data.normalize_telemetry({"vin": VEHICLE_ID, "signalMap": {"1255": 0, "3636": 255}},
+                                           expected_vin=VEHICLE_ID, received_at=received)
+    configuration = sdk_data.ConfigurationSnapshot(
+        vin=VEHICLE_ID, received_at=received, observed_at=None,
+        group_times=MappingProxyType({}), raw=MappingProxyType({}), charge=MappingProxyType({}))
+    reader = FakeReadClient(sdk_reads.VehicleReadBundle(telemetry, configuration))
+    snapshot = MateApiB10Provider(reader, VEHICLE_ID).fetch_snapshot()
+    assert snapshot["vehicle"]["vehicle_security_code"] == 0
+    assert snapshot["vehicle"]["sentry_code"] == 255
+    assert snapshot["vehicle"]["locked"] is None
+    assert reader.command_calls == []
 
 
 def test_pinned_sdk_snapshot_types_match_adapter_without_transport():
@@ -198,6 +287,12 @@ def test_pinned_sdk_snapshot_types_match_adapter_without_transport():
                 "precise_soc_percent": 79.0,
                 "expected_range_km": 312.0,
                 "odometer_km": 1_024,
+                "interior_temperature_c": 22.0,
+                "battery_min_temperature_c": 18.0,
+                "front_left_pressure_kpa": 245.0,
+                "front_right_pressure_kpa": 246.0,
+                "rear_left_pressure_kpa": 247.0,
+                "rear_right_pressure_kpa": 248.0,
             }
         ),
         unknown_signals=MappingProxyType({}),
@@ -227,6 +322,10 @@ def test_pinned_sdk_snapshot_types_match_adapter_without_transport():
     assert snapshot["vehicle"]["battery_pct"] == 79.0
     assert snapshot["vehicle"]["range_km"] == 312.0
     assert snapshot["vehicle"]["odometer_km"] == 1_024
+    assert snapshot["vehicle"]["interior_temperature_c"] == 22.0
+    assert snapshot["vehicle"]["battery_min_temperature_c"] == 18.0
+    assert snapshot["vehicle"]["front_left_pressure_kpa"] == 245.0
+    assert snapshot["vehicle"]["rear_right_pressure_kpa"] == 248.0
     assert snapshot["observed_at"] == "2026-10-08T08:20:00+00:00"
     assert snapshot["provider_received_at"] == "2026-10-08T08:21:00+00:00"
 

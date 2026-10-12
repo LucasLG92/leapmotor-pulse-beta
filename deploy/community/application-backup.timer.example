@@ -1,0 +1,10 @@
+[Unit]
+Description=Example daily database backup schedule
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+Unit=application-backup.service
+
+[Install]
+WantedBy=timers.target

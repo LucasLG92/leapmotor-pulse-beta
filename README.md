@@ -1,32 +1,34 @@
 # Leapmotor Pulse · beta
 
-Tu coche y tus cargas, en una interfaz sencilla que alojas en tu propio servidor.
+Aplicación independiente para explorar datos de movilidad y carga desde un servidor propio. Es una beta experimental y no oficial; la conexión a un vehículo, el control físico y la compatibilidad con cada dispositivo requieren comprobaciones separadas.
 
-**Beta temprana, independiente y no oficial.** Puedes instalar Pulse para probar su interfaz, usar registros personales y preparar tus integraciones. La conexión real al B10, los comandos del vehículo y el funcionamiento con distintos cargadores aún necesitan validación física. No se promete compatibilidad con todos los modelos ni una conexión al coche con un solo clic.
+## Estado del candidato local
 
-## Apariencia del B10
+El candidato identifica Android como versión **0.1.1 (versionCode 2)** e iOS como **0.1.1 (build 2)**. Ambos siguen siendo candidatos locales sin entregar. En el checkout limpio de publicación, la suite Python pasó en ambos stages: **1.174 pruebas y 87 subcasos**. La validación web pasó **43 pruebas**, la móvil compartida **7**, Svelte registró **0 errores y 0 avisos**, y TypeScript y los builds web/móvil terminaron correctamente. Son resultados locales, no una ejecución nueva de CI.
 
-La interfaz reúne Coche, Energía, Mapa, Actividad, Estados y Ajustes; cada vista conserva la procedencia y antigüedad de sus datos. El Resumen incorpora una ilustración original del B10 y temas Claro/Charcoal. En **Ajustes → Color del B10** puedes elegir entre los seis colores de la gama española y guardar la selección, incluso sin conectar el coche. [Guía de apariencia y actualización](docs/VEHICLE-APPEARANCE.md).
+La primera ejecución limpia mostró que `test_navigation_http` suponía que `dist` existía antes de pytest. Se corrigió solo el fixture de prueba para crear ese directorio temporal; pasaron las pruebas focales y la suite completa posterior pasó en ambos stages. No se alteró el runtime para resolver esa dependencia del test.
 
-La versión actual usa SQLite esquema 15 y exportación JSON 13. Restaura copias JSON 1–12 asignando el color a `null`. Para volver al binario con esquema 14 hay que restaurar su imagen **junto con** la copia SQLite anterior. Sigue siendo beta; QA sintética y builds no sustituyen las comprobaciones con teléfonos, coche o cargador.
+Android se ensambló sin firma. Para iOS solo se completó la sincronización de Capacitor; no hay build Xcode ni verificación de firma o distribución para este candidato. No se incluyen APKs, archivos de configuración de una instalación concreta, logs externos ni recibos de servidor.
+
+El diagnóstico pasivo conserva esquema SQLite **17** y formato de exportación JSON **15**. Guarda códigos recibidos junto con su origen y momento de observación cuando están disponibles, sin asignarles significado físico. Las selecciones MQTT son optativas y comienzan desactivadas. Las pruebas de interfaz y de integraciones usan datos sintéticos.
+
+El proyecto mantiene **nueve fases** de trabajo y **siete puertas reales pendientes**. Builds, pruebas sintéticas y datos de simulador no acreditan por sí solos aceptación física ni el objetivo completo. Consulta [validación del candidato](docs/VALIDATION.md), [registro de aceptación](docs/ACCEPTANCE.md) y [estado estructurado](docs/DELIVERY-STATUS.json).
 
 ## Qué ofrece
 
-| Capacidad | Estado de la beta |
+| Capacidad | Estado |
 | --- | --- |
-| Interfaz adaptable, temas y PWA instalable | Implementada; instalación, recuperación offline y avisos con teléfonos bloqueados probados en iPhone y Android. No equivale a compatibilidad con todos los dispositivos. |
-| Preparación de funciones y próximos pasos | Ajustes detecta las habilitaciones del servidor y señala qué pruebas reales faltan. [Guía de preparación](docs/SETUP.md). |
-| Registro personal de cargas y análisis | Disponible sin coche conectado. Los datos de demostración están identificados y separados. |
-| Precios PVPC oficiales para la Península | Integrados. El coste energético se calcula cuando hay precios completos; no incluye potencia fija ni impuestos. |
-| Sesiones automáticas con evcc | Integración opcional: importa inicio, fin y energía. Pendiente de validación con cargadores reales. |
-| Datos del B10 y renovación de sesión | Adaptador de lectura preparado. Requiere material y callbacks legítimos del operador; no hay asistente público de conexión al coche. |
-| Home Assistant/MQTT, ABRP y navegación | Opcionales, apagados por defecto. Requieren configuración y pruebas con los servicios del usuario. |
-| App Android, iOS y widgets | Código incluido. Cada instalación necesita su configuración OAuth, firma/asociación y pruebas; los widgets no se crean directamente desde la web. |
-| Controles del vehículo y modo centinela | Bloqueados o en estudio. No hay grabación de cámaras ni protección centinela operativa. |
+| Interfaz web y PWA | La interfaz y el modo local están implementados; compatibilidad y aceptación se documentan por candidato y dispositivo. |
+| Registros de energía | Admite registros personales y estimaciones PVPC; los importes estimados no son facturas ni medidas certificadas. |
+| Sesiones de evcc | Integración optativa; necesita configuración y validación con el cargador correspondiente. |
+| Datos del vehículo | Adaptador de lectura preparado; el login, las señales del B10 y su frescura siguen pendientes de cualificación. |
+| Home Assistant/MQTT, ABRP y mapas | Integraciones optativas; no se activan sin elección y configuración explícitas. |
+| Apps y widgets | Hay código Android/iOS; la firma, distribución, autenticación y aceptación nativa siguen pendientes para este candidato. |
+| Órdenes físicas, cámaras y centinela | Las órdenes permanecen bloqueadas; cámaras y centinela requieren demostrar primero capacidad y acceso autorizados. |
 
-## Instalar
+## Instalación local
 
-En un servidor **Linux con Docker Engine y Docker Compose v2** ya instalados:
+En Linux con Docker Engine y Docker Compose v2 ya instalados:
 
 ```sh
 git clone https://github.com/LucasLG92/leapmotor-pulse-beta.git
@@ -35,36 +37,14 @@ bash install.sh --check
 bash install.sh --install
 ```
 
-La instalación inicial queda en `http://127.0.0.1:8780`, accesible solo en el equipo donde se ejecuta. Construye la imagen desde las fuentes fijadas y conserva los datos en un volumen propio. No configura tu coche ni publica un puerto en Internet.
-
-[Instalación paso a paso y acceso desde un móvil](docs/INSTALL.md) · [HTTPS y autenticación](docs/HOSTING.md) · [Estado de la beta](docs/BETA.md)
-
-## Puntos fuertes
-
-Pulse prioriza estas decisiones de producto, para que puedas compararlas con las aplicaciones que utilizas:
-
-- **Servidor propio y control sobre tus datos.** SQLite y copias exportables, sin cuentas compartidas ni credenciales incluidas en la distribución.
-- **Menos pasos al registrar una carga.** Con evcc configurado, las sesiones cerradas aportan inicio, fin y kWh; PVPC se calcula en segundo plano cuando dispone de precios completos.
-- **Costes transparentes.** Distingue energía medida, reparto estimado, precios pendientes y registros manuales. Un coste estimado no se presenta como factura exacta.
-- **Lecturas reutilizadas.** La interfaz consulta el estado guardado; abrir pantallas no dispara otra consulta al fabricante. Las integraciones aprovechan esas observaciones con caducidad.
-- **Móvil y privacidad.** PWA, avisos genéricos, perfiles de widget con campos seleccionados, privacidad ocultada por defecto y caché opcional con vencimiento.
-- **Base técnica contenida.** Svelte 5, TypeScript, FastAPI y SQLite; integraciones apagadas hasta configurarlas y dependencias fijadas para builds reproducibles.
-
-Son características del proyecto, no una clasificación de superioridad: no se han realizado benchmarks comparativos con otras aplicaciones.
+La instalación local escucha en `127.0.0.1:8780` y no configura el vehículo ni publica un puerto en Internet. Consulta [instalación](docs/INSTALL.md), [alojamiento remoto](docs/HOSTING.md) y [despliegue comunitario](deploy/community/README.md) antes de adaptar el acceso a tu entorno.
 
 ## Documentación
 
-- [Arquitectura](docs/ARCHITECTURE.md) y [desarrollo](docs/DEVELOPMENT.md).
-- [Energía, PVPC y evcc](docs/ENERGY.md).
-- [Conexión al coche y límites](docs/VEHICLE.md).
-- [PWA, avisos, apps y widgets](docs/MOBILE.md).
-- [Integraciones opcionales](docs/INTEGRATIONS.md).
-- [Privacidad](docs/PRIVACY.md) y [seguridad](SECURITY.md).
-- [Preparación y comprobaciones pendientes](docs/SETUP.md).
-- [Contrato OpenAPI](docs/openapi.json).
+- [Arquitectura](docs/ARCHITECTURE.md), [desarrollo](docs/DEVELOPMENT.md) y [estado de la beta](docs/BETA.md).
+- [Energía y carga](docs/ENERGY.md), [lecturas del vehículo](docs/VEHICLE.md) e [integraciones](docs/INTEGRATIONS.md).
+- [PWA, apps y widgets](docs/MOBILE.md), [privacidad](docs/PRIVACY.md) y [seguridad](docs/SECURITY-QUALIFICATION.json).
+- [Validación y límites del candidato](docs/VALIDATION.md), [aceptación](docs/ACCEPTANCE.md) y [registro de entrega](docs/DELIVERY-STATUS.json).
+- [Licencia](LICENSE) y [avisos de terceros](THIRD-PARTY-NOTICES.md).
 
-## Contribuir y licencia
-
-Para informar de un fallo, indica versión, sistema, pasos y resultado esperado. Evita publicar VIN, ubicaciones, credenciales, certificados, tokens, logs completos o exportaciones personales. [Guía para contribuir](CONTRIBUTING.md).
-
-El código original se publica bajo [MIT](LICENSE), con autoría de LucasLG92. Las dependencias mantienen sus [licencias y avisos](THIRD-PARTY-NOTICES.md). Leapmotor y las demás marcas pertenecen a sus titulares; este proyecto no está afiliado al fabricante ni ofrece garantía de compatibilidad.
+No publiques credenciales, tokens, VIN, bases de datos personales, certificados ni paquetes configurados para una instalación concreta. Leapmotor y las demás marcas pertenecen a sus titulares; Pulse no es una aplicación oficial.

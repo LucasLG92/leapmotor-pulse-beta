@@ -76,13 +76,13 @@ def test_app_identity_uses_same_introspection_gate_and_sanitizes_name():
             return httpx.Response(200, json=claims())
         assert request.headers["authorization"] == "Bearer synthetic-app-access"
         return httpx.Response(200, json={"sub": "fixture-subject", "preferred_username": "fixture",
-                                        "name": "  Test\u0000 User\u202e " + "x" * 200})
+                                        "name": "  Lucas\u0000 Pulse\u202e " + "x" * 200})
 
     identity = validate_app(handler)
     assert [request.method for request in requests] == ["POST", "GET"]
     assert identity.session_user()["id"] == "fixture-subject"
     assert len(identity.session_user()["name"]) == 128
-    assert identity.session_user()["name"].startswith("Test User")
+    assert identity.session_user()["name"].startswith("Lucas Pulse")
     assert "\u0000" not in identity.session_user()["name"]
     assert "\u202e" not in identity.session_user()["name"]
     assert "fixture-subject" not in repr(identity)

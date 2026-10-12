@@ -24,9 +24,21 @@ class SyntheticReadProvider:
                 "observed_at": (now - timedelta(seconds=self.age_seconds)).isoformat(),
                 "provider_received_at": now.isoformat(),
                 "vehicle": {"battery_pct": 53.0, "range_km": 260.0, "odometer_km": 1500.0,
+                            "interior_temperature_c": 22.0,
+                            "battery_min_temperature_c": 18.0,
+                            "front_left_pressure_kpa": 245.0,
+                            "front_right_pressure_kpa": 246.0,
+                            "rear_left_pressure_kpa": 247.0,
+                            "rear_right_pressure_kpa": 248.0,
                             "locked": None, "climate_on": None, "charging": None},
                 "field_sources": {"battery_pct": "soc_percent", "range_km": "expected_range_km",
                                   "odometer_km": "odometer_km", "locked": None,
+                                  "interior_temperature_c": "interior_temperature_c",
+                                  "battery_min_temperature_c": "battery_min_temperature_c",
+                                  "front_left_pressure_kpa": "front_left_pressure_kpa",
+                                  "front_right_pressure_kpa": "front_right_pressure_kpa",
+                                  "rear_left_pressure_kpa": "rear_left_pressure_kpa",
+                                  "rear_right_pressure_kpa": "rear_right_pressure_kpa",
                                   "climate_on": None, "charging": None}}
 
 
@@ -47,10 +59,18 @@ def test_navigation_does_not_multiply_reads_and_real_controls_stay_closed(tmp_pa
         info = wait_for_snapshot(client)
         assert info["quality"]["temporal_status"] == "stale"
         assert info["quality"]["freshness"] == "unknown"
+        assert info["latest"]["vehicle"]["vehicle_security_code"] is None
+        assert info["latest"]["vehicle"]["sentry_code"] is None
+        assert info["latest"]["field_sources"]["vehicle_security_code"] is None
+        assert info["latest"]["field_sources"]["sentry_code"] is None
         for _ in range(12):
             state = client.get("/api/state").json()
             assert state["mode"] == "telemetry_read_only"
             assert state["vehicle"]["battery_pct"] == 53.0
+            assert state["vehicle"]["interior_temperature_c"] == 22.0
+            assert state["vehicle"]["rear_right_pressure_kpa"] == 248.0
+            assert state["vehicle"]["vehicle_security_code"] is None
+            assert state["vehicle"]["sentry_code"] is None
             assert not any(command["enabled"] for command in state["commands"])
         assert provider.reads == 1
         history = client.get("/api/telemetry/history?limit=1").json()
@@ -70,8 +90,13 @@ def test_expired_values_hidden_from_current_vehicle_but_retained_as_history(tmp_
         state = client.get("/api/state").json()
         assert state["vehicle"]["battery_pct"] is None
         assert state["vehicle"]["range_km"] is None
+        assert state["vehicle"]["interior_temperature_c"] is None
+        assert state["vehicle"]["rear_right_pressure_kpa"] is None
         assert state["vehicle"]["observed_at"] == info["latest"]["observed_at"]
-        assert client.get("/api/telemetry/history").json()["items"][0]["vehicle"]["battery_pct"] == 53.0
+        historical = client.get("/api/telemetry/history").json()["items"][0]["vehicle"]
+        assert historical["battery_pct"] == 53.0
+        assert historical["interior_temperature_c"] == 22.0
+        assert historical["rear_right_pressure_kpa"] == 248.0
 
 
 def test_normal_startup_has_no_collector_or_vehicle(tmp_path):
