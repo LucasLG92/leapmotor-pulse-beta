@@ -42,7 +42,7 @@ def test_db10_migration_preserves_business_and_defaults_to_no_consent(tmp_path):
         db.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
         db.execute("PRAGMA user_version = 10")
     migrated = Store(path, clock=lambda: NOW)
-    assert SCHEMA_VERSION == 17
+    assert SCHEMA_VERSION == 18
     assert migrated.export_data() == before
     assert before["schema_version"] == EXPORT_VERSION == 15
     context = migrated.abrp_context(SCOPE)
@@ -50,7 +50,7 @@ def test_db10_migration_preserves_business_and_defaults_to_no_consent(tmp_path):
     assert not context["consent"]
     assert context["generation"] == 0
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 17
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 18
 
 
 def test_consent_survives_restart_but_never_another_binding(tmp_path):

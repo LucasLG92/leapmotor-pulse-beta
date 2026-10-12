@@ -10,6 +10,7 @@ from pulse.push_policy import PushConfig
 from pulse.evcc import EvccConfig
 from pulse.navigation_config import NavigationConfig
 from pulse.abrp_policy import AbrpConfig
+from pulse.backup_alerts import BackupAlertsConfig
 
 
 def _https_url(value: str, field_name: str) -> str:
@@ -45,6 +46,7 @@ class Config:
     evcc: EvccConfig = field(default_factory=EvccConfig)
     navigation: NavigationConfig = field(default_factory=NavigationConfig)
     abrp: AbrpConfig = field(default_factory=AbrpConfig)
+    backup_alerts: BackupAlertsConfig = field(default_factory=BackupAlertsConfig)
 
     def __post_init__(self):
         if not isinstance(self.mqtt, MqttConfig):
@@ -57,6 +59,8 @@ class Config:
             raise ValueError("La configuración de mapas debe ser explícita y válida.")
         if not isinstance(self.abrp, AbrpConfig):
             raise ValueError("La configuración ABRP debe ser explícita y válida.")
+        if not isinstance(self.backup_alerts, BackupAlertsConfig):
+            raise ValueError("La configuración de avisos de copias debe ser explícita y válida.")
         if self.auth_mode not in {"local", "oidc"}:
             raise ValueError("PULSE_AUTH_MODE debe ser local u oidc.")
         if not self.hosts or any("*" in host or "/" in host for host in self.hosts):
@@ -115,6 +119,7 @@ class Config:
         return cls(
             navigation=NavigationConfig.from_env(),
             abrp=AbrpConfig.from_env(),
+            backup_alerts=BackupAlertsConfig.from_env(),
             auth_mode=os.environ.get("PULSE_AUTH_MODE", "local"),
             public_url=os.environ.get("PULSE_PUBLIC_URL", ""),
             oidc_issuer=os.environ.get("PULSE_OIDC_ISSUER", ""),

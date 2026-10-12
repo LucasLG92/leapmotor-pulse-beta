@@ -121,9 +121,11 @@ Las rutinas y los horarios son ampliaciones propuestas, sujetas a capacidades re
 
 - [x] Comprobar los seis locks del candidato con OSV fijado, conservar informe/procedencia/resumen y fallar ante errores, avisos o inventario incompleto. Pruebas focales y ejecución real local; la retención en CI está preparada, sin ejecución externa de esta revisión. [Cualificación acotada](SECURITY-QUALIFICATION.json).
 - [ ] Cerrar revisión integral de dependencias, imagen, componentes nativos y toolchains sobre el artefacto final.
-- [x] Preparar un monitor genérico de metadatos de copias: ausencia, antigüedad, tamaño, permisos, espacio y transiciones de estado. La validación focal registró 29 pruebas y 45 subcasos; la guía comunitaria está en [deploy/community/README.md](../deploy/community/README.md). No valida contenido, restauración, una instancia externa ni entrega de avisos.
+- [x] Mantener el monitor comunitario metadata-only y ampliar el estado con journal formato 2, hasta 64 transiciones por perfil. La suite focal registró 32 pruebas y 54 subcasos; no comprueba contenido, restauración ni instalación real.
 - [x] Instalar y observar el monitor con autorización; hashes, permisos y visibilidad del montaje real verificados; Pulse y scripts de copia conservados, sin ejecutar copias.
-- [ ] Elegir consumidor/canal y comprobar aviso de fallo/recuperación y fallos/ausencia/caducidad del propio monitor; observar ciclos naturales y cualificar recuperación operativa.
+- [x] Preparar un consumidor Push separado, desactivado por defecto, con consentimiento por dispositivo y payload genérico; el productor comunitario nunca envía avisos.
+- [ ] Transferir los metadatos al UID del consumidor mediante un canal protegido y comprobar recepción/ausencia/caducidad con una instancia autorizada; observar ciclos naturales y cualificar recuperación operativa.
+- [ ] Antes de cualquier actualización real, preservar el esquema efectivamente desplegado y su artefacto compatible; la migración local 17→18 no identifica el esquema instalado.
 - [ ] Actualizar recuperación y rollback; completar copia fuera del servidor y restauración integral.
 - [ ] Comprobar rechazo de otra cuenta real y recuperación conjunta de host, Pulse, proxy y autenticación con acceso humano posterior.
 - [ ] Medir rendimiento, tráfico y batería con teléfonos e integraciones reales.

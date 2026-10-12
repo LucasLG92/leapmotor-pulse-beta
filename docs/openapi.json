@@ -1672,6 +1672,55 @@
         }
       }
     },
+    "/api/push/subscriptions/{item_id}/backup-alerts": {
+      "post": {
+        "summary": "Backup Alert Consent",
+        "operationId": "backup_alert_consent_api_push_subscriptions__item_id__backup_alerts_post",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackupAlertsConsent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushDevice"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/widget-profiles": {
       "get": {
         "summary": "Widget Profiles",
@@ -2023,6 +2072,25 @@
           "version"
         ],
         "title": "AppInfo"
+      },
+      "BackupAlertsConsent": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "title": "Confirmed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "enabled",
+          "confirmed"
+        ],
+        "title": "BackupAlertsConsent"
       },
       "Charge": {
         "properties": {
@@ -4311,6 +4379,11 @@
             "const": "pwa",
             "title": "Scope",
             "default": "pwa"
+          },
+          "backup_alerts_available": {
+            "type": "boolean",
+            "title": "Backup Alerts Available",
+            "default": false
           }
         },
         "type": "object",
@@ -4391,6 +4464,11 @@
               "uncertain"
             ],
             "title": "Last Result"
+          },
+          "backup_alerts_enabled": {
+            "type": "boolean",
+            "title": "Backup Alerts Enabled",
+            "default": false
           }
         },
         "type": "object",

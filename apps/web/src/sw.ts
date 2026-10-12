@@ -11,6 +11,7 @@ import {
 	VEHICLE_ARTWORK_CACHE,
 	vehicleArtworkRequestUrl
 } from './lib/vehicle-artwork-cache';
+import { parsePushNotice } from './lib/push-notice';
 
 declare const self: ServiceWorkerGlobalScope & {
 	__WB_MANIFEST: Array<{ url: string; revision: string | null }>;
@@ -102,32 +103,10 @@ self.addEventListener('message', (event: ExtendableMessageEvent) => {
 	event.waitUntil(handleVehicleArtwork(createVehicleArtworkRequest(url), event));
 });
 
-const pushNotice = {
-	title: 'Leapmotor Pulse',
-	generic: { body: 'Hay una novedad disponible en Pulse.', tag: 'pulse-generic', path: '/' },
-	test: { body: 'Aviso de prueba de Pulse. Comprueba este dispositivo.', tag: 'pulse-test', path: '/settings' },
-	charging: { body: 'Hay una observación de carga disponible.', tag: 'pulse-charging-observation', path: '/energy' }
-} as const;
-
 self.addEventListener('push', (event: PushEvent) => {
 	event.waitUntil((async () => {
-		let notice: typeof pushNotice.generic | typeof pushNotice.test | typeof pushNotice.charging = pushNotice.generic;
-		try {
-			const data = event.data;
-			if (data) {
-				const bytes = data.arrayBuffer();
-				if (bytes.byteLength <= 4096) {
-					const payload: unknown = JSON.parse(new TextDecoder().decode(bytes));
-					if (payload && typeof payload === 'object' && 'version' in payload && payload.version === 1 && 'kind' in payload) {
-						if (payload.kind === 'test') notice = pushNotice.test;
-						else if (payload.kind === 'charging_observation') notice = pushNotice.charging;
-					}
-				}
-			}
-		} catch {
-			// Invalid payloads still produce a generic user-visible notice.
-		}
-		await self.registration.showNotification(pushNotice.title, {
+		const notice = parsePushNotice(event.data?.arrayBuffer() ?? null);
+		await self.registration.showNotification(notice.title, {
 			body: notice.body,
 			icon: '/icon-192.png',
 			badge: '/icon-192.png',

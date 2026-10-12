@@ -146,7 +146,8 @@ def create_app(db_path: str | Path | None = None, *, name: str | None = None,
         raise ValueError("El proveedor no implementa connection_status().")
     # Únicamente un bootstrap autorizado puede inyectar un cliente configurado.
     # El arranque normal no construye SDKs, lee material privado ni programa consultas.
-    push = PushService(config.push, coordinator, sessions, config.cookie_name, transport=push_transport)
+    push = PushService(config.push, coordinator, sessions, config.cookie_name, transport=push_transport,
+                       backup_config=config.backup_alerts)
     abrp = AbrpBridge(config.abrp, coordinator, transport=abrp_transport,
                       on_status_change=lambda _status: coordinator._publish())
 

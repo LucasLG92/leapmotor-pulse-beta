@@ -89,13 +89,13 @@ def test_schema_14_migration_adds_null_color_and_preserves_existing_settings_and
 
     migrated = Store(path)
     settings = migrated.get_settings()
-    assert SCHEMA_VERSION == 17
+    assert SCHEMA_VERSION == 18
     assert settings["vehicle_color"] is None
     settings.pop("vehicle_color")
     assert settings == prior_settings
     assert migrated.get_charge(charge["id"])["id"] == charge["id"]
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 17
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 18
 
 
 def test_settings_api_returns_and_persists_vehicle_color(tmp_path):

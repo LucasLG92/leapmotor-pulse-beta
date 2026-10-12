@@ -8,7 +8,7 @@ import pytest
 
 from pulse import domain
 from pulse.domain import DomainError, EXPORT_VERSION, SCHEMA_VERSION, Store
-from schema_helpers import downgrade_telemetry_to_v15
+from schema_helpers import downgrade_backup_alerts_to_v17, downgrade_telemetry_to_v15
 
 
 def make_store(tmp_path):
@@ -297,8 +297,10 @@ def test_schema_v2_migrates_additively_and_preserves_existing_data(tmp_path, mon
         patcher.setattr(Store, "_migrate_v12_to_v13", lambda self, connection: None)
         patcher.setattr(Store, "_migrate_v15_to_v16", lambda self, connection: None)
         patcher.setattr(Store, "_migrate_v16_to_v17", lambda self, connection: None)
+        patcher.setattr(Store, "_migrate_v17_to_v18", lambda self, connection: None)
         Store(path)
     with sqlite3.connect(path) as connection:
+        downgrade_backup_alerts_to_v17(connection)
         connection.execute("DROP TABLE IF EXISTS charger_pricing_history")
         connection.execute("DROP TABLE IF EXISTS charger_energy_intervals")
         connection.execute("DROP TABLE IF EXISTS charger_energy_epochs")
@@ -354,6 +356,7 @@ def test_schema_v3_migrates_charge_pricing_and_preserves_indexes(tmp_path, monke
         patcher.setattr(Store, "_migrate_v10_to_v11", lambda self, connection: None)
         patcher.setattr(Store, "_migrate_v11_to_v12", lambda self, connection: None)
         patcher.setattr(Store, "_migrate_v12_to_v13", lambda self, connection: None)
+        patcher.setattr(Store, "_migrate_v17_to_v18", lambda self, connection: None)
         Store(path)
     with sqlite3.connect(path) as connection:
         downgrade_telemetry_to_v15(connection)
@@ -457,7 +460,8 @@ def test_schema_v5_migrates_to_v6_without_changing_existing_records(tmp_path):
     assert columns == {
         "id", "owner_id", "endpoint_hash", "session_hash", "name", "ciphertext",
         "created_at", "updated_at", "expires_at", "revision", "last_attempt_at",
-        "last_accepted_at", "last_result",
+        "last_accepted_at", "last_result", "backup_alerts_enabled",
+        "backup_alerts_consented_at",
     }
     assert "sqlite_autoindex_push_subscriptions_1" in indexes
     assert "idx_push_subscriptions_owner_updated" in indexes
@@ -478,7 +482,7 @@ def test_json_archive_v6_and_import_preserves_private_push_rows(tmp_path):
         expiry.isoformat(),
     )
     archive = store.export_data()
-    assert SCHEMA_VERSION == 17
+    assert SCHEMA_VERSION == 18
     assert archive["schema_version"] == EXPORT_VERSION == 15
     assert archive["charger_energy"] == {"epochs": [], "intervals": []}
     assert "push_subscriptions" not in archive
@@ -508,7 +512,7 @@ def test_schema_v11_migration_preserves_existing_charge_costs(tmp_path):
         connection.execute("PRAGMA user_version = 11")
 
     migrated = Store(path)
-    assert SCHEMA_VERSION == 17
+    assert SCHEMA_VERSION == 18
     restored = migrated.get_charge(charge["id"])
     assert restored["cost_eur"] == 1.61
     assert restored["tariff_eur_kwh"] == 0.23

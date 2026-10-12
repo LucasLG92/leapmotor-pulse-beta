@@ -41,6 +41,10 @@ PROFILES = {
 }
 MAX_JSON_BYTES = 64 * 1024
 MAX_MANIFESTS = 256
+MAX_MONITOR_EVENTS = 64
+MAX_EVENT_SEQUENCE = 2**53 - 1
+EVENT_KINDS = {"backup_alert", "backup_recovery"}
+EVENT_ID = re.compile(r"[0-9a-f]{32}\Z", re.ASCII)
 ISSUES = {
     "backup_job_unavailable", "backup_job_failed", "backup_timer_inactive",
     "independent_disk_unavailable", "copy_missing", "inventory_limit_exceeded",
@@ -251,8 +255,13 @@ def inspect(profile, directory, now, uid, job, timer, max_age_hours=36, disk_mat
 
 
 def validate_previous(previous, report):
-    if (set(previous) != set(report) | {"transition", "alert_since", "last_recovered_at"}
-            or type(previous.get("schema_version")) is not int or previous["schema_version"] != 1
+    version = previous.get("schema_version")
+    base_fields = set(report)
+    state_fields = {"transition", "alert_since", "last_recovered_at"}
+    if (type(version) is not int or version not in {1, 2}
+            or set(previous) != base_fields | state_fields | ({"journal_id", "event_sequence", "events"} if version == 2 else set())
+            or version == 1 and report.get("schema_version") != 1
+            or version == 2 and report.get("schema_version") not in {1, 2}
             or previous.get("profile") != report["profile"]
             or not isinstance(previous.get("status"), str) or previous["status"] not in {"healthy", "alert"}
             or not isinstance(previous.get("issues"), list)
@@ -261,6 +270,8 @@ def validate_previous(previous, report):
             or (previous["status"] == "alert") != bool(previous["issues"])
             or not isinstance(previous.get("transition"), str) or previous["transition"] not in {"unchanged", "alert_started", "alert_changed", "recovered"}
             or any(previous.get(key) is not False for key in ["artifact_content_hash_verified", "restore_verified", "notification_delivered"])):
+        raise MonitorError("invalid_previous_state")
+    if type(previous["schema_version"]) is not int or previous["schema_version"] != version:
         raise MonitorError("invalid_previous_state")
     for key in ["checked_at", "latest_copy_at", "alert_since", "last_recovered_at"]:
         if key == "checked_at" or previous[key] is not None:
@@ -272,6 +283,42 @@ def validate_previous(previous, report):
             continue
         if (type(value) not in {int, float} or not minimum <= value <= maximum
                 or (type(value) is float and not math.isfinite(value))):
+            raise MonitorError("invalid_previous_state")
+    checked = timestamp(previous["checked_at"])
+    for key in ["latest_copy_at", "alert_since", "last_recovered_at"]:
+        if previous[key] is not None and timestamp(previous[key]) > checked:
+            raise MonitorError("invalid_previous_state")
+    if ((previous["status"] == "alert") != (previous["alert_since"] is not None)
+            or (previous["status"] == "alert" and previous["last_recovered_at"] is not None
+                and timestamp(previous["last_recovered_at"]) > timestamp(previous["alert_since"]))):
+        raise MonitorError("invalid_previous_state")
+    if version == 2:
+        journal_id = previous["journal_id"]
+        sequence = previous["event_sequence"]
+        events = previous["events"]
+        if (not isinstance(journal_id, str) or not EVENT_ID.fullmatch(journal_id)
+                or type(sequence) is not int or not 0 <= sequence <= MAX_EVENT_SEQUENCE
+                or not isinstance(events, list) or len(events) > MAX_MONITOR_EVENTS
+                or len(events) != min(sequence, MAX_MONITOR_EVENTS)):
+            raise MonitorError("invalid_previous_state")
+        prior_sequence = sequence - len(events)
+        prior_time = None
+        ids = set()
+        for event in events:
+            if (not isinstance(event, dict) or set(event) != {"id", "sequence", "kind", "at"}
+                    or not isinstance(event["id"], str) or not EVENT_ID.fullmatch(event["id"])
+                    or event["id"] == journal_id or event["id"] in ids
+                    or type(event["sequence"]) is not int or event["sequence"] != prior_sequence + 1
+                    or not isinstance(event["kind"], str) or event["kind"] not in EVENT_KINDS):
+                raise MonitorError("invalid_previous_state")
+            event_at = timestamp(event["at"])
+            if event_at > checked or (prior_time is not None and event_at < prior_time):
+                raise MonitorError("invalid_previous_state")
+            ids.add(event["id"])
+            prior_sequence = event["sequence"]
+            prior_time = event_at
+        if (prior_sequence != sequence
+                or bool(events) and events[-1]["kind"] != ("backup_alert" if previous["status"] == "alert" else "backup_recovery")):
             raise MonitorError("invalid_previous_state")
 
 
@@ -315,10 +362,31 @@ def persist(directory, report, uid):
         elif report["status"] == "healthy" and previous is not None and previous["status"] == "alert":
             transition = "recovered"
         result = {
-            **report, "transition": transition,
+            **report, "schema_version": 2, "transition": transition,
             "alert_since": (previous.get("alert_since") if previous and previous["status"] == "alert" else report["checked_at"]) if report["status"] == "alert" else None,
             "last_recovered_at": report["checked_at"] if transition == "recovered" else previous.get("last_recovered_at") if previous else None,
         }
+        if previous is not None and previous["schema_version"] == 2:
+            journal_id = previous["journal_id"]
+            sequence = previous["event_sequence"]
+            events = list(previous["events"])
+        else:
+            # A v1 report has no reliable event history; start a fresh journal without reconstructing it.
+            journal_id = uuid.uuid4().hex
+            sequence = 0
+            events = []
+        event_kind = {"alert_started": "backup_alert", "alert_changed": "backup_alert", "recovered": "backup_recovery"}.get(transition)
+        if event_kind is not None:
+            if sequence >= MAX_EVENT_SEQUENCE:
+                raise MonitorError("event_sequence_exhausted")
+            event_id = uuid.uuid4().hex
+            while event_id == journal_id or any(event["id"] == event_id for event in events):
+                event_id = uuid.uuid4().hex
+            sequence += 1
+            events.append({"id": event_id, "sequence": sequence, "kind": event_kind,
+                           "at": timestamp(report["checked_at"]).isoformat().replace("+00:00", "Z")})
+            events = events[-MAX_MONITOR_EVENTS:]
+        result.update({"journal_id": journal_id, "event_sequence": sequence, "events": events})
         temporary = "." + report["profile"] + "-" + uuid.uuid4().hex + ".tmp"
         descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=fd)
         with os.fdopen(descriptor, "w") as stream:

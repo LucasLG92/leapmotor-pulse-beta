@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "date": "2026-10-12",
+  "date": "2026-10-13",
   "classification": "local_software_candidate_not_delivered",
   "delivered": false,
   "physical_acceptance": false,
   "web": {
-    "types": "passed",
-    "tests_passed": 43,
+    "types": "0 errors / 0 warnings",
+    "tests_passed": 46,
     "build_passed": true,
     "browser_synthetic_checks_passed": 13,
     "browser_offline_simulation": "not_run_permission_denied",
@@ -88,7 +88,9 @@
       "physical_real_grants_or_abrp": "not_tested"
     },
     "phase9_diagnostic_browser_receipt": "docs/VALIDATION.md#fases-puertas-y-aceptacion",
-    "phase9_diagnostic_browser_receipt_sha256": null
+    "phase9_diagnostic_browser_receipt_sha256": null,
+    "phase8_build_rerun": true,
+    "scope_note": "The phase 8 alert UI and local software checks are staged; Push receipt, device acceptance, and real deployment remain unverified."
   },
   "mobile_shared": {
     "typescript_passed": true,
@@ -98,7 +100,9 @@
     "tests_rerun_for_mqtt_increment": false,
     "tests_rerun_for_action_increment": false,
     "tests_rerun_for_consent_action_increment": false,
-    "tests_rerun_for_phase9": true
+    "tests_rerun_for_phase9": true,
+    "phase8_tests_rerun": true,
+    "phase8_build_rerun": true
   },
   "android": {
     "generic_release_build_passed": true,
@@ -153,7 +157,9 @@
   "scope_limits": [
     "Current metrics are local software results; no new CI result is claimed.",
     "No APK, signing hash, credentials, external receipt or private server record is included.",
-    "Physical vehicle, charger, phone, native authentication and habitual acceptance remain pending."
+    "Physical vehicle, charger, phone, native authentication and habitual acceptance remain pending.",
+    "The phase 8 source stages remain unpublished; the metadata monitor itself never sends Push, and protected metadata transfer plus real alert/recovery receipt remain unverified.",
+    "Schema 17 is only the local software predecessor; the deployed schema is unknown and rollback must preserve that real state with its compatible artifact."
   ],
   "independent_review": {
     "result": "Scoped historic reviews are not a new CI run or physical acceptance for this candidate.",
@@ -199,8 +205,8 @@
     "implicit_activation": false
   },
   "backend_current_tests": {
-    "passed": 1174,
-    "subtests_passed": 87,
+    "passed": 1241,
+    "subtests_passed": 118,
     "single_full_run_passed": true,
     "receipt": "docs/VALIDATION.md"
   },
@@ -216,20 +222,23 @@
   },
   "build_manifest": "docs/VALIDATION.md#candidato-y-suite-python",
   "backup_monitor": {
-    "qualification": "docs/VALIDATION.md",
-    "qualification_sha256": null,
-    "focused_tests": 29,
-    "subtests": 45,
+    "qualification": "docs/BACKUP-ALERTS.md",
+    "focused_tests": 32,
+    "subtests": 54,
     "metadata_only": true,
-    "systemd_statically_verified": true,
+    "journal_format": 2,
+    "max_transitions_per_profile": 64,
+    "monitor_sends_notifications": false,
     "deployed": false,
     "notification_delivered": false
   },
   "current_storage": {
-    "sqlite_schema": 17,
+    "sqlite_schema": 18,
     "export_format": 15,
     "phase3_receipt_is_historical": true,
-    "qualification": "docs/PHASE9-QUALIFICATION.json"
+    "phase9_receipt_is_historical": true,
+    "qualification": "docs/BACKUP-ALERTS-QUALIFICATION.json",
+    "deployment_schema_verified": false
   },
   "phase9": {
     "status": "software_verified_not_delivered",
@@ -237,5 +246,45 @@
     "local_diagnostics_only": true,
     "physical_acceptance": false,
     "qualification_sha256": null
+  },
+  "backup_alerts": {
+    "qualification": "docs/BACKUP-ALERTS-QUALIFICATION.json",
+    "sqlite_schema": 18,
+    "export_format": 15,
+    "focused_tests": 174,
+    "focused_subtests": 54,
+    "web_tests": 46,
+    "mobile_tests": 7,
+    "consumer_opt_in": true,
+    "consumer_enabled_by_default": false,
+    "community_actual_host_profile": "archive",
+    "logical_backend_profile": "host",
+    "source_published": false,
+    "runtime_deployed": false,
+    "physical_acceptance": false
+  },
+  "phase8_native_artifact_alignment": {
+    "date": "2026-10-13",
+    "android_unsigned_artifact": {
+      "sha256": "8618a4bc87530214bb3e44d14c50f6a46224480c00557bc7ac70cdf791c6eff4",
+      "size_bytes": 6535400,
+      "verified_native_asset_count": 44,
+      "empty_placeholder_count": 2,
+      "canonical_phase8_ui_asset_alignment_verified": true,
+      "byte_identity_with_source_stage_verified": false,
+      "byte_identity_limit": "CSS path mapping prevents a byte-for-byte source-stage identity claim.",
+      "jar_signature_present": false,
+      "apk_signature_scheme_v2_present": false,
+      "apk_signature_scheme_v3_present": false,
+      "published_or_distributed": false
+    },
+    "ios": {
+      "previous_pr9_ipa_includes_phase8_canonical_ui": false,
+      "phase8_ipa_build_qualified": false,
+      "signed_distribution_verified": false
+    },
+    "limits": [
+      "This records native asset/UI source alignment only; it does not establish a signed or distributed Android package, a current Phase 8 IPA, physical acceptance, or runtime deployment."
+    ]
   }
 }

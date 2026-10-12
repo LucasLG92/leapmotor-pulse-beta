@@ -560,6 +560,11 @@ import type { BackupActionResult, ChargeQuote, ChargeQuotePayload, HttpMethod, M
 			try {
 				return await mutateApi<PushTestResult>(`/api/push/subscriptions/${encodeURIComponent(id)}/test`, 'POST', csrfToken, { confirmed: true });
 			} catch (error) { return handleNotificationApiError(error); }
+		},
+		setBackupAlerts: async (id: string, enabled: boolean): Promise<PushDevice> => {
+			try {
+				return await mutateApi<PushDevice>(`/api/push/subscriptions/${encodeURIComponent(id)}/backup-alerts`, 'POST', csrfToken, { enabled, confirmed: enabled });
+			} catch (error) { return handleNotificationApiError(error); }
 		}
 	};
 

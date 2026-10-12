@@ -16,6 +16,8 @@ import pytest
 
 from pulse.push_crypto import PushCrypto
 from pulse.push_policy import ChargingChangeDetector, PushConfig, encode_url64, validate_subscription
+from pulse.backup_alerts import BackupAlertsConfig
+from pulse.config import Config
 
 
 def material():
@@ -31,7 +33,7 @@ def material():
     return config, recipient, auth, subscription
 
 
-@pytest.mark.parametrize("kind", ["test", "charging_observation"])
+@pytest.mark.parametrize("kind", ["test", "charging_observation", "backup_alert", "backup_recovery"])
 def test_vapid_signature_and_browser_decryption_are_interoperable(kind):
     config, recipient, auth, subscription = material()
     crypto = PushCrypto(config)
@@ -78,6 +80,16 @@ def test_disabled_configuration_does_not_read_keys(monkeypatch):
     assert enabled.contact not in representation
     with pytest.raises(ValueError):
         PushConfig(enabled=True)
+
+
+def test_backup_alert_defaults_disabled_without_reading_other_environment(monkeypatch):
+    class DisabledEnvironment:
+        def get(self, name, default=None):
+            assert name == "PULSE_BACKUP_ALERTS_ENABLED"
+            return "false"
+    monkeypatch.setattr("pulse.backup_alerts.os", SimpleNamespace(environ=DisabledEnvironment()))
+    assert BackupAlertsConfig.from_env() == BackupAlertsConfig()
+    assert Config().backup_alerts == BackupAlertsConfig()
 
 
 @pytest.mark.parametrize("endpoint", [
