@@ -182,16 +182,7 @@ xcodebuild build-for-testing \
     CODE_SIGNING_ALLOWED=NO \
     CODE_SIGNING_REQUIRED=NO \
     CODE_SIGN_IDENTITY=
-printf '%s\n' 'Instalando y arrancando la app genérica en un simulador propio.'
-"$python_bin" scripts/ios-simulator-smoke.py \
-    "$derived_data/Build/Products/Debug-iphonesimulator/App.app" \
-    "$derived_data" "$spm_clones"
-
-"$python_bin" scripts/ios-spm-audit.py verify \
-    --lockfile "$spm_resolution" \
-    --checkout "$spm_checkout" \
-    --output "$spm_evidence"
-
+# Retain a compiled device candidate even if the independent simulator boot check fails.
 if [ "${PULSE_CHECK_IOS_DEVICE_IPA:-0}" = '1' ]; then
     if [[ ! "${GITHUB_SHA:-}" =~ ^[0-9a-f]{40}$ ]]; then
         fail 'El artefacto de dispositivo requiere la revisión Git exacta de CI.'
@@ -218,3 +209,14 @@ if [ "${PULSE_CHECK_IOS_DEVICE_IPA:-0}" = '1' ]; then
 elif [ "${PULSE_CHECK_IOS_DEVICE_IPA:-0}" != '0' ]; then
     fail 'PULSE_CHECK_IOS_DEVICE_IPA solo admite 0 o 1.'
 fi
+
+printf '%s\n' 'Instalando y arrancando la app genérica en un simulador propio.'
+"$python_bin" scripts/ios-simulator-smoke.py \
+    "$derived_data/Build/Products/Debug-iphonesimulator/App.app" \
+    "$derived_data" "$spm_clones"
+
+"$python_bin" scripts/ios-spm-audit.py verify \
+    --lockfile "$spm_resolution" \
+    --checkout "$spm_checkout" \
+    --output "$spm_evidence"
+
