@@ -1,0 +1,19 @@
+# Comprobación del acceso genérico en iOS Simulator
+
+Este incremento responde a la captura vacía de la ejecución38324253913. Aquella ejecución acreditó compilación y proceso vivo durante cinco segundos, pero no la interfaz. Su PNG y recibo se conservan; la causa de la captura anterior no queda demostrada por estas nuevas fuentes.
+
+`PulseStartupUITests` es un target XCTest independiente. El scheme `PulseStartupCI` construye los productos sólo para pruebas y no los archiva. El scheme `App`, los ajustes de App/Widget, sus fuentes, identidades y capacidades siguen siendo los del producto. El test no se embebe en App, Widget o IPA y no añade APIs de depuración a la aplicación.
+
+El helper acepta exclusivamente la App Debug de su DerivedData y comprueba que los siete campos de conexión estén vacíos. Rechaza `NativeConfig.xcconfig`, también como enlace, antes de leerlo. Crea un único simulador propio con UUID y nombre comprobados, instala y arranca la app y conserva `startup-initial.png` tras el chequeo de proceso. Esa primera captura no acredita interfaz lista.
+
+La prueba de XCTest activa `com.lucas.pulse` y observa los textos existentes «Tu espacio privado de movilidad.» y «El acceso de esta app aún no está configurado.», más el botón «Iniciar sesión» deshabilitado. Exige la app en primer plano y los textos accesibles visibles. No pulsa controles, inicia sesión o ejecuta comandos. Su espera tiene un límite de90segundos; el comando tiene timeout240segundos, pruebas paralelas desactivadas y sin reintentos automáticos.
+
+La captura de éxito se toma dentro del test, al observar esos elementos. Se adjunta a XCTest y se transporta al helper con un protocolo acotado: una PNG de hasta10MiB en base64 y un marcador fijo de éxito, cada uno una sola vez. `xcodebuild` se ejecuta con stdout/stderr capturados; el helper no publica el texto bruto ni la imagen codificada en los logs. Acepta el resultado sólo si el comando termina correctamente, hay una única confirmación y una PNG válida dentro del límite; escribe sus bytes en `startup.png`. No toma una captura después de terminar el test para atribuirla al estado anterior.
+
+El recibo separa vida del proceso, inicio de XCTest, confirmación de renderizado y revisión visual pendiente. Si falla la prueba, conserva la captura inicial y puede guardar una captura diagnóstica del simulador propio, sin declarar que corresponde al instante del fallo de XCTest. El fallo de diagnóstico no reemplaza el fallo original. Antes de apagar/borrar vuelve a comprobar la propiedad; si ésta cambió, se abstiene y registra el fallo de cleanup. No se borran dispositivos por nombre aproximado ni se limpian dispositivos ajenos.
+
+El workflow conserva exclusivamente las dos PNG genéricas y el recibo durante siete días. No publica el `.xcresult` completo, dumps de accesibilidad o logs generales del sistema. Hace falta el resultado real del runner y revisar el PNG; las pruebas de control y el checker ejecutados en Linux no acreditan XCTest o el renderizado Apple. Firma, instalación física, OAuth, App Groups/widgets y coche siguen pendientes.
+
+APIs primarias: [XCUIApplication](https://developer.apple.com/documentation/xcuiautomation/xcuiapplication), [XCUIScreenshot.pngRepresentation](https://developer.apple.com/documentation/xcuiautomation/xcuiscreenshot/pngrepresentation) y [adjuntos de XCTest](https://developer.apple.com/documentation/xctest/adding-attachments-to-tests-activities-and-issues).
+
+Reversión de este incremento: recuperar conjuntamente el proyecto/checker/helper/shell/workflow anteriores y retirar sólo el schemeCI/test nuevo. Los cambios previos de UI/avisos y las evidencias de sus PRs se conservan. No implica cambios de producción o downgrade de datos.

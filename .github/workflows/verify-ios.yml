@@ -50,6 +50,7 @@ jobs:
         with:
           name: ios-simulator-startup
           path: |
+            apps/mobile/ios/App/output/ci-smoke/startup-initial.png
             apps/mobile/ios/App/output/ci-smoke/startup.png
             apps/mobile/ios/App/output/ci-smoke/receipt.json
           retention-days: 7

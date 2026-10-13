@@ -1,9 +1,12 @@
 """Launch only an unconfigured Pulse build in a new, disposable Apple simulator.
 
-The screenshot needs visual review. This does not test OAuth or WidgetKit runtime.
+XCTest observes the existing generic login UI. Screenshots still need visual review.
+This does not test OAuth or WidgetKit runtime.
 """
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 from pathlib import Path
 import plistlib
@@ -18,6 +21,11 @@ OUTPUT = ROOT / "apps/mobile/ios/App/output/ci-smoke"
 RUNTIME = "com.apple.CoreSimulator.SimRuntime.iOS-26-5"
 DEVICE_TYPE = "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max"
 BUNDLE = "com.lucas.pulse"
+UI_SCHEME = "PulseStartupCI"
+UI_TEST = "PulseStartupUITests/PulseStartupUITests/testGenericLoginRenders"
+UI_READY_MARKER = "PULSE_CI_UI_READY_V1"
+UI_PNG_PREFIX = "PULSE_CI_UI_PNG_V1:"
+MAX_PNG_BYTES = 10 * 1024 * 1024
 
 
 class SmokeFailure(RuntimeError):
@@ -56,15 +64,50 @@ def own_device(device_id: str, name: str) -> dict:
     return matches[0]
 
 
+def screenshot(device_id: str, filename: str, stage: str) -> None:
+    path = OUTPUT / filename
+    run(["xcrun", "simctl", "io", device_id, "screenshot", str(path)],
+        stage=stage, timeout=120)
+    if (not path.is_file() or path.is_symlink() or path.stat().st_size > MAX_PNG_BYTES
+            or path.read_bytes()[:8] != b"\x89PNG\r\n\x1a\n"):
+        raise SmokeFailure(stage, "invalid-png")
+
+
+def retain_ui_screenshot(output: str) -> None:
+    """Only retain the screenshot taken inside the successful semantic UI test.
+
+    Never print the captured XCTest output, its image transport, or raw errors.
+    A post-test simctl screenshot could show a terminated/replaced application.
+    """
+    lines = [line.strip() for line in output.splitlines()]
+    images = [line[len(UI_PNG_PREFIX):] for line in lines if line.startswith(UI_PNG_PREFIX)]
+    if lines.count(UI_READY_MARKER) != 1 or len(images) != 1:
+        raise SmokeFailure("ui-readiness", "readiness-not-reported")
+    if len(images[0]) > ((MAX_PNG_BYTES + 2) // 3) * 4:
+        raise SmokeFailure("ui-readiness", "invalid-png")
+    try:
+        data = base64.b64decode(images[0], validate=True)
+    except (ValueError, binascii.Error):
+        raise SmokeFailure("ui-readiness", "invalid-png") from None
+    if len(data) > MAX_PNG_BYTES or data[:8] != b"\x89PNG\r\n\x1a\n":
+        raise SmokeFailure("ui-readiness", "invalid-png")
+    (OUTPUT / "startup.png").write_bytes(data)
+
+
 def main() -> None:
     stage = "preflight"
-    if sys.platform != "darwin" or len(sys.argv) != 2:
+    if sys.platform != "darwin" or len(sys.argv) != 4:
         raise SmokeFailure(stage, "precondition")
     operator_config = ROOT / "apps/mobile/ios/NativeConfig.xcconfig"
     if operator_config.exists() or operator_config.is_symlink():
         raise SmokeFailure(stage, "precondition")
     try:
         app = Path(sys.argv[1]).resolve(strict=True)
+        derived_data = Path(sys.argv[2]).resolve(strict=True)
+        spm_clones = Path(sys.argv[3]).resolve(strict=True)
+        if (not derived_data.is_dir() or not spm_clones.is_dir()
+                or app != derived_data / "Build/Products/Debug-iphonesimulator/App.app"):
+            raise SmokeFailure(stage, "build-inputs")
         with (app / "Info.plist").open("rb") as stream:
             info = plistlib.load(stream)
     except (OSError, ValueError, plistlib.InvalidFileException):
@@ -93,6 +136,11 @@ def main() -> None:
     receipt = {"runtime": RUNTIME, "device_type": DEVICE_TYPE, "bundle_id": BUNDLE,
                "operator_configuration": False, "installed": False, "launched": False,
                "process_alive_after_seconds": 0, "screenshot_created": False,
+               "initial_screenshot_created": False,
+               "ui_readiness_test": UI_TEST, "ui_readiness_test_started": False,
+               "rendered_startup_verified": False,
+               "ui_readiness_command_timeout_seconds": 240,
+               "diagnostic_capture_failure": None,
                "visual_review_pending": True, "widget_runtime_verified": False,
                "physical_device_verified": False, "owned_simulator_removed": False,
                "failure": None, "cleanup_failure": None}
@@ -128,18 +176,43 @@ def main() -> None:
             if not command.endswith("/App.app/App"):
                 raise SmokeFailure("process-check", "not-alive")
             receipt["process_alive_after_seconds"] += 1
-        stage = "screenshot"
-        screenshot = OUTPUT / "startup.png"
-        run(["xcrun", "simctl", "io", device_id, "screenshot", str(screenshot)],
-            stage="screenshot", timeout=120)
-        if not screenshot.is_file() or screenshot.read_bytes()[:8] != b"\x89PNG\r\n\x1a\n":
-            raise SmokeFailure("screenshot", "invalid-png")
+        stage = "initial-screenshot"
+        screenshot(device_id, "startup-initial.png", stage)
+        receipt["initial_screenshot_created"] = True
+        stage = "ui-readiness"
+        receipt["ui_readiness_test_started"] = True
+        ui_output = run([
+            "xcodebuild", "test-without-building",
+            "-project", str(ROOT / "apps/mobile/ios/App/App.xcodeproj"),
+            "-scheme", UI_SCHEME, "-configuration", "Debug",
+            "-destination", f"platform=iOS Simulator,id={device_id}",
+            "-derivedDataPath", str(derived_data),
+            "-clonedSourcePackagesDirPath", str(spm_clones),
+            "-resultBundlePath", str(OUTPUT / "ui-readiness.xcresult"),
+            "-only-testing:" + UI_TEST,
+            "-parallel-testing-enabled", "NO",
+            "-test-iterations", "1",
+            "CODE_SIGNING_ALLOWED=NO", "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=",
+        ], stage=stage, timeout=240)
+        retain_ui_screenshot(ui_output)
+        receipt["rendered_startup_verified"] = True
         receipt["screenshot_created"] = True
     except SmokeFailure as exc:
         operation_failure = {"stage": exc.stage, "type": exc.failure_type}
     except Exception:
         operation_failure = {"stage": stage, "type": "operation"}
     finally:
+        # Preserve the initial PNG and inspect the failed state only on our own
+        # unconfigured simulator. Never replace the original operation failure.
+        if operation_failure and device_id and receipt["launched"]:
+            try:
+                own_device(device_id, name)
+                screenshot(device_id, "startup.png", "failure-screenshot")
+                receipt["screenshot_created"] = True
+            except SmokeFailure as exc:
+                receipt["diagnostic_capture_failure"] = {"stage": exc.stage, "type": exc.failure_type}
+            except Exception:
+                receipt["diagnostic_capture_failure"] = {"stage": "failure-screenshot", "type": "operation"}
         try:
             if device_id:
                 device = own_device(device_id, name)
@@ -163,7 +236,7 @@ def main() -> None:
     if operation_failure or cleanup_failure:
         failure = operation_failure or receipt["failure"]
         raise SmokeFailure(failure["stage"], failure["type"])
-    print("App installed, launched and alive for 5 seconds; own simulator removed. Screenshot needs review.")
+    print("Generic login UI observed by XCTest; own simulator removed. Screenshots need visual review.")
 
 
 if __name__ == "__main__":
