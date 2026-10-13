@@ -217,6 +217,9 @@ public final class NativeJourneyReportTemporaryStore {
             try protectAndExclude(exportDirectory)
 
             let file = exportDirectory.appendingPathComponent("pulse-viajes-\(days)-dias.json", isDirectory: false)
+            guard #available(macOS 11.0, *) else {
+                throw NativeJourneyReportTemporaryStoreError.unavailable
+            }
             try data.write(to: file, options: [.atomic, .completeFileProtection])
             try protectAndExclude(file)
             return file
