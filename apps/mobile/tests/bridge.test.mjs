@@ -14,6 +14,24 @@ test('exportar informes delega sólo days y conserva cancel/completed sin URI', 
   assert.deepEqual(inputs, [{ days: 30 }, { days: 90 }]);
   assert.equal(createNativeBridge({}).exportJourneyReport, undefined);
 });
+
+test('la cancelación nativa depende de la capacidad anunciada y conserva request_id', async () => {
+  const cancellations = [];
+  const current = createNativeBridge({
+    async status() { return { configured: true, authenticated: true, supportsRequestCancellation: true }; },
+    async cancelRequest(input) { cancellations.push(input); }
+  });
+  assert.equal(current.supportsRequestCancellation(), false);
+  await current.status();
+  assert.equal(current.supportsRequestCancellation(), true);
+  await current.cancelRequest({ request_id: '00000000-0000-4000-8000-000000000001' });
+  assert.deepEqual(cancellations, [{ request_id: '00000000-0000-4000-8000-000000000001' }]);
+
+  const legacy = createNativeBridge({ async status() { return { configured: true, authenticated: true }; } });
+  await legacy.status();
+  assert.equal(legacy.supportsRequestCancellation(), false);
+  assert.equal(legacy.cancelRequest, undefined);
+});
 function fixture(overrides = {}) {
   const listeners = [], starts = [], stops = [];
   const plugin = {

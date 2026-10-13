@@ -5,6 +5,7 @@
 	import { DraftGuard } from './lib/draft-guard';
 	import { observeServiceWorkerUpdate } from './lib/pwa-update';
 	import { createStartupAttempt } from './lib/startup-read';
+	import { createStateRefresh } from './lib/state-refresh';
 	import { internalAppPath, preparationSection } from './lib/app-links';
 import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuotePayload, HttpMethod, ManualJourneyCreationRequest, MutationPayload, PageProps, PulseState, Route, SessionState, ThemePreference, WebPushSubscriptionInput, WidgetPairingResult, PushDevice, PushTestResult } from './lib/types';
 	import Glyph from './lib/Glyph.svelte';
@@ -181,9 +182,12 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 		toastTimeout = setTimeout(() => { toastMessage = ''; }, 5200);
 	}
 
-	async function refreshState() {
-		pulseState = await getState();
-	}
+	const stateRefresh = createStateRefresh(getState, (state) => {
+		pulseState = state;
+		eventRefreshPending = false;
+		dataRevision += 1;
+	});
+	const refreshState = stateRefresh.refresh;
 
 	function closeEventSource() {
 		nativeSubscriptionRequest += 1;
@@ -209,6 +213,7 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 	}
 
 	function expireSession() {
+		stateRefresh.invalidate();
 		cancelStartup();
 		navigationGeneration += 1;
 		navigationPending = false;
@@ -234,7 +239,6 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 			if (!eventRefreshPending) return;
 			if (isBusy || updateBusy || document.visibilityState === 'hidden' || !session?.authenticated) return;
 			eventRefreshPending = false;
-			dataRevision += 1;
 			void refreshState().catch((error) => {
 				if (error instanceof ApiError && error.status === 401) expireSession();
 				else showToast('No se pudo sincronizar Pulse con el servidor.', 'error');
@@ -244,6 +248,11 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 
 	function requestStateRefresh() {
 		eventRefreshPending = true;
+		if (stateRefresh.markDirty()) {
+			if (eventRefreshTimer) clearTimeout(eventRefreshTimer);
+			eventRefreshTimer = undefined;
+			return;
+		}
 		if (initialStateReady && !isBusy && !updateBusy) scheduleEventRefresh();
 	}
 
@@ -387,6 +396,7 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 
 	async function startSession() {
 		if (updateBusy || startupAttempt) return;
+		stateRefresh.invalidate();
 		const attempt = createStartupAttempt();
 		startupAttempt = attempt;
 		closeEventSource();
@@ -471,19 +481,19 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 
 	async function mutate(path: string, method: HttpMethod, data?: MutationPayload, success = 'Cambios guardados.') {
 		if (updateBusy) { showToast('Pulse se está actualizando. Espera antes de guardar cambios.', 'info'); return false; }
+		stateRefresh.invalidate();
 		busyCount += 1;
 		try {
 			await mutateApi(path, method, csrfToken, data);
 			const eventRevisionAtRefreshStart = latestEventRevision;
 			eventRefreshPending = false;
 			try {
-				await refreshState();
+				if (!await refreshState()) return false;
 				showToast(success, 'success');
 			} catch {
 				eventRefreshPending = true;
 				showToast('El servidor guardó el cambio, pero no se pudo actualizar la vista. Pulsa «Reintentar».', 'info');
 			}
-			dataRevision += 1;
 			if (latestEventRevision !== eventRevisionAtRefreshStart) eventRefreshPending = true;
 			return true;
 		} catch (error) {
@@ -1031,6 +1041,7 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 			window.addEventListener('appinstalled', installed);
 		}
 		return () => {
+			stateRefresh.invalidate();
 			cancelStartup();
 			stopServiceWorker();
 			drafts.clear();

@@ -300,7 +300,16 @@ def create_app(db_path: str | Path | None = None, *, name: str | None = None,
 
     @app.exception_handler(HTTPException)
     async def http_error(request, error):
-        return JSONResponse({"detail": "Recurso no disponible."}, status_code=error.status_code)
+        headers = {
+            key: value for key, value in (error.headers or {}).items()
+            if key.lower() in {"allow", "www-authenticate", "proxy-authenticate"}
+        }
+        headers["Cache-Control"] = "no-store"
+        return JSONResponse(
+            {"detail": "Recurso no disponible."},
+            status_code=error.status_code,
+            headers=headers,
+        )
 
     @app.exception_handler(Exception)
     async def unexpected_error(request, error):

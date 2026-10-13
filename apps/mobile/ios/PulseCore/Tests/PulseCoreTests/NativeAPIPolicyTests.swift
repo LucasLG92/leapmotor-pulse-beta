@@ -24,6 +24,21 @@ final class NativeAPIPolicyTests: XCTestCase {
         }
     }
 
+    func testCancellationPolicyAllowsReadsAndExactNavigationQueryPostsOnly() {
+        XCTAssertTrue(NativeAPIPolicy.isCancellableRead(path: "/api/state", method: "GET"))
+        XCTAssertTrue(NativeAPIPolicy.isCancellableRead(path: "/api/charges?limit=50", method: "GET"))
+        for path in ["/api/navigation/places", "/api/navigation/chargers", "/api/navigation/tiles"] {
+            XCTAssertTrue(NativeAPIPolicy.isCancellableRead(path: path, method: "POST"))
+            XCTAssertFalse(NativeAPIPolicy.isCancellableRead(path: path + "?x=1", method: "POST"))
+        }
+        for path in ["/api/charges", "/api/commands", "/api/charges/requests"] {
+            XCTAssertTrue(NativeAPIPolicy.allows(path: path, method: "POST"))
+            XCTAssertFalse(NativeAPIPolicy.isCancellableRead(path: path, method: "POST"))
+        }
+        XCTAssertFalse(NativeAPIPolicy.isCancellableRead(path: "/api/navigation/favorites", method: "POST"))
+        XCTAssertFalse(NativeAPIPolicy.isCancellableRead(path: "/api/state", method: "PUT"))
+    }
+
     func testChargerIsReadOnlyAndBounded() {
         XCTAssertTrue(NativeAPIPolicy.allows(path: "/api/charger", method: "GET"))
         XCTAssertTrue(NativeAPIPolicy.allows(path: "/api/charger/sessions?limit=20&offset=1000", method: "GET"))

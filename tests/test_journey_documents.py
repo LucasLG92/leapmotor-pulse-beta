@@ -2,6 +2,7 @@
 
 from copy import deepcopy
 import csv
+from contextlib import contextmanager
 import io
 import sqlite3
 from datetime import datetime, timezone
@@ -138,7 +139,9 @@ def test_csv_and_html_reject_documents_over_row_or_byte_budget():
         assert rejected_bytes.value.status == 413
 
 
-def test_document_data_is_owner_scoped_and_rejects_more_than_10000_rows(tmp_path):
+def test_document_data_is_owner_scoped_and_rejects_more_than_10000_rows(
+    tmp_path, monkeypatch
+):
     path = tmp_path / "pulse.sqlite3"
     store = Store(path, clock=lambda: NOW)
     other_owner = store.reserve_manual_journey_creation("owner-b")
@@ -164,7 +167,24 @@ def test_document_data_is_owner_scoped_and_rejects_more_than_10000_rows(tmp_path
         "tags": ["privado"],
     })
 
+    statements = []
+    read_transaction = store._read_transaction
+
+    @contextmanager
+    def traced_read_transaction():
+        with read_transaction() as connection:
+            connection.set_trace_callback(statements.append)
+            yield connection
+
+    monkeypatch.setattr(store, "_read_transaction", traced_read_transaction)
     data = store.journey_document_data("owner-a", days=30)
+    journey_reads = [
+        statement for statement in statements
+        if "FROM MANUAL_JOURNEYS" in statement.upper()
+    ]
+    assert len(journey_reads) == 1
+    assert "LIMIT 10001" in journey_reads[0].upper()
+    monkeypatch.setattr(store, "_read_transaction", read_transaction)
     assert data["report"] == store.report_manual_journeys("owner-a", days=30)
     assert data["journeys"] == [journey]
     assert "owner-b" not in repr(data)

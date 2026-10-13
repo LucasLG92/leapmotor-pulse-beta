@@ -4,6 +4,14 @@ import Foundation
 public enum NativeAPIPolicy {
     private static let pageQueries: Set<String> = ["limit", "offset"]
 
+    /// Only idempotent reads and the exact navigation query POSTs can be cancelled.
+    public static func isCancellableRead(path: String, method: String) -> Bool {
+        if method == "GET" { return allows(path: path, method: method) }
+        return method == "POST"
+            && ["/api/navigation/places", "/api/navigation/chargers", "/api/navigation/tiles"].contains(path)
+            && allows(path: path, method: method)
+    }
+
     public static func allows(path rawPath: String, method: String) -> Bool {
         guard rawPath.utf16.count <= 2_048,
               method == method.uppercased(),

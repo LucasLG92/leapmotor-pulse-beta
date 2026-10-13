@@ -3,7 +3,8 @@
 	import { ApiError } from './api';
 	import type { PageProps, PushCapabilities, PushDevice, WebPushSubscriptionInput } from './types';
 
-	let { online, revision, busy, native, notifications, runNotificationAction, confirmAction, drafts }: {
+	let { active = true, online, revision, busy, native, notifications, runNotificationAction, confirmAction, drafts }: {
+		active?: boolean;
 		online: boolean;
 		revision: number;
 		busy: boolean;
@@ -132,7 +133,7 @@
 	}
 
 	async function loadData(force = false) {
-		if (disposed || (!force && (busy || actionBusy)) || loading) return;
+		if (disposed || !active || (!force && (busy || actionBusy)) || loading) return;
 		if (!online) {
 			error = 'Conéctate para consultar la disponibilidad y los dispositivos registrados.';
 			return;
@@ -164,6 +165,7 @@
 		void revision;
 		void online;
 		void busy;
+		if (!active) { requestId++; loading = false; return; }
 		detectSupport();
 		if (!native && !busy) queueMicrotask(() => void loadData());
 	});

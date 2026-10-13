@@ -17,7 +17,7 @@ const nativeUrl = await moduleUrl('native');
 const startupUrl = await moduleUrl('startup-read');
 const { installNativeBridge } = await import(nativeUrl);
 const { createStartupAttempt, StartupTimeoutError } = await import(startupUrl);
-const { ApiError, getSession, getState, mutateApi } = await import(await moduleUrl('api'));
+const { ApiError, getSession, getState, mutateApi, requestApi } = await import(await moduleUrl('api'));
 
 test('las lecturas web transmiten la señal y conservan no-store y mismo origen', async (context) => {
 	const originalFetch = globalThis.fetch;
@@ -131,9 +131,10 @@ test('un status nativo tardío no inicia un GET tras el timeout', async (context
 
 test('un GET nativo no cancelable físicamente deja de bloquear el arranque', async (context) => {
 	let resolveRequest, requests = 0;
+	const inputs = [];
 	installNativeBridge({
 		status: async () => ({ configured: true, authenticated: true }),
-		request: () => { requests++; return new Promise(resolve => { resolveRequest = resolve; }); }
+		request: (input) => { requests++; inputs.push(input); return new Promise(resolve => { resolveRequest = resolve; }); }
 	}, 'ios');
 	context.after(() => installNativeBridge(null));
 	const attempt = createStartupAttempt(20);
@@ -142,4 +143,88 @@ test('un GET nativo no cancelable físicamente deja de bloquear el arranque', as
 	assert.equal(requests, 1);
 	resolveRequest({ status: 200, contentType: 'application/json', body: '{"authenticated":true}' });
 	await new Promise(resolve => setImmediate(resolve));
+	assert.equal('request_id' in inputs[0], false);
+});
+
+test('un cliente nativo compatible cancela el transporte de una lectura con request_id correlacionado', async (context) => {
+	const controller = new AbortController();
+	let resolveRequest;
+	const inputs = [], cancellations = [];
+	installNativeBridge({
+		supportsRequestCancellation: () => true,
+		request: (input) => { inputs.push(input); return new Promise(resolve => { resolveRequest = resolve; }); },
+		cancelRequest: async (input) => { cancellations.push(input); }
+	}, 'android');
+	context.after(() => installNativeBridge(null));
+	const pending = requestApi('/api/state', { method: 'GET', signal: controller.signal });
+	await new Promise(resolve => setImmediate(resolve));
+	assert.match(inputs[0].request_id, /^[0-9a-f-]{36}$/);
+	controller.abort();
+	await assert.rejects(pending, error => error instanceof DOMException && error.name === 'AbortError');
+	assert.deepEqual(cancellations, [{ request_id: inputs[0].request_id }]);
+	resolveRequest({ status: 200, contentType: 'application/json', body: '{}' });
+	await new Promise(resolve => setImmediate(resolve));
+});
+
+test('si abort llega durante el despacho, se envía la cancelación correlacionada', async (context) => {
+	const controller = new AbortController();
+	let requestId;
+	const cancellations = [];
+	installNativeBridge({
+		supportsRequestCancellation: () => true,
+		request: (input) => {
+			requestId = input.request_id;
+			controller.abort();
+			return new Promise(() => {});
+		},
+		cancelRequest: async (input) => { cancellations.push(input); }
+	}, 'ios');
+	context.after(() => installNativeBridge(null));
+	await assert.rejects(requestApi('/api/session', { method: 'GET', signal: controller.signal }),
+		error => error instanceof DOMException && error.name === 'AbortError');
+	assert.deepEqual(cancellations, [{ request_id: requestId }]);
+});
+
+test('una respuesta terminada limpia el listener y no cancela un transporte ya completo', async (context) => {
+	const controller = new AbortController();
+	const cancellations = [];
+	installNativeBridge({
+		supportsRequestCancellation: () => true,
+		request: async () => ({ status: 200, contentType: 'application/json', body: '{}' }),
+		cancelRequest: async (input) => { cancellations.push(input); }
+	}, 'android');
+	context.after(() => installNativeBridge(null));
+	const response = await requestApi('/api/state', { method: 'GET', signal: controller.signal });
+	controller.abort();
+	assert.equal(response.status, 200);
+	assert.deepEqual(cancellations, []);
+});
+
+test('solo los POST de navegación allowlisted reciben cancelación; una mutación conserva su espera', async (context) => {
+	const controllers = [new AbortController(), new AbortController()];
+	const inputs = [], cancellations = [], resolvers = [];
+	installNativeBridge({
+		supportsRequestCancellation: () => true,
+		request: (input) => { inputs.push(input); return new Promise(resolve => { resolvers.push(resolve); }); },
+		cancelRequest: async (input) => { cancellations.push(input); }
+	}, 'ios');
+	context.after(() => installNativeBridge(null));
+	const query = requestApi('/api/navigation/places', { method: 'POST', body: '{}', signal: controllers[0].signal });
+	await new Promise(resolve => setImmediate(resolve));
+	assert.match(inputs[0].request_id, /^[0-9a-f-]{36}$/);
+	controllers[0].abort();
+	await assert.rejects(query, error => error instanceof DOMException && error.name === 'AbortError');
+	assert.deepEqual(cancellations, [{ request_id: inputs[0].request_id }]);
+
+	let mutationSettled = false;
+	const mutation = requestApi('/api/charges', { method: 'POST', body: '{"request_id":"synthetic"}', signal: controllers[1].signal })
+		.then(value => { mutationSettled = true; return value; });
+	await new Promise(resolve => setImmediate(resolve));
+	assert.equal('request_id' in inputs[1], false);
+	controllers[1].abort();
+	await new Promise(resolve => setImmediate(resolve));
+	assert.equal(mutationSettled, false);
+	assert.equal(cancellations.length, 1);
+	resolvers[1]({ status: 200, contentType: 'application/json', body: '{}' });
+	assert.equal((await mutation).status, 200);
 });

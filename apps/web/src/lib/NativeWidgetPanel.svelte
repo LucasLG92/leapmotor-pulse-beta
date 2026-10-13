@@ -4,7 +4,8 @@
 	import { getNativeBridge, getNativePlatform, type NativeBridgeStatus } from './native';
 	import type { PageProps } from './types';
 
-	let { online, revision, confirmAction, drafts }: {
+	let { active = true, online, revision, confirmAction, drafts }: {
+		active?: boolean;
 		online: boolean;
 		revision: number;
 		confirmAction: (title: string, message: string, confirmLabel?: string) => Promise<boolean>;
@@ -51,11 +52,12 @@
 	$effect(() => {
 		void revision;
 		if (!online) clearCode();
+		if (!active) { requestId++; loading = false; return; }
 		void refreshStatus();
 	});
 
 	async function refreshStatus() {
-		if (!bridge || disposed) return;
+		if (!bridge || disposed || !active) return;
 		const current = ++requestId;
 		loading = true;
 		statusError = '';

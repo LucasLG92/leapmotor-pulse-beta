@@ -96,3 +96,13 @@ jobs:
             exit 1
           fi
           trap - EXIT
+
+      - name: Install isolated browser test runtime
+        working-directory: apps/web
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Exercise UI flows against a disposable local server
+        working-directory: apps/web
+        env:
+          PULSE_E2E_PYTHON: python
+        run: pnpm test:e2e

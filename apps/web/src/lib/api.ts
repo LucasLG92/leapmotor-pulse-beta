@@ -13,6 +13,34 @@ export class ApiError extends Error {
 	}
 }
 
+function isCancellableNativeRead(method: string, path: string): boolean {
+	return method === 'GET' || (method === 'POST'
+		&& ['/api/navigation/places', '/api/navigation/chargers', '/api/navigation/tiles'].includes(path));
+}
+
+function waitForNativeRead<T>(operation: Promise<T>, signal: AbortSignal,
+	onAbort?: () => void): Promise<T> {
+	return new Promise<T>((resolve, reject) => {
+		let settled = false;
+		const finish = (action: () => void) => {
+			if (settled) return;
+			settled = true;
+			signal.removeEventListener('abort', abort);
+			action();
+		};
+		const abort = () => finish(() => {
+			try { onAbort?.(); } catch { /* La cancelación física es best-effort; el deadline local siempre termina. */ }
+			reject(signal.reason ?? new DOMException('La solicitud se canceló.', 'AbortError'));
+		});
+		signal.addEventListener('abort', abort, { once: true });
+		operation.then(
+			(value) => signal.aborted ? abort() : finish(() => resolve(value)),
+			(error) => finish(() => reject(error))
+		);
+		if (signal.aborted) abort();
+	});
+}
+
 export async function getObservedEvents(limit = 20, offset = 0, signal?: AbortSignal): Promise<ObservedEventPage> {
 	const response = await requestApi(`/api/protection/observations?limit=${limit}&offset=${offset}`, {
 		method: 'GET', credentials: 'same-origin', cache: 'no-store',
@@ -59,18 +87,21 @@ export async function requestApi(path: string, init: RequestInit): Promise<Respo
 		const body = typeof init.body === 'string' ? init.body : undefined;
 		const signal = init.signal;
 		try {
-			if (signal?.aborted) throw new DOMException('La solicitud se canceló.', 'AbortError');
-			const request = bridge.request({ path, method, ...(body === undefined ? {} : { body }) });
+			if (signal?.aborted) throw signal.reason ?? new DOMException('La solicitud se canceló.', 'AbortError');
+			const cancellableRead = isCancellableNativeRead(method, path);
+			let supportsRequestCancellation = false;
+			try { supportsRequestCancellation = bridge.supportsRequestCancellation?.() === true; } catch { /* Cliente antiguo: espera local. */ }
+			const requestId = signal && cancellableRead && supportsRequestCancellation
+				&& typeof bridge.cancelRequest === 'function'
+				? globalThis.crypto?.randomUUID?.() : undefined;
+			const request = bridge.request({ path, method, ...(body === undefined ? {} : { body }),
+				...(requestId ? { request_id: requestId } : {}) });
 			let result;
-			const cancellableRead = method === 'GET' || (method === 'POST' &&
-				['/api/navigation/places', '/api/navigation/chargers', '/api/navigation/tiles'].includes(path));
 			if (signal && cancellableRead) {
-				result = await new Promise<Awaited<typeof request>>((resolve, reject) => {
-					const abort = () => reject(new DOMException('La solicitud se canceló.', 'AbortError'));
-					signal.addEventListener('abort', abort, { once: true });
-					if (signal.aborted) abort();
-					request.then(resolve, reject).finally(() => signal.removeEventListener('abort', abort));
-				});
+				const cancelTransport = requestId && bridge.cancelRequest
+					? () => { void bridge.cancelRequest!({ request_id: requestId }).catch(() => undefined); }
+					: undefined;
+				result = await waitForNativeRead(request, signal, cancelTransport);
 			} else {
 				result = await request;
 			}
@@ -79,6 +110,7 @@ export async function requestApi(path: string, init: RequestInit): Promise<Respo
 				headers: result.contentType ? { 'Content-Type': result.contentType } : undefined
 			});
 		} catch (error) {
+			if (signal?.aborted) throw signal.reason ?? new DOMException('La solicitud se canceló.', 'AbortError');
 			if (error instanceof DOMException && error.name === 'AbortError') throw error;
 			throw new ApiError(nativeRequestFailureMessage(error), 0);
 		}
@@ -217,23 +249,25 @@ export async function getChargerPricingHistory(sessionId: string, limit = 10, of
 	return responseJson<ChargerPricingHistoryPage>(response);
 }
 
-export async function getCommandHistory(): Promise<CommandHistoryEntry[]> {
+export async function getCommandHistory(signal?: AbortSignal): Promise<CommandHistoryEntry[]> {
 	const response = await requestApi('/api/commands/history', {
 		method: 'GET',
 		credentials: 'same-origin',
 		cache: 'no-store',
-		headers: { Accept: 'application/json' }
+		headers: { Accept: 'application/json' },
+		signal
 	});
 	const value = await responseJson<CommandHistoryResponse>(response);
 	return value.items;
 }
 
-export async function getWidgetProfiles(): Promise<WidgetProfileList['items']> {
+export async function getWidgetProfiles(signal?: AbortSignal): Promise<WidgetProfileList['items']> {
 	const response = await requestApi('/api/widget-profiles', {
 		method: 'GET',
 		credentials: 'same-origin',
 		cache: 'no-store',
-		headers: { Accept: 'application/json' }
+		headers: { Accept: 'application/json' },
+		signal
 	});
 	const value = await responseJson<WidgetProfileList>(response);
 	return value.items;

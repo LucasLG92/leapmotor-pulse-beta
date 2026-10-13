@@ -8,8 +8,8 @@
 	import { convertJourneyBasis, emptyJourneyForm, journeyQuantityInput, localJourneyTime, validateJourneyForm, type JourneyForm } from './manual-journey-form';
 	import type { ManualJourney, ManualJourneyCreationRequest, ManualJourneyPage, ManualJourneyReport, PageProps } from './types';
 
-	let { busy, online, revision, drafts, mutate, reserveJourneyCreation, confirmAction, onSessionExpired }:
-		Pick<PageProps, 'busy' | 'online' | 'revision' | 'drafts' | 'mutate' | 'reserveJourneyCreation' | 'confirmAction' | 'onSessionExpired'> = $props();
+	let { active = true, busy, online, revision, drafts, mutate, reserveJourneyCreation, confirmAction, onSessionExpired }:
+		{ active?: boolean } & Pick<PageProps, 'busy' | 'online' | 'revision' | 'drafts' | 'mutate' | 'reserveJourneyCreation' | 'confirmAction' | 'onSessionExpired'> = $props();
 	let page = $state<ManualJourneyPage | null>(null);
 	let report = $state<ManualJourneyReport | null>(null);
 	let reportRevision = $state<number | null>(null);
@@ -53,27 +53,29 @@
 
 	onMount(() => {
 		mounted = true;
-		observedReadKey = `${revision}:${online}:${offset}:${days}:${appliedTag}:${appliedSearch}`;
+		observedReadKey = `${active}:${revision}:${online}:${offset}:${days}:${appliedTag}:${appliedSearch}`;
 		void load();
 		return drafts.register('journey', dirty, () => sent);
 	});
 	onDestroy(() => { mounted = false; readGeneration++; editGeneration++; reads?.abort(); });
 	$effect(() => {
-		const key = { revision, online, offset, days, appliedTag, appliedSearch };
+		const key = { active, revision, online, offset, days, appliedTag, appliedSearch };
 		untrack(() => {
 			if (!mounted) return;
-			const readKey = `${key.revision}:${key.online}:${key.offset}:${key.days}:${key.appliedTag}:${key.appliedSearch}`;
+			const readKey = `${key.active}:${key.revision}:${key.online}:${key.offset}:${key.days}:${key.appliedTag}:${key.appliedSearch}`;
 			if (readKey === observedReadKey) return;
 			observedReadKey = readKey;
 			if (!key.online) {
 				readGeneration++; reads?.abort(); page = null; report = null; reportRevision = null; loading = false;
 				readError = 'Sin conexión. El diario se consulta en el servidor y no se guarda en este dispositivo.';
+			} else if (!key.active) {
+				readGeneration++; reads?.abort(); loading = false;
 			} else void load();
 		});
 	});
 
 	async function load() {
-		if (!mounted || !online) return;
+		if (!mounted || !online || !active) return;
 		const request = ++readGeneration;
 		const currentOffset = offset, currentDays = days, currentRevision = revision;
 		const currentFilters = { ...(appliedTag ? { tag: appliedTag } : {}), ...(appliedSearch ? { search: appliedSearch } : {}) };

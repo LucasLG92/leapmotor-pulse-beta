@@ -35,6 +35,15 @@ public final class NativeApiPolicy {
         return "GET".equals(method) && "/api/events".equals(rawPath);
     }
 
+    /** Reads may be cancelled; navigation POSTs are queries despite their HTTP method. */
+    public static boolean isCancellableRead(String rawPath, String method) {
+        if ("GET".equals(method)) return allows(rawPath, method);
+        return "POST".equals(method) && allows(rawPath, method)
+                && ("/api/navigation/places".equals(rawPath)
+                || "/api/navigation/chargers".equals(rawPath)
+                || "/api/navigation/tiles".equals(rawPath));
+    }
+
     private static boolean validate(String rawPath, String method) {
         if (rawPath == null || method == null || rawPath.length() > 2048
                 || !method.equals(method.toUpperCase(Locale.ROOT))

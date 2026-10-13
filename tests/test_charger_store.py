@@ -1,6 +1,7 @@
 """Persistence tests for normalized evcc data; no evcc endpoint is contacted."""
 
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 import copy
 import json
@@ -161,6 +162,28 @@ def test_observation_and_sessions_persist_dedupe_and_accept_newer_corrections(tm
     assert store.charger_sessions(other_scope)["items"][0]["kwh"] == 4.0
 
 
+def test_ingest_compares_only_submitted_session_rows(tmp_path, monkeypatch):
+    store = make_store(tmp_path)
+    statements = []
+    transaction = store._transaction
+
+    @contextmanager
+    def traced_transaction():
+        with transaction() as connection:
+            connection.set_trace_callback(statements.append)
+            yield connection
+
+    monkeypatch.setattr(store, "_transaction", traced_transaction)
+    assert store.ingest_charger(scope(), sessions=[session()]) == {"changed": True}
+
+    session_reads = [
+        statement for statement in statements
+        if statement.lstrip().upper().startswith("SELECT * FROM CHARGER_SESSIONS")
+    ]
+    assert len(session_reads) == 2
+    assert all("WHERE ID =" in statement.upper() for statement in session_reads)
+
+
 def test_session_id_normalizes_equivalent_utc_instants_and_precision():
     utc = canonical_session_id(scope(), 42, "2026-10-08T12:00:00Z", "Garage")
     offset = canonical_session_id(scope(), 42, "2026-10-08T14:00:00+02:00", "Garage")
@@ -305,6 +328,14 @@ def test_scope_and_batch_limits_and_global_retention(tmp_path):
         ))
     # Use one existing scope so this checks the session quota, not the scope cap.
     store.ingest_charger(scope(), sessions=batch)
+    discarded = session(
+        1_002,
+        started_at="2026-10-08T12:00:00Z",
+        ended_at="2026-10-08T12:01:00Z",
+        active_seconds=30,
+    )
+    assert store.ingest_charger(scope(), sessions=[discarded]) == {"changed": False}
+
     newest = session(
         1_001,
         started_at="2026-10-08T14:58:59Z",
@@ -312,7 +343,7 @@ def test_scope_and_batch_limits_and_global_retention(tmp_path):
         active_seconds=30,
         received_at="2026-10-08T14:59:00Z",
     )
-    store.ingest_charger(scope(), sessions=[newest])
+    assert store.ingest_charger(scope(), sessions=[newest]) == {"changed": True}
     all_ids = set()
     for offset in range(0, MAX_CHARGER_SESSIONS, 100):
         all_ids.update(item["id"] for item in store.charger_sessions(
