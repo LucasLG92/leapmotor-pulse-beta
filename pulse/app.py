@@ -21,7 +21,7 @@ from pulse import __version__
 from pulse.auth import Sessions, build_oidc, register_auth
 from pulse.config import Config
 from pulse.collector import Collector, quality
-from pulse.contracts import (ChargePage, ChargeQuote, ChargerStatus, ChargerSessionPage, CommandHistory, EnergyAnalytics, StateResponse, TelemetryPage, TelemetryResponse, WidgetProfileList,
+from pulse.contracts import (ChargeCreationRequest, ChargePage, ChargeQuote, ChargerStatus, ChargerSessionPage, CommandHistory, EnergyAnalytics, StateResponse, TelemetryPage, TelemetryResponse, WidgetProfileList,
                              WidgetProfileResult)
 from pulse.coordinator import Coordinator
 from pulse.domain import DomainError
@@ -85,6 +85,7 @@ class ChargePayload(Payload):
     kwh: float = Field(gt=0, le=500)
     ended_at: str | None = Field(default=None, max_length=64)
     pricing_method: Literal["manual", "pvpc"] | None = None
+    request_id: str = Field(default=None, pattern=r"^[0-9a-f]{32}$", min_length=32, max_length=32)
 
 
 class ChargeEditPayload(Payload):
@@ -406,17 +407,48 @@ def create_app(db_path: str | Path | None = None, *, name: str | None = None,
     @app.post("/api/charges/quote", response_model=ChargeQuote)
     async def quote(values: ChargePayload):
         data = values.model_dump(exclude_unset=True)
+        if "request_id" in data:
+            raise DomainError("La vista previa no admite metadatos de creación.")
         if data.get("pricing_method") not in (None, "pvpc"):
             raise DomainError("La vista previa por tramos requiere PVPC.")
         return await electricity.quote(data)
 
+    @app.post("/api/charges/requests", response_model=ChargeCreationRequest)
+    async def reserve_charge_creation(request: Request, values: Payload):
+        return await coordinator.call(
+            "reserve_charge_creation", owner_id(request)
+        )
+
     @app.post("/api/charges")
-    async def charge(values: ChargePayload):
+    async def charge(request: Request, values: ChargePayload):
         data = values.model_dump(exclude_unset=True)
+        request_id_supplied = "request_id" in data
+        request_id = data.pop("request_id", None)
+        if request_id_supplied and request_id is None:
+            raise DomainError("request_id debe ser una solicitud reservada.", 422)
+        owner = None
+        request_attempt = None
+        if request_id is not None:
+            owner = owner_id(request)
+            request_attempt = dict(data)
+            preflight = await coordinator.call(
+                "preflight_charge_creation", owner, request_id, request_attempt
+            )
+            if preflight["charge"] is not None:
+                return {"ok": True, "charge": preflight["charge"]}
         settings = await coordinator.call("get_settings")
         data.setdefault("pricing_method", settings["pricing_method"])
         snapshot = await electricity.quote(data) if data["pricing_method"] == "pvpc" else None
-        result = await coordinator.call("add_charge", data, pricing_snapshot=snapshot, write=True)
+        if request_id is None:
+            result = await coordinator.call(
+                "add_charge", data, pricing_snapshot=snapshot, write=True
+            )
+        else:
+            result = await coordinator.call(
+                "add_charge", data, pricing_snapshot=snapshot,
+                request_id=request_id, owner_id=owner,
+                request_attempt=request_attempt, write=True,
+            )
         return {"ok": True, "charge": result}
 
     @app.put("/api/charges/{item_id}")

@@ -464,6 +464,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/charges/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reserve Charge Creation */
+        post: operations["reserve_charge_creation_api_charges_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/charges/{item_id}": {
         parameters: {
             query?: never;
@@ -941,6 +958,13 @@ export interface components {
             /** Effective Tariff Eur Kwh */
             effective_tariff_eur_kwh: number | null;
         };
+        /** ChargeCreationRequest */
+        ChargeCreationRequest: {
+            /** Id */
+            id: string;
+            /** Expires At */
+            expires_at: string;
+        };
         /** ChargeEditPayload */
         ChargeEditPayload: {
             /** Started At */
@@ -975,6 +999,8 @@ export interface components {
             ended_at?: string | null;
             /** Pricing Method */
             pricing_method?: ("manual" | "pvpc") | null;
+            /** Request Id */
+            request_id?: string;
         };
         /** ChargeQuote */
         ChargeQuote: {
@@ -3071,6 +3097,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChargeQuote"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reserve_charge_creation_api_charges_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Payload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChargeCreationRequest"];
                 };
             };
             /** @description Validation Error */

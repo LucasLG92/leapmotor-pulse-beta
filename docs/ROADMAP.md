@@ -73,6 +73,9 @@ Este incremento sigue siendo un candidato local, documentado en [PHASE3-QUALIFIC
 
 ### 4. Cargas y energía
 
+- [x] Reservar altas manuales por propietario, persistir intención/carga atómicamente y reintentar sin duplicar; conflictos, caducidad, restore y fallo de respuesta comprobados localmente. La UI conserva el borrador y reconoce guardados sin confirmar al salir. SQLite19/JSON15; compatibilidad sin reserva no ofrece deduplicación. [Cualificación](CHARGE-SAVE-QUALIFICATION.json).
+
+
 - [ ] Conectar el cargador real y contrastar inicio, fin, pausas, reanudaciones y kWh.
 - [ ] Implementar el adaptador concreto de intervalos vinculado inequívocamente a la sesión; evitar duplicados y conservar huecos.
 - [ ] Reconciliar sesiones y precios pendientes, PVPC histórico y revisiones de coste.

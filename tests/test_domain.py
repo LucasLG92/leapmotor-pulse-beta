@@ -305,6 +305,7 @@ def test_schema_v2_migrates_additively_and_preserves_existing_data(tmp_path, mon
         connection.execute("DROP TABLE IF EXISTS charger_energy_intervals")
         connection.execute("DROP TABLE IF EXISTS charger_energy_epochs")
         connection.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
+        connection.execute("DROP TABLE IF EXISTS manual_charge_requests")
         connection.execute("PRAGMA user_version = 2")
         connection.execute(
             "INSERT INTO demo_command_journal VALUES (?, 'unlock', 'simulated', ?, ?)",
@@ -364,6 +365,7 @@ def test_schema_v3_migrates_charge_pricing_and_preserves_indexes(tmp_path, monke
         connection.execute("DROP TABLE IF EXISTS charger_energy_intervals")
         connection.execute("DROP TABLE IF EXISTS charger_energy_epochs")
         connection.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
+        connection.execute("DROP TABLE IF EXISTS manual_charge_requests")
         connection.execute("PRAGMA user_version = 3")
         connection.execute(
             """INSERT INTO manual_charges
@@ -434,6 +436,7 @@ def test_schema_v5_migrates_to_v6_without_changing_existing_records(tmp_path):
         connection.execute("DROP TABLE charger_sessions")
         connection.execute("DROP TABLE charger_observations")
         connection.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
+        connection.execute("DROP TABLE IF EXISTS manual_charge_requests")
         connection.execute("PRAGMA user_version = 5")
 
     migrated = Store(path)
@@ -482,7 +485,7 @@ def test_json_archive_v6_and_import_preserves_private_push_rows(tmp_path):
         expiry.isoformat(),
     )
     archive = store.export_data()
-    assert SCHEMA_VERSION == 18
+    assert SCHEMA_VERSION == 19
     assert archive["schema_version"] == EXPORT_VERSION == 15
     assert archive["charger_energy"] == {"epochs": [], "intervals": []}
     assert "push_subscriptions" not in archive
@@ -509,10 +512,11 @@ def test_schema_v11_migration_preserves_existing_charge_costs(tmp_path):
         connection.execute("DROP TABLE charger_energy_intervals")
         connection.execute("DROP TABLE charger_energy_epochs")
         connection.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
+        connection.execute("DROP TABLE IF EXISTS manual_charge_requests")
         connection.execute("PRAGMA user_version = 11")
 
     migrated = Store(path)
-    assert SCHEMA_VERSION == 18
+    assert SCHEMA_VERSION == 19
     restored = migrated.get_charge(charge["id"])
     assert restored["cost_eur"] == 1.61
     assert restored["tariff_eur_kwh"] == 0.23

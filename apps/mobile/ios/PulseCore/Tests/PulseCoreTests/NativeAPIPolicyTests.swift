@@ -50,6 +50,15 @@ final class NativeAPIPolicyTests: XCTestCase {
         XCTAssertTrue(NativeAPIPolicy.allowsEvents(path: "/api/events", method: "GET"))
     }
 
+    func testChargeRequestReservationAllowsOnlyExactPostRoute() {
+        XCTAssertTrue(NativeAPIPolicy.allows(path: "/api/charges/requests", method: "POST"))
+        for method in ["GET", "PUT", "DELETE"] {
+            XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/charges/requests", method: method))
+        }
+        XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/charges/requests/extra", method: "POST"))
+        XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/charges/requests?source=1", method: "POST"))
+    }
+
     func testPricingHistoryRequiresExactSessionAndBoundedReadOnlyPage() {
         let route = "/api/charger/pricing-history?session_id=\(id)"
         XCTAssertTrue(NativeAPIPolicy.allows(path: route, method: "GET"))

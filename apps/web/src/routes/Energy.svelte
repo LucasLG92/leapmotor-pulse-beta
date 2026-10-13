@@ -4,7 +4,7 @@
 	import ChargerPanel from '../lib/ChargerPanel.svelte';
 	import Glyph from '../lib/Glyph.svelte';
 	import { count, dateTime, euros, localDateTimeValue, number } from '../lib/format';
-	import type { ChargeQuote, ChargeQuotePayload, ChargeSession, EnergyAnalytics, PageProps, PricingMethod } from '../lib/types';
+	import type { ChargeCreationRequest, ChargeQuote, ChargeQuotePayload, ChargeSession, EnergyAnalytics, PageProps, PricingMethod } from '../lib/types';
 	type AnalyticsDays = 30 | 90 | 365;
 	const analyticsRanges: AnalyticsDays[] = [30, 90, 365];
 	const analyticsSources = [
@@ -15,7 +15,7 @@
 	type OriginalLocalInstant = { localValue: string; occurrence: number; instant: string };
 	type ChargeErrorField = 'startedAt' | 'endedAt' | 'kwh' | 'tariff';
 
-	let { drafts, pulseState, busy, online, revision, mutate, quoteCharge, confirmAction, toast, onSessionExpired }: PageProps = $props();
+	let { drafts, pulseState, busy, online, revision, mutate, quoteCharge, reserveChargeCreation, confirmAction, toast, onSessionExpired }: PageProps = $props();
 	const pageSize = 20;
 	let charges = $state<ChargeSession[]>([]);
 	let total = $state(0);
@@ -52,6 +52,9 @@
 	let quoteRequestKey = $state('');
 	let quoteBusy = $state(false);
 	let savingCharge = $state(false);
+	let creationRequest: ChargeCreationRequest | null = $state(null);
+	let creationAttempt = '';
+	let creationSent = $state(false);
 	let quoteRequest = 0;
 	let loadPageRequest = 0;
 	let editSwitchGeneration = 0;
@@ -226,7 +229,7 @@
 
 	onMount(() => {
 		mounted = true;
-		const unregisterDraft = drafts.register('charge', isChargeDirty);
+		const unregisterDraft = drafts.register('charge', isChargeDirty, () => creationSent);
 		personalDataReady = true;
 		return () => {
 			mounted = false;
@@ -257,7 +260,7 @@
 	}
 
 	function isChargeDirty(): boolean {
-		return chargeFormFingerprint() !== chargeBaseline;
+		return creationSent || chargeFormFingerprint() !== chargeBaseline;
 	}
 
 	function setChargeFieldError(field: ChargeErrorField, message: string, focus = true): null {
@@ -361,12 +364,15 @@
 			const draftAtConfirmation = chargeFormFingerprint();
 			const accepted = await confirmAction(
 				'Descartar cambios de carga',
-				'Se descartarán los cambios sin guardar del formulario actual para editar otra carga.',
+				creationSent
+					? 'El guardado anterior podría haberse completado. Revisa el historial antes de continuar. Se descartará este formulario para editar otra carga.'
+					: 'Se descartarán los cambios sin guardar del formulario actual para editar otra carga.',
 				'Descartar y editar'
 			);
 			if (!accepted || !mounted || generation !== editSwitchGeneration || busy || savingCharge || draftAtConfirmation !== chargeFormFingerprint()) return;
 		}
 		if (!mounted || generation !== editSwitchGeneration || busy || savingCharge) return;
+		clearCreationAttempt();
 		editing = item;
 		startedAt = localDateTimeValue(item.started_at);
 		startOccurrence = occurrenceForInstant(startedAt, item.started_at);
@@ -387,6 +393,7 @@
 	}
 
 	function cancelEdit() {
+		clearCreationAttempt();
 		editing = null;
 		startedAt = localDateTimeValue();
 		startOccurrence = 0;
@@ -401,6 +408,24 @@
 		saveError = '';
 		clearQuote();
 		chargeBaseline = chargeFormFingerprint();
+	}
+
+	function clearCreationAttempt() {
+		creationRequest = null;
+		creationAttempt = '';
+		creationSent = false;
+	}
+
+	async function discardUnconfirmedCharge() {
+		if (busy || savingCharge || !creationSent) return;
+		const requestId = creationRequest?.id;
+		const draft = chargeFormFingerprint();
+		const accepted = await confirmAction('Descartar formulario de carga',
+			'El guardado anterior podría haberse completado. Revisa el historial antes de crear otra carga. Se borrarán los datos del formulario.',
+			'Descartar formulario');
+		if (!accepted || !mounted || busy || savingCharge || requestId !== creationRequest?.id
+			|| draft !== chargeFormFingerprint()) return;
+		cancelEdit();
 	}
 
 	function clearQuote() {
@@ -511,17 +536,6 @@
 			return;
 		}
 		if (!mounted || busy || savingCharge) return;
-		savingCharge = true;
-		quoteError = '';
-		saveError = '';
-		if (chargePricingMethod === 'pvpc' && (!pvpcQuote || quoteFingerprint !== values.fingerprint)) {
-			const quote = await requestQuote(values);
-			if (!mounted) return;
-			if (!quote) {
-				savingCharge = false;
-				return;
-			}
-		}
 		const payload = {
 			started_at: values.startedIso,
 			kwh: values.energy,
@@ -529,11 +543,46 @@
 			...(editing ? { ended_at: values.endedIso } : values.endedIso ? { ended_at: values.endedIso } : {}),
 			...(editing && chargePricingMethod === 'manual' ? { tariff_eur_kwh: appliedTariff } : {})
 		};
+		const attempt = JSON.stringify(payload);
+		if (!editing && creationSent && attempt !== creationAttempt) {
+			saveError = 'No está confirmado el guardado anterior. Revisa el historial antes de iniciar otra carga o vuelve a los datos anteriores para reintentarla.';
+			return;
+		}
+		const draft = chargeFormFingerprint();
+		const editingId = editing?.id;
 		const path = editing ? `/api/charges/${encodeURIComponent(editing.id)}` : '/api/charges';
 		const previousOffset = offset;
-		if (!editing) offset = 0;
+		savingCharge = true;
+		quoteError = '';
+		saveError = '';
 		try {
-			const saved = await mutate(path, editing ? 'PUT' : 'POST', payload, editing ? 'La carga se ha actualizado.' : 'La carga se ha guardado.');
+			// A retry of an uncertain creation must reach the server's stored result,
+			// even if obtaining a new PVPC preview is currently unavailable.
+			if (chargePricingMethod === 'pvpc' && !creationSent && (!pvpcQuote || quoteFingerprint !== values.fingerprint)) {
+				const quote = await requestQuote(values);
+				if (!mounted || !quote) return;
+			}
+			if (!editingId && !creationRequest) {
+				const reservation = await reserveChargeCreation();
+				if (!mounted) return;
+				if (draft !== chargeFormFingerprint()) {
+					saveError = 'Los datos cambiaron mientras se preparaba el guardado. Revisa el formulario y vuelve a guardarlo.';
+					return;
+				}
+				creationRequest = reservation;
+				creationAttempt = attempt;
+			}
+			if (!mounted) return;
+			if (draft !== chargeFormFingerprint() || editingId !== editing?.id) {
+				saveError = 'Los datos cambiaron mientras se preparaba el guardado. Revisa el formulario y vuelve a guardarlo.';
+				return;
+			}
+			if (!editingId) {
+				creationSent = true;
+				offset = 0;
+			}
+			const data = editingId ? payload : { ...payload, request_id: creationRequest!.id };
+			const saved = await mutate(path, editingId ? 'PUT' : 'POST', data, editingId ? 'La carga se ha actualizado.' : 'La carga se ha guardado.');
 			if (!mounted) return;
 			if (saved) cancelEdit();
 			else {
@@ -542,7 +591,9 @@
 			}
 		} catch {
 			if (!mounted) return;
-			saveError = 'No se ha podido confirmar el guardado. El formulario sigue intacto. Revisa el historial antes de reintentarlo.';
+			saveError = !editingId && !creationSent
+				? 'No se pudo preparar el guardado. No se envió la carga. El formulario sigue intacto; vuelve a intentarlo cuando haya conexión.'
+				: 'No se ha podido confirmar el guardado. El formulario sigue intacto. Revisa el historial antes de reintentarlo.';
 			offset = previousOffset;
 		} finally {
 			if (mounted) {
@@ -834,7 +885,7 @@
 					</section>
 				{/if}
 			{/if}
-			<div class="form-actions"><button class="button button-primary button-block" type="submit" disabled={busy || savingCharge || quoteBusy || !online}>{savingCharge ? 'Guardando…' : quoteBusy ? 'Calculando…' : busy ? 'Un momento…' : editing ? 'Guardar cambios' : 'Añadir carga'}</button>{#if editing}<button class="button button-quiet button-block" type="button" disabled={busy || savingCharge} onclick={cancelEdit}>Cancelar edición</button>{/if}</div>
+			<div class="form-actions"><button class="button button-primary button-block" type="submit" disabled={busy || savingCharge || quoteBusy || !online}>{savingCharge ? 'Guardando…' : quoteBusy ? 'Calculando…' : busy ? 'Un momento…' : editing ? 'Guardar cambios' : 'Añadir carga'}</button>{#if editing}<button class="button button-quiet button-block" type="button" disabled={busy || savingCharge} onclick={cancelEdit}>Cancelar edición</button>{:else if creationSent}<button class="button button-quiet button-block" type="button" disabled={busy || savingCharge} onclick={() => void discardUnconfirmedCharge()}>Descartar formulario</button>{/if}</div>
 		</form>
 		<div class="notice energy-note"><Glyph name="overview" size={17} /><span>Las cifras describen lo registrado. Pulse no estima consumos ni inventa sesiones ausentes.</span></div>
 	</aside>

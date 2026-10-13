@@ -51,6 +51,15 @@ public final class NativeApiPolicyTest {
         assertTrue(NativeApiPolicy.allowsEvents("/api/events", "GET"));
     }
 
+    @Test public void chargeRequestReservationAllowsOnlyExactPostRoute() {
+        assertTrue(NativeApiPolicy.allows("/api/charges/requests", "POST"));
+        for (String method : new String[]{"GET", "PUT", "DELETE"}) {
+            assertFalse(NativeApiPolicy.allows("/api/charges/requests", method));
+        }
+        assertFalse(NativeApiPolicy.allows("/api/charges/requests/extra", "POST"));
+        assertFalse(NativeApiPolicy.allows("/api/charges/requests?source=1", "POST"));
+    }
+
     @Test public void pricingHistoryIsPrivateReadOnlyWithAnExactSessionAndBoundedPage() {
         String route = "/api/charger/pricing-history?session_id=" + ID;
         assertTrue(NativeApiPolicy.allows(route, "GET"));

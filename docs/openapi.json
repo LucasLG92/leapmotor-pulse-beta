@@ -940,6 +940,44 @@
         }
       }
     },
+    "/api/charges/requests": {
+      "post": {
+        "summary": "Reserve Charge Creation",
+        "operationId": "reserve_charge_creation_api_charges_requests_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChargeCreationRequest"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/charges/{item_id}": {
       "put": {
         "summary": "Edit Charge",
@@ -2219,6 +2257,27 @@
         ],
         "title": "ChargeAggregate"
       },
+      "ChargeCreationRequest": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 32,
+            "pattern": "^[0-9a-f]{32}$",
+            "title": "Id"
+          },
+          "expires_at": {
+            "type": "string",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "expires_at"
+        ],
+        "title": "ChargeCreationRequest"
+      },
       "ChargeEditPayload": {
         "properties": {
           "started_at": {
@@ -2361,6 +2420,13 @@
               }
             ],
             "title": "Pricing Method"
+          },
+          "request_id": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 32,
+            "pattern": "^[0-9a-f]{32}$",
+            "title": "Request Id"
           }
         },
         "additionalProperties": false,

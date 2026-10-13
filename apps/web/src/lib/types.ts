@@ -18,7 +18,8 @@ export type ChargerSessionPage = components['schemas']['ChargerSessionPage'];
 export type ChargerPricingEvent = components['schemas']['ChargerPricingEvent'];
 export type ChargerPricingHistoryPage = components['schemas']['ChargerPricingHistoryPage'];
 export type ChargePayload = components['schemas']['ChargePayload'];
-export type ChargeQuotePayload = Omit<ChargePayload, 'pricing_method' | 'ended_at'> & {
+export type ChargeCreationRequest = components['schemas']['ChargeCreationRequest'];
+export type ChargeQuotePayload = Omit<ChargePayload, 'pricing_method' | 'ended_at' | 'request_id'> & {
 	ended_at: string;
 	pricing_method: 'pvpc';
 };
@@ -99,6 +100,7 @@ export interface PageProps {
 	canInstall: boolean;
 	mutate: (path: string, method: HttpMethod, data?: MutationPayload, success?: string) => Promise<boolean>;
 	quoteCharge: (payload: ChargeQuotePayload) => Promise<ChargeQuote>;
+	reserveChargeCreation: () => Promise<ChargeCreationRequest>;
 	onSessionExpired: () => void;
 	navigation: {
 		status: (signal?: AbortSignal) => Promise<NavigationStatus>;

@@ -1,6 +1,6 @@
 # Contrato HTTP Pulse 0.1
 
-El candidato local de fase 3 usa SQLite 16 y exporta JSON 14. `Vehicle` y `TelemetryValues` incorporan temperaturas interior/mínima de batería (°C) y cuatro presiones de neumáticos (kPa), nullable y con fuentes permitidas. Se conserva la separación de fechas y la caducidad del estado actual. JSON 1–13 restaura las magnitudes nuevas a `null`. [Contrato y recuperación](TELEMETRY.md). Las notas de apariencia y V42 siguientes describen incrementos anteriores.
+La fuente actual usa SQLite 19 y exporta JSON 15. La migración 18→19 añade únicamente el ledger operativo de solicitudes manuales, excluido del JSON. Los recibos de fases anteriores conservan sus versiones históricas. El incremento de telemetría de fase 3 utilizó SQLite 16/JSON 14. `Vehicle` y `TelemetryValues` incorporan temperaturas interior/mínima de batería (°C) y cuatro presiones de neumáticos (kPa), nullable y con fuentes permitidas. Se conserva la separación de fechas y la caducidad del estado actual. JSON 1–13 restaura las magnitudes nuevas a `null`. [Contrato y recuperación](TELEMETRY.md). Las notas de apariencia y V42 siguientes describen incrementos anteriores.
 
 Actualización de apariencia: SQLite15 y JSON13 añaden `settings.vehicle_color`, nullable y limitado a seis colores del B10. Importar JSON1–12 asigna el color a `null`; actualizar ajustes sin ese campo conserva la elección. [Guía](VEHICLE-APPEARANCE.md). Las referencias V42 siguientes documentan el incremento previo.
 
@@ -26,7 +26,8 @@ Toda mutación requiere cookie, `X-Pulse-CSRF` y JSON del mismo origen. Campos d
 | PUT `/api/protection` | `{enabled:bool}`; solo demo. |
 | POST `/api/protection/event` | `{}`; evento ficticio solo en demo. |
 | GET `/api/charges?limit=100&offset=0` | `{items,limit,offset,total}`, máximos 100 por página. |
-| POST `/api/charges` | `{started_at:ISO_con_zona,kwh}`; coste con tarifa actual, conservada por sesión. |
+| POST `/api/charges/requests` | `{}`; reserva `{id,expires_at}` para el propietario autenticado. Sin revisión SSE ni carga nueva. |
+| POST `/api/charges` | `{started_at:ISO_con_zona,kwh,ended_at?:ISO_con_zona,pricing_method?:manual_o_pvpc,request_id?:id_reservado}`; devuelve `{ok:true,charge}`. Coste conservado por carga; reintento con la misma solicitud e intención devuelve la fila existente. |
 | PUT `/api/charges/{id}` | Actualización parcial started_at, kwh, tariff_eur_kwh; solo registros manuales. |
 | DELETE `/api/charges/{id}` | `{}`; solo registros manuales. |
 | POST `/api/maintenance` | `{title,due_date:YYYY-MM-DD}`. |
@@ -40,8 +41,8 @@ Toda mutación requiere cookie, `X-Pulse-CSRF` y JSON del mismo origen. Campos d
 | GET `/api/telemetry/history?limit=100&offset=0` | Snapshots observados separados de demo, máximo100 por página; retención actual1000 por orden local de ingestión. No constituye todavía historial de viajes/energía completo. |
 | GET `/api/charger` | Estado del lector evcc y última observación mínima guardada. Apagado por defecto; nunca inicia una lectura externa. Recepción local y cualificación física explícitas. |
 | GET `/api/charger/sessions?limit=20&offset=0` | `{items,total,limit,offset}` del ámbito seleccionado; solo historial local. Límite1–100, offset0–1000, retención global1000. |
-| GET `/api/export` | JSON formato14, con el color opcional y las nuevas magnitudes de telemetría, historial del cargador y revisiones de cotización; sin permisos/códigos/hashes nativos. Descarga explícita. Perfiles limitados al propietario de sesión, conservando su subject en el archivo para integridad al restaurar. |
-| POST `/api/import` | `{confirmed:true,data:documento}`; acepta formatos1–13, validación íntegra y transacción atómica. Valida documento/propietario/fechas/identidad del cargador antes del backup. Backup e importación son un solo trabajo; poda a cinco copias privadas tras restauración correcta. Rechazos no alteran recuperación ni perfiles ajenos; restaurar perfiles revoca sus dispositivos. Una copia anterior a6 reemplaza el historial del cargador por vacío. |
+| GET `/api/export` | JSON formato15, con color, telemetría, códigos de diagnóstico sin semántica física inferida, historial del cargador y revisiones de cotización; sin permisos/códigos/hashes nativos. Descarga explícita. Perfiles limitados al propietario de sesión, conservando su subject en el archivo para integridad al restaurar. |
+| POST `/api/import` | `{confirmed:true,data:documento}`; acepta formatos1–15, validación íntegra y transacción atómica. Una restauración válida invalida las solicitudes de alta manual; una rechazada las conserva. Valida documento/propietario/fechas/identidad del cargador antes del backup. Backup e importación son un solo trabajo; poda a cinco copias privadas tras restauración correcta. Rechazos no alteran recuperación ni perfiles ajenos; restaurar perfiles revoca sus dispositivos. Una copia anterior a6 reemplaza el historial del cargador por vacío. |
 | GET `/api/events` | SSE `event: state`, `data: {revision:int}`; sin datos personales, heartbeat 15s, máximo 32 suscriptores. Se cierra al caducar/invalidad la sesión. |
 
 Errores esperados: `{detail:mensaje}`, 400/401/403/404/409/410/413/415/422/429/500/503 según el caso. Las vistas no interpretan HTML de login como una respuesta API.
@@ -59,3 +60,12 @@ Los perfiles del editor son configuración, no widgets instalados. Pairings, lis
 `GET /healthz` público solo acredita proceso vivo; `GET /readyz` requiere almacenamiento inicializado y build estático presente. El frontend se sirve desde `apps/web/dist`, incluyendo `/index.html`, `/sw.js`, iconos, manifest y assets con hash. El SW precachea únicamente esos archivos genéricos, nunca API, exportación ni login. Las rutas privadas no están disponibles al reiniciar offline.
 
 Los GET finitos de `/api/` usan NetworkOnly; `/api/events` pasa directamente a la red sin `respondWith`. Antes de solicitar una actualización explícita, la UI cierra SSE y bloquea escrituras, cotizaciones e importaciones concurrentes. Si el controlador no cambia en ocho segundos, recupera la suscripción y permite reintentar. Véase [PWA](PWA.md).
+
+
+## Solicitudes de alta manual (SQLite 19, JSON 15)
+
+El servidor reserva un ID opaco para el propietario de la sesión; el cliente no aporta un propietario. La reserva dura siete días desde su creación y tiene límites de128por propietario y2048globales. Se podan caducadas al reservar; el límite devuelve429 sin retirar reservas vigentes. `request_id` puede omitirse por compatibilidad, pero no puede ser `null`. El alta antigua sin ese campo sigue creando un registro por petición y no ofrece deduplicación. La vista previa `/api/charges/quote` rechaza este metadato.
+
+El servidor normaliza la intención original y guarda su huella junto con el ID de la carga en la misma transacción. Repetir la misma reserva/datos devuelve la fila actual sin volver a cotizar, incluso si después cambió la tarifa o se editó esa carga. Datos distintos, otro propietario, reserva desconocida/caducada o carga eliminada se rechazan sin recrear filas. El ledger conserva el vínculo al reiniciar; no se exporta como parte del JSON. Un import válido lo invalida atómicamente y el alta vuelve a comprobar la reserva tras una cotización pendiente. Esa comprobación impide el commit tardío; no cancela necesariamente una consulta PVPC ya iniciada.
+
+La UI retiene el intento en memoria mientras vive el formulario. Un error después de enviar mantiene el borrador y permite repetir la misma solicitud, sin un nuevo preview PVPC. Modificar los datos tras un resultado incierto exige resolver o descartar ese intento. Salir, editar otra carga o descartar avisa que el guardado podría haberse completado, también después de vaciar campos. No hay replay automático ni almacenamiento de cargas o reservas en el navegador. [Cualificación y límites](CHARGE-SAVE-QUALIFICATION.json).

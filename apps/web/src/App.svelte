@@ -6,7 +6,7 @@
 	import { observeServiceWorkerUpdate } from './lib/pwa-update';
 	import { createStartupAttempt } from './lib/startup-read';
 	import { internalAppPath, preparationSection } from './lib/app-links';
-import type { BackupActionResult, ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, PageProps, PulseState, Route, SessionState, ThemePreference, WebPushSubscriptionInput, WidgetPairingResult, PushDevice, PushTestResult } from './lib/types';
+import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, PageProps, PulseState, Route, SessionState, ThemePreference, WebPushSubscriptionInput, WidgetPairingResult, PushDevice, PushTestResult } from './lib/types';
 	import Glyph from './lib/Glyph.svelte';
 
 	type ViewComponent = Component<PageProps>;
@@ -484,6 +484,25 @@ import type { BackupActionResult, ChargeQuote, ChargeQuotePayload, HttpMethod, M
 		}
 	}
 
+	async function reserveChargeCreation(): Promise<ChargeCreationRequest> {
+		if (updateBusy) throw new Error('Pulse se está actualizando. Espera antes de guardar la carga.');
+		busyCount += 1;
+		try {
+			const result = await mutateApi<ChargeCreationRequest>('/api/charges/requests', 'POST', csrfToken);
+			if (!result || typeof result.id !== 'string' || !/^[a-f0-9]{32}$/.test(result.id)
+				|| typeof result.expires_at !== 'string' || !Number.isFinite(Date.parse(result.expires_at))) {
+				throw new Error('No se pudo preparar el guardado de la carga.');
+			}
+			return result;
+		} catch (error) {
+			if (error instanceof ApiError && error.status === 401) expireSession();
+			throw error;
+		} finally {
+			busyCount = Math.max(0, busyCount - 1);
+			if (!isBusy && eventRefreshPending) scheduleEventRefresh();
+		}
+	}
+
 	async function quoteCharge(payload: ChargeQuotePayload): Promise<ChargeQuote> {
 		if (updateBusy) throw new Error('Pulse se está actualizando. Espera antes de calcular el coste.');
 		busyCount += 1;
@@ -631,6 +650,10 @@ import type { BackupActionResult, ChargeQuote, ChargeQuotePayload, HttpMethod, M
 
 	async function approveDraftExit(title = 'Cambios sin guardar', label = 'Descartar y salir'): Promise<boolean> {
 		if (!drafts.hasDirty()) return true;
+		if (drafts.hasUnconfirmedSave()) {
+			return confirmAction(title === 'Cambios sin guardar' ? 'Guardado sin confirmar' : title,
+				'El guardado anterior podría haberse completado. Revisa el historial antes de continuar. Si sales, se descartará el formulario; puedes cancelar para conservarlo.', label);
+		}
 		return confirmAction(title, 'Hay cambios sin guardar en esta pantalla. Si continúas, se descartarán. Puedes cancelar para seguir editando.', label);
 	}
 
@@ -845,7 +868,9 @@ import type { BackupActionResult, ChargeQuote, ChargeQuotePayload, HttpMethod, M
 			}
 			const confirmed = await confirmAction(
 				'Restaurar una copia',
-				'Esta operación sustituirá los datos actuales de Pulse por el contenido del archivo. El servidor validará la copia antes de aplicarla.' + (drafts.hasDirty() ? ' También se descartarán los cambios sin guardar de esta pantalla.' : ''),
+				'Esta operación sustituirá los datos actuales de Pulse por el contenido del archivo. El servidor validará la copia antes de aplicarla.' + (drafts.hasUnconfirmedSave()
+					? ' También se descartará el formulario de un guardado sin confirmar, que podría haberse completado.'
+					: drafts.hasDirty() ? ' También se descartarán los cambios sin guardar de esta pantalla.' : ''),
 				'Restaurar datos'
 			);
 			if (confirmed) {
@@ -1112,6 +1137,7 @@ import type { BackupActionResult, ChargeQuote, ChargeQuotePayload, HttpMethod, M
 						{canInstall}
 						{mutate}
 						{quoteCharge}
+						{reserveChargeCreation}
 						onSessionExpired={expireSession}
 						navigation={navigationClient}
 						{createWidgetPairing}

@@ -424,15 +424,16 @@ def test_legacy_exports_and_v9_database_migration_start_with_empty_history(tmp_p
         connection.execute("DROP TABLE charger_energy_intervals")
         connection.execute("DROP TABLE charger_energy_epochs")
         connection.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
+        connection.execute("DROP TABLE IF EXISTS manual_charge_requests")
         connection.execute("PRAGMA user_version = 9")
     migrated = Store(path, clock=clock)
-    assert SCHEMA_VERSION == 18
+    assert SCHEMA_VERSION == 19
     assert migrated.telemetry_latest()["id"] != stored["id"]
     assert migrated.observed_events() == {
         "items": [], "total": 0, "limit": 20, "offset": 0,
     }
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 18
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 19
         assert connection.execute(
             "SELECT COUNT(*) FROM telemetry_snapshots"
         ).fetchone()[0] == 2

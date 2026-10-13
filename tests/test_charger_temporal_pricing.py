@@ -113,7 +113,7 @@ def test_temporal_identity_export_and_private_response_fields(tmp_path):
     assert restored.priced_charger_sessions(scope())["items"][0]["pvpc"] == quote
     assert restored.charger_pricing_history(scope(), item["id"])["total"] == 1
     with sqlite3.connect(restored.path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 18
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 19
     for version in (11, 10, 9, 8):
         old = deepcopy(document)
         old["schema_version"] = version
@@ -313,6 +313,7 @@ def test_semantic_migration_preserves_db13_uniform_data(tmp_path):
     with sqlite3.connect(path) as db:
         downgrade_telemetry_to_v15(db)
         db.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
+        db.execute("DROP TABLE IF EXISTS manual_charge_requests")
         db.execute("PRAGMA user_version = 13")
         tables_before = db.execute(
             "SELECT name,sql FROM sqlite_master "
@@ -325,7 +326,7 @@ def test_semantic_migration_preserves_db13_uniform_data(tmp_path):
     assert migrated.export_data() == before
     assert migrated.get_settings()["vehicle_color"] is None
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 18
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 19
         tables_after = db.execute(
             "SELECT name,sql FROM sqlite_master "
             "WHERE name NOT IN ('settings', 'telemetry_snapshots') ORDER BY name"
@@ -341,11 +342,15 @@ def test_semantic_migration_preserves_db13_uniform_data(tmp_path):
         "backup_alert_events",
         "backup_alert_observations",
         "backup_alert_runtime",
+        "manual_charge_requests",
         "idx_backup_alert_deliveries_recent",
         "idx_backup_alert_events_recent",
+        "idx_manual_charge_requests_expiry",
+        "idx_manual_charge_requests_owner_expiry",
         "sqlite_autoindex_backup_alert_deliveries_1",
         "sqlite_autoindex_backup_alert_events_1",
         "sqlite_autoindex_backup_alert_observations_1",
+        "sqlite_autoindex_manual_charge_requests_1",
     }
     assert [
         row for row in tables_after

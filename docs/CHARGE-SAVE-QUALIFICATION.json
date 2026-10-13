@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-13",
+  "increment": "manual-charge-creation-requests",
+  "status": "local_software_verified_delivery_pending",
+  "storage_schema": 19,
+  "export_version": 15,
+  "protocol": {
+    "reservation_method": "POST",
+    "reservation_path": "/api/charges/requests",
+    "body": {},
+    "owner": "trusted authenticated session",
+    "ttl_days": 7,
+    "limits": {
+      "per_owner": 128,
+      "global": 2048
+    },
+    "automatic_replay": false,
+    "browser_persistence": false,
+    "legacy_without_request_id": "compatible; not deduplicated",
+    "successful_replay": "current existing row; original normalized intent; no repricing",
+    "valid_json_restore": "atomic invalidation of reservations; final check after pending quote",
+    "invalid_json_restore": "rollback preserves ledger"
+  },
+  "verification": {
+    "backend": {
+      "passed": 1242,
+      "subtests_passed": 126,
+      "skipped": 34,
+      "skip_reason": "optional leapmotor_cloud SDK absent"
+    },
+    "web_tests": 51,
+    "mobile_tests": 7,
+    "svelte_errors": 0,
+    "svelte_warnings": 0,
+    "web_mobile_builds": "passed",
+    "android_policy_junit": 8,
+    "independent_review_p1_p2_remaining": 0,
+    "browser_bundle": "assets/index-CKci_f_w.js",
+    "browser_qa": "synthetic503 after SQLite commit; same-attempt retry; conflict; clearing fields; exit/edit/discard cancel; reservation failure/recovery",
+    "fixture_final": {
+      "charges": 4,
+      "kwh": 28,
+      "cost_cents": 420,
+      "bound_requests": 4,
+      "quick_check": "ok"
+    },
+    "screenshot": "observed in tool; no saved screenshot artifact",
+    "full_native_build": "pending for current source",
+    "apple_ci": "pending for current source"
+  },
+  "source_publication": {
+    "public": false,
+    "private": false
+  },
+  "runtime_deployed": false,
+  "physical_acceptance": false,
+  "remaining": [
+    "charger adapter/source identity and interval coverage",
+    "physical B10/charger/network/client acceptance",
+    "signing/iPhone/widget/services acceptance"
+  ],
+  "rollback": "Restore this increment sources locally; future deployment requires prior code together with coherent SQLite18 snapshot. Old code cannot open migrated SQLite19. No production database migrated.",
+  "evidence": "evidence/phase4-charge-save-20261013"
+}

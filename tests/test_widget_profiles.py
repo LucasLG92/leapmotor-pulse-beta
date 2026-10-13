@@ -281,6 +281,7 @@ def test_v7_to_current_migration_preserves_widget_profiles_and_grants(tmp_path):
         connection.execute("DROP TRIGGER invalidate_charger_pricing_on_session_change")
         connection.execute("DROP TABLE charger_pricing")
         connection.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
+        connection.execute("DROP TABLE IF EXISTS manual_charge_requests")
         tables_before = connection.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
         ).fetchall()
@@ -288,17 +289,18 @@ def test_v7_to_current_migration_preserves_widget_profiles_and_grants(tmp_path):
 
     migrated = Store(path, clock=lambda: datetime(2026, 10, 8, 15, 0, tzinfo=timezone.utc))
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 18
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 19
         tables_after = connection.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
         ).fetchall()
     assert set(tables_after) == set(tables_before) | {
         ("abrp_preference",), ("charger_pricing",), ("observed_events",),
-        ("charger_energy_epochs",), ("charger_energy_intervals",),
-        ("charger_pricing_history",),
-        ("backup_alert_runtime",), ("backup_alert_observations",),
-        ("backup_alert_events",), ("backup_alert_deliveries",),
-    }
+            ("charger_energy_epochs",), ("charger_energy_intervals",),
+            ("charger_pricing_history",),
+            ("backup_alert_runtime",), ("backup_alert_observations",),
+            ("backup_alert_events",), ("backup_alert_deliveries",),
+            ("manual_charge_requests",),
+        }
     assert migrated.list_widget_profiles("user-a")["items"] == [profile]
     assert migrated.widget_grant_context(
         grant["widget_token"], grant["grant"]["id"]

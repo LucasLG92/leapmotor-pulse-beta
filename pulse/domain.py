@@ -60,8 +60,15 @@ from pulse.observed_events import (
     ObservedEventError, ObservedEventsStoreMixin, select_changes,
     validate_observed_events_archive, validate_observed_event_future_dates,
 )
+from pulse.manual_charge_requests import (
+    MAX_REQUESTS_GLOBAL,
+    MAX_REQUESTS_PER_OWNER,
+    REQUEST_TTL_DAYS,
+    attempt_fingerprint,
+    valid_request_id,
+)
 
-SCHEMA_VERSION = 18
+SCHEMA_VERSION = 19
 EXPORT_VERSION = 15
 MAX_IMPORT_BYTES = 1_000_000
 MAX_V3_IMPORT_BYTES = 5_000_000
@@ -381,6 +388,10 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
         if version == 17:
             self._migrate_v17_to_v18(connection)
             connection.execute("PRAGMA user_version = 18")
+            version = 18
+        if version == 18:
+            self._migrate_v18_to_v19(connection)
+            connection.execute("PRAGMA user_version = 19")
 
     def _migrate_v17_to_v18(self, connection: sqlite3.Connection) -> None:
         """Add opt-in backup notices and bounded operational state, outside exports."""
@@ -392,6 +403,37 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
             "ALTER TABLE push_subscriptions ADD COLUMN backup_alerts_consented_at TEXT"
         )
         self._create_backup_alert_schema(connection)
+
+    def _migrate_v18_to_v19(self, connection: sqlite3.Connection) -> None:
+        """Add operational idempotency reservations, excluded from JSON archives."""
+        connection.execute(
+            """CREATE TABLE manual_charge_requests (
+                id TEXT PRIMARY KEY
+                    CHECK (length(id) = 32 AND id NOT GLOB '*[^0-9a-f]*'),
+                owner_id TEXT NOT NULL
+                    CHECK (length(owner_id) BETWEEN 1 AND 255),
+                created_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                attempt_fingerprint TEXT,
+                charge_id TEXT,
+                CHECK (
+                    (attempt_fingerprint IS NULL AND charge_id IS NULL)
+                    OR (attempt_fingerprint IS NOT NULL
+                        AND length(attempt_fingerprint) = 64
+                        AND attempt_fingerprint NOT GLOB '*[^0-9a-f]*'
+                        AND charge_id IS NOT NULL
+                        AND length(charge_id) = 32
+                        AND charge_id NOT GLOB '*[^0-9a-f]*')
+                )
+            )"""
+        )
+        connection.execute(
+            "CREATE INDEX idx_manual_charge_requests_expiry ON manual_charge_requests(expires_at)"
+        )
+        connection.execute(
+            """CREATE INDEX idx_manual_charge_requests_owner_expiry
+               ON manual_charge_requests(owner_id, expires_at)"""
+        )
 
     def _migrate_v14_to_v15(self, connection: sqlite3.Connection) -> None:
         connection.execute(
@@ -1680,11 +1722,86 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
             self._touch(connection)
             return event
 
+    def reserve_charge_creation(self, owner_id: str) -> dict[str, str]:
+        """Create a server-generated, owner-bound request with a seven-day TTL."""
+        owner = _validate_profile_owner(owner_id)
+        reservation: dict[str, str] | None = None
+        capacity_reached = False
+        with self._transaction() as connection:
+            now_value = self._clock_now()
+            now = _format_datetime(now_value)
+            expires_at = _format_datetime(now_value + timedelta(days=REQUEST_TTL_DAYS))
+            connection.execute(
+                "DELETE FROM manual_charge_requests WHERE expires_at <= ?", (now,)
+            )
+            owner_count = int(connection.execute(
+                "SELECT COUNT(*) FROM manual_charge_requests WHERE owner_id = ?", (owner,)
+            ).fetchone()[0])
+            global_count = int(connection.execute(
+                "SELECT COUNT(*) FROM manual_charge_requests"
+            ).fetchone()[0])
+            if owner_count >= MAX_REQUESTS_PER_OWNER or global_count >= MAX_REQUESTS_GLOBAL:
+                capacity_reached = True
+            else:
+                request_id = uuid.uuid4().hex
+                connection.execute(
+                    """INSERT INTO manual_charge_requests
+                       (id, owner_id, created_at, expires_at)
+                       VALUES (?, ?, ?, ?)""",
+                    (request_id, owner, now, expires_at),
+                )
+                reservation = {"id": request_id, "expires_at": expires_at}
+        if capacity_reached:
+            raise DomainError("Se alcanzó el límite de solicitudes de carga pendientes.", 429)
+        if reservation is None:
+            raise DomainError("No se pudo reservar la solicitud de carga.", 500)
+        return reservation
+
+    def preflight_charge_creation(
+        self, owner_id: str, request_id: str, values: Mapping[str, Any]
+    ) -> dict[str, Any]:
+        """Check ownership, expiry, and a prior successful attempt before pricing."""
+        owner = _validate_profile_owner(owner_id)
+        if not valid_request_id(request_id):
+            raise DomainError("La solicitud de creación ya no está disponible.", 409)
+        canonical_attempt = _canonical_charge_creation_attempt(values)
+        fingerprint = attempt_fingerprint(canonical_attempt)
+        with self._read_transaction() as connection:
+            now_value = self._clock_now()
+            reservation = connection.execute(
+                "SELECT * FROM manual_charge_requests WHERE id = ?", (request_id,)
+            ).fetchone()
+            if (
+                reservation is None
+                or reservation["owner_id"] != owner
+                or not _manual_charge_request_is_current(reservation, now_value)
+            ):
+                raise DomainError("La solicitud de creación ya no está disponible.", 409)
+            if not _manual_charge_request_link_is_valid(reservation):
+                raise DomainError("La solicitud de creación ya no está disponible.", 409)
+            previous_fingerprint = reservation["attempt_fingerprint"]
+            if previous_fingerprint is None:
+                return {"fingerprint": fingerprint, "charge": None}
+            if previous_fingerprint != fingerprint:
+                raise DomainError("La solicitud ya se utilizó con otros datos.", 409)
+            charge = connection.execute(
+                "SELECT * FROM manual_charges WHERE id = ?", (reservation["charge_id"],)
+            ).fetchone()
+            if charge is None:
+                raise DomainError("La carga de esta solicitud ya no existe.", 409)
+            return {
+                "fingerprint": fingerprint,
+                "charge": _charge_item(charge, "manual"),
+            }
+
     def add_charge(
         self,
         values: Mapping[str, Any],
         *,
         pricing_snapshot: Mapping[str, Any] | None = None,
+        request_id: str | None = None,
+        owner_id: str | None = None,
+        request_attempt: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         if not isinstance(values, Mapping) or set(values) - {
             "started_at", "kwh", "ended_at", "pricing_method"
@@ -1694,10 +1811,63 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
         kwh = _number(values["kwh"], "kwh", minimum=0, maximum=500, exclusive_minimum=True)
         ended_at = _parse_optional_datetime(values.get("ended_at"), "ended_at")
 
+        request_owner = None
+        canonical_attempt = None
+        fingerprint = None
+        if request_id is not None:
+            if not valid_request_id(request_id) or request_attempt is None:
+                raise DomainError("La solicitud de creación ya no está disponible.", 409)
+            request_owner = _validate_profile_owner(owner_id)
+            canonical_attempt = _canonical_charge_creation_attempt(request_attempt)
+            if (
+                canonical_attempt["started_at"] != started_at
+                or canonical_attempt["ended_at"] != ended_at
+                or canonical_attempt["kwh"] != kwh
+                or (
+                    "pricing_method" in canonical_attempt
+                    and values.get("pricing_method") != canonical_attempt["pricing_method"]
+                )
+            ):
+                raise DomainError("La carga no coincide con el intento reservado.", 409)
+            fingerprint = attempt_fingerprint(canonical_attempt)
+        elif owner_id is not None or request_attempt is not None:
+            raise DomainError("La solicitud de creación ya no está disponible.", 409)
+
         with self._transaction() as connection:
+            if request_id is not None:
+                now_value = self._clock_now()
+                now = _format_datetime(now_value)
+                reservation = connection.execute(
+                    "SELECT * FROM manual_charge_requests WHERE id = ?", (request_id,)
+                ).fetchone()
+                if (
+                    reservation is None
+                    or reservation["owner_id"] != request_owner
+                    or not _manual_charge_request_is_current(reservation, now_value)
+                ):
+                    raise DomainError("La solicitud de creación ya no está disponible.", 409)
+                if not _manual_charge_request_link_is_valid(reservation):
+                    raise DomainError("La solicitud de creación ya no está disponible.", 409)
+                previous_fingerprint = reservation["attempt_fingerprint"]
+                if previous_fingerprint is not None:
+                    if previous_fingerprint != fingerprint:
+                        raise DomainError("La solicitud ya se utilizó con otros datos.", 409)
+                    charge = connection.execute(
+                        "SELECT * FROM manual_charges WHERE id = ?", (reservation["charge_id"],)
+                    ).fetchone()
+                    if charge is None:
+                        raise DomainError("La carga de esta solicitud ya no existe.", 409)
+                    return _read_charge(connection, "manual_charges", charge["id"], "manual")
+
             settings = _read_settings(connection)
             method = values.get("pricing_method", settings["pricing_method"])
             _validate_pricing_method(method)
+            if (
+                canonical_attempt is not None
+                and "pricing_method" in canonical_attempt
+                and method != canonical_attempt["pricing_method"]
+            ):
+                raise DomainError("La carga no coincide con el intento reservado.", 409)
             _validate_charge_window(started_at, ended_at)
             if method == "pvpc":
                 if ended_at is None:
@@ -1723,6 +1893,16 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                     method, _encode_json(pricing) if pricing is not None else None,
                 ),
             )
+            if request_id is not None:
+                cursor = connection.execute(
+                    """UPDATE manual_charge_requests
+                       SET attempt_fingerprint = ?, charge_id = ?
+                       WHERE id = ? AND owner_id = ? AND expires_at > ?
+                         AND attempt_fingerprint IS NULL AND charge_id IS NULL""",
+                    (fingerprint, charge_id, request_id, request_owner, now),
+                )
+                if cursor.rowcount != 1:
+                    raise DomainError("La solicitud de creación ya no está disponible.", 409)
             self._touch(connection)
             return _read_charge(connection, "manual_charges", charge_id, "manual")
 
@@ -2021,6 +2201,7 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
             connection.execute("""UPDATE abrp_preference SET scope = '', enabled = 0,
                 generation = generation + 1, last_attempt_key = NULL, last_attempt_at = NULL
                 WHERE id = 1""")
+            connection.execute("DELETE FROM manual_charge_requests")
             for table in (
                 "manual_charges",
                 "demo_charges",
@@ -3379,6 +3560,57 @@ def _parse_datetime(value: Any, name: str) -> str:
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise DomainError(f"{name} debe incluir una zona horaria.")
     return _format_datetime(parsed)
+
+
+def _canonical_charge_creation_attempt(values: Mapping[str, Any]) -> dict[str, Any]:
+    """Normalize only user intent; tariff defaults and settings are not part of it."""
+    allowed = {"started_at", "kwh", "ended_at", "pricing_method"}
+    if (
+        not isinstance(values, Mapping)
+        or set(values) - allowed
+        or not {"started_at", "kwh"} <= set(values)
+    ):
+        raise DomainError("La carga contiene campos vacíos o no admitidos.")
+    started_at = _parse_datetime(values["started_at"], "started_at")
+    kwh = _number(values["kwh"], "kwh", minimum=0, maximum=500, exclusive_minimum=True)
+    ended_at = _parse_optional_datetime(values.get("ended_at"), "ended_at")
+    _validate_charge_window(started_at, ended_at)
+    canonical = {"started_at": started_at, "ended_at": ended_at, "kwh": kwh}
+    if values.get("pricing_method") is not None:
+        canonical["pricing_method"] = _validate_pricing_method(values["pricing_method"])
+    return canonical
+
+
+def _manual_charge_request_is_current(
+    reservation: Mapping[str, Any], now: datetime
+) -> bool:
+    """Reject expired, future-created, malformed, or incorrectly bounded ledger rows."""
+    try:
+        created_at = _datetime_from_normalized(
+            _parse_datetime(reservation["created_at"], "created_at")
+        )
+        expires_at = _datetime_from_normalized(
+            _parse_datetime(reservation["expires_at"], "expires_at")
+        )
+    except (DomainError, KeyError, TypeError):
+        return False
+    return (
+        created_at <= now < expires_at
+        and expires_at - created_at == timedelta(days=REQUEST_TTL_DAYS)
+    )
+
+
+def _manual_charge_request_link_is_valid(reservation: Mapping[str, Any]) -> bool:
+    """Treat only unlinked reservations or complete, well-shaped success links as valid."""
+    fingerprint = reservation["attempt_fingerprint"]
+    charge_id = reservation["charge_id"]
+    if fingerprint is None or charge_id is None:
+        return fingerprint is None and charge_id is None
+    return (
+        isinstance(fingerprint, str)
+        and re.fullmatch(r"[0-9a-f]{64}", fingerprint) is not None
+        and valid_request_id(charge_id)
+    )
 
 
 def _parse_date(value: Any, name: str) -> str:

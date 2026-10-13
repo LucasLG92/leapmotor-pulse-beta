@@ -211,14 +211,21 @@
     {
       "id": "phase-4",
       "name": "Cargas y energía",
-      "status": "pending",
+      "status": "in_progress",
       "software_criteria": [
         "Asociar sesiones, curva temporal, pausas/cierres/reconciliación, PVPC y retención de tarifa sin duplicados."
       ],
       "real_criteria": [
         "Validar con cargador y medidas reales; separar coste estimado de gasto real, red y autoconsumo."
       ],
-      "source_contract_review": "docs/SOURCE-QUALIFICATION.md"
+      "source_contract_review": "docs/SOURCE-QUALIFICATION.md",
+      "local_increment": "Altas manuales reservadas por propietario, intención/carga atómicas y reintentos sin duplicar en UI compartida. SQLite19/JSON15; errores de respuesta/reserva, caducidad, conflictos, restore y guardas de borrador comprobados localmente. No acredita cargador, red móvil, precios físicos ni B10.",
+      "qualification": "docs/CHARGE-SAVE-QUALIFICATION.json",
+      "remaining_software_checks": [
+        "Adaptador de intervalos ligado inequívocamente a sesiones y cualificado con el cargador/origen autorizado.",
+        "Reconciliación y revisiones PVPC histórico en servicio real; red/autoconsumo sólo con mediciones suficientes.",
+        "Instalación y transporte de nuevas solicitudes en ambos clientes físicos; reintento real bajo pérdidas de red y restauración operativa."
+      ]
     },
     {
       "id": "phase-5",
@@ -350,5 +357,18 @@
       "path": "docs/VALIDATION.md",
       "kind": "local"
     }
-  ]
+  ],
+  "manual_charge_save_review": {
+    "status": "local_software_verified_delivery_pending",
+    "storage_schema": 19,
+    "export_version": 15,
+    "source_only": true,
+    "source_published": false,
+    "native_full_build_current_source": false,
+    "apple_ci_current_source": false,
+    "runtime_deployed": false,
+    "physical_acceptance": false,
+    "evidence": "evidence/phase4-charge-save-20261013",
+    "qualification": "docs/CHARGE-SAVE-QUALIFICATION.json"
+  }
 }
