@@ -310,9 +310,6 @@
 		<div class="overview-layout cockpit-layout">
 			<section class="vehicle-scene cockpit-vehicle" aria-label="Vehículo y lecturas">
 				<div class="vehicle-display cockpit-stage">
-					<div class="cockpit-artwork">
-						<VehicleArtwork color={pulseState.settings.vehicle_color ?? null} />
-					</div>
 					<div class="cockpit-instruments">
 						<div class="cockpit-reading-state" class:cockpit-reading-stale={readingIsUncertain} class:cockpit-reading-demo={pulseState.mode === 'demo'}>
 							<Glyph name="clock" size={15} />
@@ -325,12 +322,18 @@
 							</div>
 							<div class="battery-reading">
 								<dt>Batería</dt>
-								<dd><Glyph name="battery" size={19} /><span>{number(vehicleValues?.battery_pct)}{vehicleValues?.battery_pct == null ? '' : '%'}</span></dd>
+								<dd>
+									<Glyph name="battery" size={19} />
+									<span>{number(vehicleValues?.battery_pct)}{vehicleValues?.battery_pct == null ? '' : '%'}</span>
+									{#if batteryPercentage !== null}
+										<meter class="battery-level cockpit-battery-meter" aria-label="Nivel de batería recibido" min="0" max="100" value={batteryPercentage}>{number(batteryPercentage)} %</meter>
+									{/if}
+								</dd>
 							</div>
 						</dl>
-						{#if batteryPercentage !== null}
-							<meter class="battery-level cockpit-battery-meter" aria-label="Nivel de batería recibido" min="0" max="100" value={batteryPercentage}>{number(batteryPercentage)} %</meter>
-						{/if}
+						<div class="cockpit-artwork">
+						<VehicleArtwork color={pulseState.settings.vehicle_color ?? null} />
+					</div>
 						<div class="reading-caption cockpit-provenance" aria-label="Procedencia de las lecturas del coche">
 							<p>{sourceLabel} <span aria-hidden="true">·</span> {observedAt ? absoluteDateTime(observedAt) : 'Sin lectura disponible'}</p>
 							{#if pulseState.mode === 'telemetry_read_only'}<p class="temporal-explanation">{temporalExplanation} Vigencia física sin comprobar.</p>{:else if pulseState.mode !== 'demo'}<p>{connectionReason}</p>{/if}
@@ -591,37 +594,44 @@
 </div>
 
 <style>
-	.overview-page { display: grid; gap: clamp(34px, 4.4vw, 58px); min-width: 0; }
+	.overview-page { display: grid; gap: clamp(24px, 3vw, 40px); min-width: 0; }
 	.overview-hero, .profile-heading, .vehicle-scene, .vehicle-task { min-width: 0; }
 	.overview-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin: 0; }
 	.overview-heading h2 { margin: 0; font-size: clamp(2.125rem, 4.2vw, 3.5rem); font-weight: 590; line-height: 1.05; letter-spacing: -.05em; overflow-wrap: anywhere; }
 	.overview-heading p { margin: 10px 0 0; color: var(--muted); font-size: var(--text-label); line-height: 1.5; overflow-wrap: anywhere; }
 	.overview-heading :global(.status-pill) { flex: 0 1 auto; min-height: 36px; font-size: var(--text-caption); }
 	.overview-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(19rem, .82fr); gap: clamp(24px, 3.2vw, 48px); align-items: start; }
-	.vehicle-display { display: grid; min-width: 0; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); align-items: center; gap: clamp(20px, 3vw, 40px); padding: 0; border: 0; border-radius: 0; background: transparent; }
-	.vehicle-scene :global(.vehicle-artwork) { min-width: 0; margin: 0; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
-	.vehicle-scene :global(.vehicle-frame) { height: clamp(220px, 23vw, 330px); }
-	.vehicle-scene :global(figcaption) { padding: 8px 0 0; color: var(--muted); font-size: var(--text-caption); line-height: 1.45; text-align: left; }
-	.vehicle-readings { display: grid; grid-template-columns: minmax(0, 1fr); align-items: end; gap: 20px; margin: 0; padding-top: 0; font-variant-numeric: tabular-nums; }
+	.vehicle-display { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr); align-items: stretch; gap: 12px; padding: 0; border: 0; border-radius: 0; background: transparent; }
+	.vehicle-scene :global(.vehicle-artwork) { min-width: 0; margin: 0; }
+	.vehicle-scene :global(figcaption) { padding: 0 4px; color: var(--muted); font-size: var(--text-caption); line-height: 1.45; text-align: center; }
+	.cockpit-instruments { display: grid; width: 100%; max-width: 840px; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-inline: auto; padding: 0; }
+	.cockpit-reading-state { width: fit-content; margin: 0; }
+	.vehicle-readings { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(180px, .65fr); align-items: end; gap: 14px clamp(22px, 4vw, 48px); margin: 0; padding-top: 0; font-variant-numeric: tabular-nums; }
 	.vehicle-readings > div { min-width: 0; }
 	.vehicle-readings dt { color: var(--muted); font-size: var(--text-caption); font-weight: 650; letter-spacing: .04em; line-height: 1.5; text-transform: uppercase; }
 	.vehicle-readings dd { margin: 5px 0 0; overflow-wrap: anywhere; }
-	.range-reading dd { font-size: clamp(3rem, 5.4vw, 5.25rem); font-weight: 570; letter-spacing: -.055em; line-height: .98; }
-	.battery-reading { align-self: end; padding-bottom: 0; }
-	.battery-reading dd { display: flex; align-items: center; gap: 7px; font-size: clamp(1.125rem, 2.2vw, 1.5rem); font-weight: 610; }
+	.range-reading dd { font-size: clamp(3.5rem, 6vw, 5.5rem); font-weight: 570; letter-spacing: -.055em; line-height: .98; }
+	.battery-reading { align-self: stretch; padding: 0 0 0 clamp(16px, 2vw, 26px); border-left: 1px solid var(--line); }
+	.battery-reading dd { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: center; gap: 5px 8px; font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 610; line-height: 1.1; }
 	.battery-reading dd :global(svg) { flex-shrink: 0; color: var(--forest); }
-	.reading-caption { max-width: 68ch; margin: 15px 0 0; }
-	.reading-caption p { margin: 4px 0; color: var(--muted); font-size: var(--text-caption); line-height: 1.55; overflow-wrap: anywhere; }
+	.reading-caption { max-width: none; margin: 0; padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--forest) 16%, var(--line)); }
+	.reading-caption p { margin: 2px 0; color: var(--muted); font-size: var(--text-caption); line-height: 1.55; overflow-wrap: anywhere; }
+	.reading-caption p:first-child { color: var(--muted-strong); font-variant-numeric: tabular-nums; }
 	.reading-caption .temporal-explanation { color: var(--muted-strong); }
-	.battery-level { display: block; width: min(100%, 420px); height: 7px; margin: 10px 0 0; border: 0; border-radius: 9px; background: var(--line); }
+	.battery-level { display: block; grid-column: 1 / -1; width: 100%; height: 8px; margin: 4px 0 0; border: 0; border-radius: 9px; background: var(--line); }
 	.battery-level::-webkit-meter-bar { height: 6px; border: 0; border-radius: 9px; background: var(--line); }
 	.battery-level::-webkit-meter-optimum-value { border-radius: 9px; background: var(--forest); }
 	.battery-level::-moz-meter-bar { border-radius: 9px; background: var(--forest); }
-	.charge-glance { display: flex; width: fit-content; max-width: 100%; min-height: 56px; align-items: center; gap: 12px; margin: 18px 0 0; padding: 10px 14px; border: 1px solid color-mix(in srgb, var(--forest) 22%, var(--line)); border-radius: 14px; background: var(--forest-soft); color: var(--forest); text-decoration: none; }
+	.charge-glance { display: flex; width: fit-content; max-width: 100%; min-height: 56px; align-items: center; gap: 12px; margin: 4px 0 0; padding: 10px 14px; border: 1px solid color-mix(in srgb, var(--forest) 22%, var(--line)); border-radius: 14px; background: var(--forest-soft); color: var(--forest); text-decoration: none; }
 	.charge-glance > span { display: grid; min-width: 0; gap: 4px; }
 	.charge-glance strong { font-size: var(--text-caption); overflow-wrap: anywhere; }
 	.charge-glance span span { color: var(--muted-strong); font-size: var(--text-caption); overflow-wrap: anywhere; }
 	.charge-glance :global(svg) { flex: 0 0 auto; }
+	.vehicle-scene :global(.cockpit-quick-actions) { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 8px 0 0; }
+	.vehicle-scene :global(.cockpit-quick-actions a) { min-height: 56px; gap: 8px; padding: 4px 7px; border: 0; border-radius: 13px; background: transparent; color: var(--muted-strong); font-size: var(--text-caption); transition: background-color var(--motion-fast, 160ms) ease, color var(--motion-fast, 160ms) ease; }
+	.vehicle-scene :global(.cockpit-quick-actions a:hover) { background: var(--surface-soft); color: var(--forest); }
+	.vehicle-scene :global(.cockpit-quick-actions a svg) { width: 34px; height: 34px; flex: 0 0 34px; padding: 8px; border-radius: 50%; background: var(--forest-soft); color: var(--forest); transition: transform var(--motion-fast, 160ms) ease; }
+	.vehicle-scene :global(.cockpit-quick-actions a:active svg) { transform: scale(.93); }
 	.color-picker { margin: 14px 0 26px; }
 	.color-picker > summary { display: flex; width: fit-content; min-height: 48px; align-items: center; gap: 8px; color: var(--forest); font-size: var(--text-caption); cursor: pointer; list-style: none; }
 	.color-picker > summary::-webkit-details-marker { display: none; }
@@ -757,11 +767,16 @@
 		.overview-heading p { font-size: var(--text-caption); }
 		.overview-heading p span { display: none; }
 		.overview-layout { gap: 24px; }
-		.vehicle-display { grid-template-columns: minmax(0, 1fr); gap: 14px; }
-		.vehicle-scene :global(.vehicle-frame) { height: clamp(190px, 52vw, 250px); }
-		.vehicle-readings { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; }
-		.range-reading dd { font-size: clamp(2.75rem, 12vw, 3.5rem); }
-		.battery-reading dd { font-size: 1.125rem; }
+		.vehicle-display { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+		.cockpit-instruments { gap: 8px; padding-inline: 0; }
+		.vehicle-readings { grid-template-columns: minmax(0, 1.1fr) minmax(120px, .9fr); gap: 8px 12px; }
+		.range-reading dd { font-size: clamp(2.7rem, 12vw, 3.5rem); }
+		.battery-reading { padding-left: 12px; }
+		.battery-reading dd { grid-template-columns: 18px minmax(0, 1fr); gap: 4px 6px; font-size: clamp(1.375rem, 6vw, 1.75rem); }
+		.battery-reading dd :global(svg) { width: 17px; height: 17px; }
+		.vehicle-scene :global(.cockpit-quick-actions) { gap: 2px; }
+		.vehicle-scene :global(.cockpit-quick-actions a) { min-height: 54px; gap: 5px; padding-inline: 4px; }
+		.vehicle-scene :global(.cockpit-quick-actions a svg) { width: 31px; height: 31px; flex-basis: 31px; padding: 7px; }
 		.color-picker { margin-bottom: 20px; }
 		.vehicle-state { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; padding-block: 16px; }
 		.control-actions { gap: 4px; }
@@ -785,9 +800,16 @@
 		.overview-heading :global(.status-pill) { max-width: 100%; }
 		.vehicle-state { gap: 14px 8px; }
 		.control-label { max-width: 7ch; }
+		.vehicle-readings { grid-template-columns: minmax(0, 1fr) minmax(108px, .9fr); gap: 8px; }
+		.range-reading dd { font-size: clamp(2.5rem, 12vw, 2.9rem); }
+		.battery-reading { padding-left: 9px; }
 		.journey-metrics { grid-template-columns: minmax(0, 1fr); gap: 10px; }
 		.journey-metrics > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 		.journey-metrics dd { text-align: right; }
 		.latest-charge-values { flex-wrap: wrap; }
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.vehicle-scene :global(.cockpit-quick-actions a), .vehicle-scene :global(.cockpit-quick-actions a svg) { transition: none; }
+		.vehicle-scene :global(.cockpit-quick-actions a:active svg) { transform: none; }
 	}
 </style>

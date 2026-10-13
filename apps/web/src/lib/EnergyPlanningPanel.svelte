@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onDestroy, onMount, untrack } from 'svelte';
 	import { ApiError, getChargingComparison, simulateChargingPlan } from './api';
+	import Glyph from './Glyph.svelte';
 	import type { ChargingComparison, ChargingPlan, ChargingPlanInput, PageProps } from './types';
 
 	let { busy, online, revision, drafts, confirmAction, onSessionExpired }:
@@ -198,7 +199,7 @@
 </script>
 
 <section class="energy-planning" aria-labelledby="energy-planning-heading">
-	<header class="planning-heading"><div><p class="eyebrow">Costes manuales y escenarios</p><h2 id="energy-planning-heading">Planificación de energía</h2><p>Compara lo que registraste y prueba un horario con precios que aportes tú.</p></div></header>
+	<header class="planning-heading"><span class="planning-mark" aria-hidden="true"><Glyph name="energy" size={19} /></span><div><p class="eyebrow">Costes manuales y escenarios</p><h2 id="energy-planning-heading">Planificación de energía</h2><p>Compara lo que registraste y prueba un horario con precios que aportes tú.</p></div></header>
 
 	<section class="comparison-section" aria-labelledby="comparison-heading">
 		<div class="planning-section-heading"><div><p class="eyebrow">Histórico registrado</p><h3 id="comparison-heading">Cargas manuales por mes</h3><p>Sin estimar datos ausentes ni mezclar fuentes automáticas o de demostración.</p></div>
@@ -227,13 +228,13 @@
 				<ol class="month-list evolution-list" aria-label="Detalle mensual">{#each comparison.months as month (month.month)}
 					<li class="evolution-item"><div class="month-heading"><strong>{monthLabel(month.month)}</strong><span>{month.charge_count} {month.charge_count === 1 ? 'carga' : 'cargas'}</span></div><div class="month-values"><span>{amount(month.kwh, 'kWh')}<small> {month.known_kwh_count} con energía</small></span><span>{amount(month.cost_eur, '€')}<small> {month.known_cost_count} con coste</small></span></div><p>{addHistoryText(month)}</p><details><summary>Desglose por ubicación</summary><ul>{#each month.locations as location, index (`${month.month}-${location.location ?? 'unknown'}-${index}`)}<li><strong>{location.location ?? 'Ubicación sin indicar'}</strong><span>{location.charge_count} cargas · {amount(location.kwh, 'kWh')} · {amount(location.cost_eur, '€')}</span></li>{/each}</ul></details></li>
 				{/each}</ol>
-			{:else}<div class="empty-state"><h4>Sin cargas manuales en esta ventana</h4><p>No se han encontrado registros para comparar durante los últimos {comparison.days} días.</p></div>{/if}
+			{:else}<div class="empty-state"><span class="empty-mark"><Glyph name="energy" size={18} /></span><div><h4>Sin cargas manuales en esta ventana</h4><p>No se han encontrado registros para comparar durante los últimos {comparison.days} días.</p></div></div>{/if}
 			{#if comparison.excluded_non_manual_count}<p class="small-note">Se excluyeron {comparison.excluded_non_manual_count} registros que no son manuales.</p>{/if}
 		{:else if !comparisonLoading && !comparisonError}<p class="state-message">Conéctate para comparar las cargas guardadas en el servidor.</p>{/if}
 	</section>
 
 	<section class="simulator-section" aria-labelledby="simulator-heading">
-		<div class="planning-section-heading"><div><p class="eyebrow">Escenario bajo tu control</p><h3 id="simulator-heading">Simular una carga</h3><p>Estimación constante por intervalos; no controla el coche, el cargador ni inicia ninguna operación.</p></div><button class="simulator-toggle" type="button" aria-expanded={simulatorOpen} aria-controls="energy-simulator-content" onclick={() => simulatorOpen = !simulatorOpen}>{simulatorOpen ? 'Cerrar simulador' : planResult ? 'Ver simulación guardada' : 'Abrir simulador'}</button></div>
+		<div class="planning-section-heading"><div><p class="eyebrow">Escenario bajo tu control</p><h3 id="simulator-heading">Simular una carga</h3><p>Explora precios manuales y horarios posibles. Es una estimación informativa; no inicia una carga.</p></div><button class="simulator-toggle" type="button" aria-expanded={simulatorOpen} aria-controls="energy-simulator-content" onclick={() => simulatorOpen = !simulatorOpen}><Glyph name={simulatorOpen ? 'close' : 'plus'} size={16} />{simulatorOpen ? 'Cerrar simulador' : planResult ? 'Ver simulación guardada' : 'Abrir simulador'}</button></div>
 		<div id="energy-simulator-content" class="simulator-content" hidden={!simulatorOpen}>
 		<form class="simulation-form" onsubmit={calculate} novalidate>
 			<div class="form-grid">
@@ -277,12 +278,14 @@
 
 <style>
 	.energy-planning { display: grid; gap: 24px; min-width: 0; }
+	.planning-heading { display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: start; gap: 12px; }
+	.planning-mark { display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid var(--line); border-radius: 12px; background: var(--forest-soft); color: var(--forest); }
 	.planning-heading h2 { margin: 2px 0 4px; font-size: clamp(1.35rem, 2vw, 1.75rem); letter-spacing: -.025em; }
 	.planning-heading p:not(.eyebrow) { max-width: 62ch; margin: 0; color: var(--muted); }
 	.eyebrow { margin: 0; color: var(--forest); font-size: .75rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
 	.comparison-section, .simulator-section { display: grid; gap: 15px; min-width: 0; }
 	.planning-section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
-	.simulator-toggle { display: inline-flex; min-width: 150px; min-height: 48px; align-items: center; justify-content: center; flex: 0 0 auto; padding: 9px 14px; border: 1px solid var(--line-strong); border-radius: 10px; background: transparent; color: var(--forest); font: inherit; font-size: .875rem; font-weight: 680; cursor: pointer; }
+	.simulator-toggle { display: inline-flex; min-width: 150px; min-height: 48px; align-items: center; justify-content: center; flex: 0 0 auto; gap: 8px; padding: 9px 14px; border: 1px solid var(--line-strong); border-radius: 10px; background: transparent; color: var(--forest); font: inherit; font-size: .875rem; font-weight: 680; cursor: pointer; }
 	.simulator-toggle:hover { background: var(--forest-soft); }
 	.simulator-toggle:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 	.simulator-content { display: grid; gap: 15px; min-width: 0; }
@@ -312,7 +315,9 @@
 	.month-list details li span { color: var(--muted); font-size: .8125rem; }
 	.empty-state, .state-message { margin: 0; padding: 15px; border: 1px dashed var(--line-strong); border-radius: 13px; color: var(--muted); }
 	.empty-state h4, .empty-state p { margin: 0; }
-	.empty-state { display: grid; gap: 4px; }
+	.empty-state { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: start; gap: 4px 10px; }
+	.empty-mark { display: grid; width: 34px; height: 34px; grid-row: span 2; place-items: center; border-radius: 10px; background: var(--forest-soft); color: var(--forest); }
+	.empty-mark :global(svg) { display: block; }
 	.small-note { margin: 0; color: var(--muted); font-size: .8125rem; }
 	.simulation-form { display: grid; gap: 15px; min-width: 0; padding: clamp(14px, 2.4vw, 22px); border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
 	.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }

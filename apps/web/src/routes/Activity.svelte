@@ -191,8 +191,9 @@
 	}
 </script>
 
-<section class="page-intro">
+<section class="page-intro activity-intro">
 	<div>
+		<p class="activity-intro-kicker eyebrow"><Glyph name="activity" size={16} /> TU DIARIO DE VIAJE</p>
 		<h2>Tu diario</h2>
 		<p>Tu registro manual de trayectos, demostración y mantenimiento guardado en Pulse, cada uno con su fecha.</p>
 	</div>
@@ -203,7 +204,7 @@
 	<div class="activity-main-column">
 		<ManualJourneysPanel {busy} {online} {revision} {drafts} {mutate} {reserveJourneyCreation} {confirmAction} {onSessionExpired} />
 		<section aria-labelledby="journeys-heading">
-			<div class="section-heading"><div><h2 id="journeys-heading">{pulseState.mode === 'demo' ? 'Trayectos de demostración' : 'Trayectos automáticos'}</h2><p class="activity-section-copy">{pulseState.mode === 'demo' ? 'Registros ficticios, separados de tu diario manual.' : 'La recepción del vehículo requiere una integración cualificada.'}</p></div><span class="badge">{count(journeys.length)} disponibles</span></div>
+			<div class="section-heading"><div><h2 id="journeys-heading" class="activity-section-title"><Glyph name="activity" size={16} />{pulseState.mode === 'demo' ? 'Trayectos de demostración' : 'Trayectos automáticos'}</h2><p class="activity-section-copy">{pulseState.mode === 'demo' ? 'Registros ficticios, separados de tu diario manual.' : 'La recepción del vehículo requiere una integración cualificada.'}</p></div><span class="badge">{count(journeys.length)} disponibles</span></div>
 			{#if journeys.length === 0}
 				<div class="empty-state"><span class="empty-mark"><Glyph name="activity" /></span><h3>No hay trayectos recibidos</h3><p>{pulseState.mode === 'demo' ? 'El servidor no entrega recorridos en este momento.' : 'Pulse aún no tiene una integración que reciba recorridos del vehículo.'}</p>{#if pulseState.mode !== 'demo'}<a class="button button-secondary" href="/settings#preparation">Revisar preparación</a>{/if}</div>
 			{:else}
@@ -220,7 +221,7 @@
 		</section>
 
 		<section aria-labelledby="command-history-heading">
-			<div class="section-heading"><div><h2 id="command-history-heading">Historial de acciones</h2><p class="activity-section-copy">Resultados guardados por Pulse; no son confirmaciones del coche.</p></div><span class="badge badge-demo">Simulaciones</span></div>
+			<div class="section-heading"><div><h2 id="command-history-heading" class="activity-section-title"><Glyph name="settings" size={16} />Historial de acciones</h2><p class="activity-section-copy">Resultados guardados por Pulse; no son confirmaciones del coche.</p></div><span class="badge badge-demo">Simulaciones</span></div>
 			{#if loadingCommands}
 				<div class="card loading-card" role="status">Cargando historial…</div>
 			{:else if commandError}
@@ -283,7 +284,11 @@
 </section>
 
 <style>
+	.activity-intro-kicker { display: inline-flex; align-items: center; gap: 7px; margin: 0 0 3px; color: var(--forest); font-size: .6875rem; font-weight: 720; letter-spacing: .075em; }
+	.activity-intro-kicker :global(svg) { flex: 0 0 auto; }
 	.page-intro h2 { margin: 0; font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing: -.035em; }
+	.activity-section-title { display: flex; align-items: center; gap: 8px; }
+	.activity-section-title :global(svg) { flex: 0 0 auto; color: var(--forest); }
 	.activity-section-copy { max-width: 58ch; margin: 6px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
 	.activity-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: clamp(28px, 4vw, 48px); }
 	.activity-main-column, .activity-side-column { display: grid; min-width: 0; gap: clamp(28px, 4vw, 48px); }
