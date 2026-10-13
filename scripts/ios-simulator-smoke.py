@@ -32,11 +32,15 @@ UI_ERROR_WORDS = frozenset({
     "destination", "disabling", "enabled", "error", "executable", "failure",
     "file", "folder", "found", "framework", "host", "identifier", "invalid",
     "iterations", "launch", "matching", "missing", "no", "not", "option",
+    "count", "greater", "maximum", "minimum", "must", "positive", "than",
     "platform", "plist", "product", "products", "project", "provided",
     "required", "requires", "retry", "root", "runner", "scheme", "sdk",
     "signed", "signing", "simulator", "specifier", "target", "test",
     "testable", "tests", "unable", "unsupported", "value",
 })
+UI_ERROR_OPTIONS = frozenset({"-test-iterations", "-retry-tests-on-failure",
+                             "-run-tests-until-failure", "-only-testing",
+                             "-scheme", "-destination"})
 
 
 class SmokeFailure(RuntimeError):
@@ -56,13 +60,16 @@ def ui_failure_diagnostic(result: subprocess.CompletedProcess) -> dict:
     output = result.stderr + "\n" + result.stdout
     errors = re.findall(r"(?m)^xcodebuild: error:([^\n]*)", output)
     words = set()
+    options = set()
     for line in errors:
         for token in line.split():
             word = token.strip("\"'.,:;!?").lower()
             if re.fullmatch(r"[a-z]+", word) and word in UI_ERROR_WORDS:
                 words.add(word)
+            if word in UI_ERROR_OPTIONS:
+                options.add(word)
     return {"return_code": result.returncode, "xcodebuild_error_detected": bool(errors),
-            "known_error_words": sorted(words)}
+            "known_error_words": sorted(words), "known_error_options": sorted(options)}
 
 
 def progress(stage: str) -> None:
@@ -164,11 +171,17 @@ def main() -> None:
         raise SmokeFailure("device-type-check", "unavailable")
     OUTPUT.mkdir(parents=True, exist_ok=False)
     name = "Pulse-CI-" + uuid.uuid4().hex
-    receipt = {"runtime": RUNTIME, "device_type": DEVICE_TYPE, "bundle_id": BUNDLE,
+    receipt = {"receipt_version": 2,
+               "runtime": RUNTIME, "device_type": DEVICE_TYPE, "bundle_id": BUNDLE,
                "operator_configuration": False, "installed": False, "launched": False,
                "process_alive_after_seconds": 0, "screenshot_created": False,
+               "launch_observer": "XCTest",
+               "process_liveness_observation": "replaced_by_semantic_XCTest",
                "initial_screenshot_created": False,
+               "initial_screenshot_scope": "before_XCTest_launch_simulator_state",
                "ui_readiness_test": UI_TEST, "ui_readiness_test_started": False,
+               "ui_readiness_command_invoked": False,
+               "ui_readiness_method_completed": False,
                "rendered_startup_verified": False,
                "ui_readiness_command_timeout_seconds": 240,
                "ui_readiness_failure_diagnostic": None,
@@ -194,24 +207,17 @@ def main() -> None:
         stage = "install"
         run(["xcrun", "simctl", "install", device_id, str(app)], stage="install", timeout=180)
         receipt["installed"] = True
-        stage = "launch"
-        result = run(["xcrun", "simctl", "launch", device_id, BUNDLE], stage="launch")
-        match = re.fullmatch(re.escape(BUNDLE) + r": ([1-9][0-9]*)", result)
-        if not match:
-            raise SmokeFailure("launch", "response")
-        receipt["launched"] = True
-        pid = match.group(1)
-        stage = "process-check"
-        for _ in range(5):
-            time.sleep(1)
-            command = run(["/bin/ps", "-p", pid, "-o", "comm="], stage="process-check")
-            if not command.endswith("/App.app/App"):
-                raise SmokeFailure("process-check", "not-alive")
-            receipt["process_alive_after_seconds"] += 1
+        stage = "ownership-check"
+        if own_device(device_id, name).get("state") != "Booted":
+            raise SmokeFailure(stage, "not-booted")
         stage = "initial-screenshot"
         screenshot(device_id, "startup-initial.png", stage)
         receipt["initial_screenshot_created"] = True
+        stage = "ownership-check"
+        if own_device(device_id, name).get("state") != "Booted":
+            raise SmokeFailure(stage, "not-booted")
         stage = "ui-readiness"
+        receipt["ui_readiness_command_invoked"] = True
         receipt["ui_readiness_test_started"] = True
         ui_output = run([
             "xcodebuild", "test-without-building",
@@ -227,6 +233,8 @@ def main() -> None:
             "CODE_SIGNING_ALLOWED=NO", "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=",
         ], stage=stage, timeout=240)
         retain_ui_screenshot(ui_output)
+        receipt["launched"] = True
+        receipt["ui_readiness_method_completed"] = True
         receipt["rendered_startup_verified"] = True
         receipt["screenshot_created"] = True
     except SmokeFailure as exc:
@@ -239,9 +247,10 @@ def main() -> None:
     finally:
         # Preserve the initial PNG and inspect the failed state only on our own
         # unconfigured simulator. Never replace the original operation failure.
-        if operation_failure and device_id and receipt["launched"]:
+        if operation_failure and device_id and receipt["installed"]:
             try:
-                own_device(device_id, name)
+                if own_device(device_id, name).get("state") != "Booted":
+                    raise SmokeFailure("failure-screenshot", "not-booted")
                 screenshot(device_id, "startup.png", "failure-screenshot")
                 receipt["screenshot_created"] = True
             except SmokeFailure as exc:

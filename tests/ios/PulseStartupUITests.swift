@@ -9,9 +9,8 @@ final class PulseStartupUITests: XCTestCase {
         let heading = app.staticTexts["Tu espacio privado de movilidad."]
         let notice = app.staticTexts["El acceso de esta app aún no está configurado."]
         let loginButton = app.buttons["Iniciar sesión"]
+        app.launch()
         let deadline = ProcessInfo.processInfo.systemUptime + 90
-
-        app.activate()
 
         while ProcessInfo.processInfo.systemUptime < deadline {
             if app.state == .runningForeground,

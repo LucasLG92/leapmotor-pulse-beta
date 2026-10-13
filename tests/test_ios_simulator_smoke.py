@@ -51,7 +51,16 @@ class IOSSimulatorSmokeTests(unittest.TestCase):
 
     def test_unknown_ui_error_keeps_only_return_code(self):
         diagnostic = smoke.ui_failure_diagnostic(subprocess.CompletedProcess([], 65, "secret", "secret"))
-        self.assertEqual(diagnostic, {"return_code": 65, "xcodebuild_error_detected": False, "known_error_words": []})
+        self.assertEqual(diagnostic, {"return_code": 65, "xcodebuild_error_detected": False,
+                                      "known_error_words": [], "known_error_options": []})
+
+    def test_ui_error_options_are_complete_allowlisted_tokens_without_values(self):
+        result = subprocess.CompletedProcess([], 64, "", "xcodebuild: error: '-test-iterations' must be greater than 1 at /private/secret?flag=-scheme -private-token")
+        diagnostic = smoke.ui_failure_diagnostic(result)
+        self.assertEqual(diagnostic["known_error_options"], ["-test-iterations"])
+        self.assertEqual(diagnostic["known_error_words"], ["greater", "must", "than"])
+        self.assertNotIn("secret", json.dumps(diagnostic))
+        self.assertNotIn("private-token", json.dumps(diagnostic))
 
     def test_ui_failure_diagnostic_does_not_replace_original_failure_or_cleanup(self):
         diagnostic = {"return_code": 70, "xcodebuild_error_detected": True, "known_error_words": ["test"]}
@@ -65,6 +74,8 @@ class IOSSimulatorSmokeTests(unittest.TestCase):
         self.assertEqual(receipt["failure"], {"stage": "ui-readiness", "type": "operation"})
         self.assertEqual(receipt["ui_readiness_failure_diagnostic"], diagnostic)
         self.assertFalse(receipt["rendered_startup_verified"])
+        self.assertFalse(receipt["launched"])
+        self.assertFalse(receipt["ui_readiness_method_completed"])
         self.assertTrue(receipt["initial_screenshot_created"])
         self.assertTrue(receipt["owned_simulator_removed"])
         self.assertIsNone(receipt["cleanup_failure"])
@@ -112,17 +123,12 @@ class IOSSimulatorSmokeTests(unittest.TestCase):
                                                 str(self.derived_data), str(self.spm_clones)]),
             mock.patch.object(smoke, "run", side_effect=dispatched) as run_mock,
             mock.patch.object(smoke, "own_device", side_effect=ownership),
-            mock.patch.object(smoke.time, "sleep"),
         ):
             return smoke.main(), run_mock, ownership
 
     def successful_run(self, arguments, *, stage, timeout=60):
         if stage == "create":
             return self.device_id
-        if stage == "launch":
-            return f"{smoke.BUNDLE}: 42"
-        if stage == "process-check":
-            return "/tmp/App.app/App"
         if stage in {"screenshot", "initial-screenshot", "failure-screenshot"}:
             Path(arguments[-1]).write_bytes(b"\x89PNG\r\n\x1a\nimage")
         if stage == "ui-readiness":
@@ -137,7 +143,13 @@ class IOSSimulatorSmokeTests(unittest.TestCase):
         receipt = self.receipt()
         self.assertTrue(receipt["installed"])
         self.assertTrue(receipt["launched"])
-        self.assertEqual(receipt["process_alive_after_seconds"], 5)
+        self.assertEqual(receipt["receipt_version"], 2)
+        self.assertEqual(receipt["process_alive_after_seconds"], 0)
+        self.assertEqual(receipt["process_liveness_observation"], "replaced_by_semantic_XCTest")
+        self.assertEqual(receipt["launch_observer"], "XCTest")
+        self.assertEqual(receipt["initial_screenshot_scope"], "before_XCTest_launch_simulator_state")
+        self.assertTrue(receipt["ui_readiness_command_invoked"])
+        self.assertTrue(receipt["ui_readiness_method_completed"])
         self.assertTrue(receipt["screenshot_created"])
         self.assertTrue(receipt["initial_screenshot_created"])
         self.assertTrue(receipt["rendered_startup_verified"])
@@ -150,7 +162,9 @@ class IOSSimulatorSmokeTests(unittest.TestCase):
         self.assertEqual(calls["bootstatus"], 300)
         self.assertEqual(calls["install"], 180)
         self.assertEqual(calls["initial-screenshot"], 120)
-        self.assertEqual(calls["launch"], 60)
+        self.assertNotIn("launch", calls)
+        self.assertNotIn("process-check", calls)
+        self.assertFalse(any(call.args[0][0] == "/bin/ps" for call in run_mock.call_args_list))
         self.assertEqual(calls["ui-readiness"], 240)
         ui_call = next(call for call in run_mock.call_args_list if call.kwargs["stage"] == "ui-readiness")
         self.assertIn("test-without-building", ui_call.args[0])
@@ -184,10 +198,6 @@ class IOSSimulatorSmokeTests(unittest.TestCase):
         def run_with_screenshot_timeout(arguments, *, stage, timeout=60):
             if stage == "create":
                 return self.device_id
-            if stage == "launch":
-                return f"{smoke.BUNDLE}: 42"
-            if stage == "process-check":
-                return "/tmp/App.app/App"
             if stage in {"initial-screenshot", "failure-screenshot"}:
                 self.assertEqual(timeout, 120)
                 raise smoke.SmokeFailure(stage, "timeout")
@@ -198,12 +208,14 @@ class IOSSimulatorSmokeTests(unittest.TestCase):
         receipt = self.receipt()
         self.assertEqual(receipt["failure"], {"stage": "initial-screenshot", "type": "timeout"})
         self.assertTrue(receipt["installed"])
-        self.assertTrue(receipt["launched"])
+        self.assertFalse(receipt["launched"])
+        self.assertFalse(receipt["ui_readiness_command_invoked"])
+        self.assertEqual(receipt["diagnostic_capture_failure"], {"stage": "failure-screenshot", "type": "timeout"})
         self.assertFalse(receipt["screenshot_created"])
         self.assertTrue(receipt["owned_simulator_removed"])
 
     def test_changed_ownership_withholds_delete_and_records_cleanup_failure(self):
-        ownership = mock.Mock(side_effect=[{"state": "Booted"},
+        ownership = mock.Mock(side_effect=[{"state": "Booted"}, {"state": "Booted"},
             smoke.SmokeFailure("ownership-check", "ownership"),
             smoke.SmokeFailure("ownership-check", "ownership")])
         stages = []
@@ -212,10 +224,6 @@ class IOSSimulatorSmokeTests(unittest.TestCase):
             stages.append(stage)
             if stage == "create":
                 return self.device_id
-            if stage == "launch":
-                return f"{smoke.BUNDLE}: 42"
-            if stage == "process-check":
-                return "/tmp/App.app/App"
             if stage == "initial-screenshot":
                 raise smoke.SmokeFailure(stage, "timeout")
             return ""
@@ -289,7 +297,7 @@ class IOSSimulatorSmokeTests(unittest.TestCase):
                 smoke.run(["synthetic-command"], stage="install", timeout=180)
         self.assertEqual(str(caught.exception), "install:operation")
 
-    def test_live_process_without_ui_observation_fails_and_preserves_initial_png(self):
+    def test_successful_ui_command_without_observation_fails_and_preserves_initial_png(self):
         def no_ui_marker(arguments, *, stage, timeout=60):
             if stage == "ui-readiness":
                 return "** TEST SUCCEEDED **"
@@ -299,6 +307,8 @@ class IOSSimulatorSmokeTests(unittest.TestCase):
         self.assertEqual(str(caught.exception), "ui-readiness:readiness-not-reported")
         receipt = self.receipt()
         self.assertFalse(receipt["rendered_startup_verified"])
+        self.assertFalse(receipt["launched"])
+        self.assertFalse(receipt["ui_readiness_method_completed"])
         self.assertTrue(receipt["initial_screenshot_created"])
         self.assertTrue(receipt["owned_simulator_removed"])
         self.assertEqual((self.output / "startup-initial.png").read_bytes(), b"\x89PNG\r\n\x1a\nimage")
@@ -344,6 +354,57 @@ class IOSSimulatorSmokeTests(unittest.TestCase):
                 smoke.main()
         self.assertEqual(str(caught.exception), "preflight:build-inputs")
         self.assertFalse(self.output.exists())
+
+    def test_changed_ownership_before_xctest_withholds_ui_command_and_delete(self):
+        stages = []
+        def dispatched(arguments, *, stage, timeout=60):
+            stages.append(stage)
+            return self.successful_run(arguments, stage=stage, timeout=timeout)
+        ownership = mock.Mock(side_effect=[{"state": "Booted"}, {"state": "Booted"},
+            smoke.SmokeFailure("ownership-check", "ownership"),
+            smoke.SmokeFailure("ownership-check", "ownership"),
+            smoke.SmokeFailure("ownership-check", "ownership")])
+        with self.assertRaises(smoke.SmokeFailure):
+            self.run_main(dispatched, ownership)
+        self.assertNotIn("ui-readiness", stages)
+        self.assertNotIn("delete", stages)
+        receipt = self.receipt()
+        self.assertFalse(receipt["ui_readiness_command_invoked"])
+        self.assertFalse(receipt["rendered_startup_verified"])
+
+    def test_shutdown_simulator_after_ui_failure_is_not_captured_but_is_removed(self):
+        stages = []
+        def dispatched(arguments, *, stage, timeout=60):
+            stages.append(stage)
+            if stage == "ui-readiness":
+                raise smoke.SmokeFailure(stage, "operation")
+            return self.successful_run(arguments, stage=stage, timeout=timeout)
+        ownership = mock.Mock(side_effect=[{"state": "Booted"}, {"state": "Booted"}, {"state": "Booted"},
+            {"state": "Shutdown"}, {"state": "Shutdown"}])
+        with self.assertRaises(smoke.SmokeFailure):
+            self.run_main(dispatched, ownership)
+        receipt = self.receipt()
+        self.assertEqual(receipt["diagnostic_capture_failure"], {"stage": "failure-screenshot", "type": "not-booted"})
+        self.assertEqual(receipt["failure"], {"stage": "ui-readiness", "type": "operation"})
+        self.assertNotIn("failure-screenshot", stages)
+        self.assertTrue(receipt["owned_simulator_removed"])
+
+    def test_changed_ownership_before_initial_png_withholds_all_captures(self):
+        stages = []
+        def dispatched(arguments, *, stage, timeout=60):
+            stages.append(stage)
+            return self.successful_run(arguments, stage=stage, timeout=timeout)
+        ownership = mock.Mock(side_effect=[{"state": "Booted"},
+            smoke.SmokeFailure("ownership-check", "ownership"),
+            smoke.SmokeFailure("ownership-check", "ownership"),
+            smoke.SmokeFailure("ownership-check", "ownership")])
+        with self.assertRaises(smoke.SmokeFailure):
+            self.run_main(dispatched, ownership)
+        self.assertNotIn("initial-screenshot", stages)
+        self.assertNotIn("failure-screenshot", stages)
+        self.assertNotIn("ui-readiness", stages)
+        self.assertNotIn("delete", stages)
+        self.assertFalse(self.receipt()["initial_screenshot_created"])
 
 
 if __name__ == "__main__":
