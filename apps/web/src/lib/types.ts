@@ -18,7 +18,8 @@ export type ChargerSessionPage = components['schemas']['ChargerSessionPage'];
 export type ChargerPricingEvent = components['schemas']['ChargerPricingEvent'];
 export type ChargerPricingHistoryPage = components['schemas']['ChargerPricingHistoryPage'];
 export type ChargePayload = components['schemas']['ChargePayload'];
-export type ChargeQuotePayload = Omit<ChargePayload, 'pricing_method' | 'ended_at'> & {
+export type ChargeCreationRequest = components['schemas']['ChargeCreationRequest'];
+export type ChargeQuotePayload = Omit<ChargePayload, 'pricing_method' | 'ended_at' | 'request_id'> & {
 	ended_at: string;
 	pricing_method: 'pvpc';
 };
@@ -34,6 +35,19 @@ export type EnergyMonth = components['schemas']['EnergyMonth'];
 export type ObservationCoverage = components['schemas']['ObservationCoverage'];
 export type EnergyEstimates = components['schemas']['EnergyEstimates'];
 export type Journey = components['schemas']['Journey'];
+export type ManualJourney = components['schemas']['ManualJourney'];
+export type MaintenancePlan = components['schemas']['MaintenancePlanResult'];
+export type MaintenancePlanPage = components['schemas']['MaintenancePlanPage'];
+export type MaintenancePlanInput = components['schemas']['MaintenancePlanPayload'];
+export type ChargingPlanInput = components['schemas']['ChargingPlanPayload'];
+export type ChargingPlan = components['schemas']['ChargingPlanResult'];
+export type ChargingComparison = components['schemas']['ChargeComparisonResult'];
+export type NavigationFavorite = components['schemas']['FavoriteResult'];
+export type NavigationFavoritePage = components['schemas']['FavoritePage'];
+
+export type ManualJourneyPage = components['schemas']['ManualJourneyPage'];
+export type ManualJourneyReport = components['schemas']['ManualJourneyReport'];
+export type ManualJourneyCreationRequest = components['schemas']['ManualJourneyCreationRequest'];
 export type MaintenanceItem = components['schemas']['Maintenance'];
 export type ProtectionEvent = components['schemas']['Event'];
 export type ObservedEvent = components['schemas']['ObservedEvent'];
@@ -57,8 +71,12 @@ export type NativeCapabilities = components['schemas']['NativeCapabilities'];
 export type WidgetGrant = components['schemas']['WidgetGrant'];
 export type WidgetGrantList = components['schemas']['WidgetGrantList'];
 export type WidgetPairingResult = components['schemas']['WidgetPairingResult'];
-export type PushCapabilities = components['schemas']['PushCapabilities'];
-export type PushDevice = components['schemas']['PushDevice'];
+export type PushCapabilities = components['schemas']['PushCapabilities'] & {
+	backup_alerts_available: boolean;
+};
+export type PushDevice = components['schemas']['PushDevice'] & {
+	backup_alerts_enabled: boolean;
+};
 export type PushDeviceList = components['schemas']['PushDeviceList'];
 export type PushTestResult = components['schemas']['PushTestResult'];
 export type WebPushSubscriptionInput = components['schemas']['PushSubscription'];
@@ -72,6 +90,14 @@ export type MutationPayload =
 	| components['schemas']['CommandPayload']
 	| ChargePayload
 	| ChargeEditPayload
+	| components['schemas']['ManualJourneyPayload']
+	| components['schemas']['ManualJourneyEditPayload']
+	| components['schemas']['ManualJourneyDeletePayload']
+	| components['schemas']['MaintenancePlanPayload']
+	| components['schemas']['MaintenancePlanEditPayload']
+	| components['schemas']['MaintenanceCompletionPayload']
+	| components['schemas']['RevisionPayload']
+	| components['schemas']['FavoritePayload']
 	| components['schemas']['MaintenancePayload']
 	| components['schemas']['MaintenanceEditPayload']
 	| components['schemas']['ImportPayload']
@@ -95,6 +121,8 @@ export interface PageProps {
 	canInstall: boolean;
 	mutate: (path: string, method: HttpMethod, data?: MutationPayload, success?: string) => Promise<boolean>;
 	quoteCharge: (payload: ChargeQuotePayload) => Promise<ChargeQuote>;
+	reserveChargeCreation: () => Promise<ChargeCreationRequest>;
+	reserveJourneyCreation: () => Promise<ManualJourneyCreationRequest>;
 	onSessionExpired: () => void;
 	navigation: {
 		status: (signal?: AbortSignal) => Promise<NavigationStatus>;
@@ -109,6 +137,7 @@ export interface PageProps {
 		register: (name: string, subscription: WebPushSubscriptionInput) => Promise<PushDevice>;
 		revoke: (id: string) => Promise<void>;
 		test: (id: string) => Promise<PushTestResult>;
+		setBackupAlerts: (id: string, enabled: boolean) => Promise<PushDevice>;
 	};
 	runNotificationAction: (operation: () => Promise<void>) => Promise<void>;
 	confirmAction: (title: string, message: string, confirmLabel?: string) => Promise<boolean>;

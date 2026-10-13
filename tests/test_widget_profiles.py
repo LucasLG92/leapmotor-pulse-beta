@@ -6,7 +6,7 @@ import sqlite3
 import pytest
 
 from pulse.domain import DomainError, Store
-from schema_helpers import downgrade_telemetry_to_v15
+from schema_helpers import downgrade_export_to_v16, downgrade_telemetry_to_v15
 
 
 PROFILE_INPUT = {"name": "Panel semanal", "fields": ["battery_pct", "charging"]}
@@ -174,7 +174,9 @@ def test_validate_import_is_read_only_and_applies_owner_scope(tmp_path):
 def test_legacy_import_with_explicit_owner_only_clears_that_users_profiles(tmp_path):
     source = make_store(tmp_path, "legacy-source.sqlite3")
     legacy = source.export_data()
+    downgrade_export_to_v16(legacy)
     legacy["schema_version"] = 1
+    legacy.pop("manual_journeys")
     legacy.pop("charger")
     legacy.pop("charger_pricing")
     legacy.pop("observed_events")
@@ -221,14 +223,16 @@ def test_export_v7_round_trips_new_fields_but_v6_rejects_them_atomically(tmp_pat
         "user-a", {"name": "Energía", "fields": ["energy_kwh", "energy_cost_eur"]}
     )
     archive = source.export_data(owner_id="user-a")
-    assert archive["schema_version"] == 15
+    assert archive["schema_version"] == 17
 
     destination = make_store(tmp_path, "v7-destination.sqlite3")
     destination.import_data(archive, owner_id="user-a")
     assert destination.list_widget_profiles("user-a")["items"] == [profile]
 
     legacy = copy.deepcopy(archive)
+    downgrade_export_to_v16(legacy)
     legacy["schema_version"] = 6
+    legacy.pop("manual_journeys")
     legacy["settings"].pop("vehicle_color")
     legacy.pop("charger_pricing")
     legacy.pop("observed_events")
@@ -244,7 +248,9 @@ def test_export_v7_round_trips_new_fields_but_v6_rejects_them_atomically(tmp_pat
     old_source = make_store(tmp_path, "v6-source.sqlite3")
     old_profile = old_source.create_widget_profile("user-a", PROFILE_INPUT)
     old_archive = old_source.export_data(owner_id="user-a")
+    downgrade_export_to_v16(old_archive)
     old_archive["schema_version"] = 6
+    old_archive.pop("manual_journeys")
     old_archive["settings"].pop("vehicle_color")
     old_archive.pop("charger_pricing")
     old_archive.pop("observed_events")
@@ -281,6 +287,9 @@ def test_v7_to_current_migration_preserves_widget_profiles_and_grants(tmp_path):
         connection.execute("DROP TRIGGER invalidate_charger_pricing_on_session_change")
         connection.execute("DROP TABLE charger_pricing")
         connection.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
+        connection.execute("DROP TABLE IF EXISTS manual_charge_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journey_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journeys")
         tables_before = connection.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
         ).fetchall()
@@ -288,15 +297,21 @@ def test_v7_to_current_migration_preserves_widget_profiles_and_grants(tmp_path):
 
     migrated = Store(path, clock=lambda: datetime(2026, 10, 8, 15, 0, tzinfo=timezone.utc))
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 17
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 21
         tables_after = connection.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
         ).fetchall()
     assert set(tables_after) == set(tables_before) | {
         ("abrp_preference",), ("charger_pricing",), ("observed_events",),
-        ("charger_energy_epochs",), ("charger_energy_intervals",),
-        ("charger_pricing_history",),
-    }
+            ("charger_energy_epochs",), ("charger_energy_intervals",),
+            ("charger_pricing_history",),
+            ("backup_alert_runtime",), ("backup_alert_observations",),
+            ("backup_alert_events",), ("backup_alert_deliveries",),
+            ("manual_charge_requests",),
+            ("manual_journeys",), ("manual_journey_requests",),
+            ("maintenance_completions",), ("maintenance_plans",), ("maintenance_plan_request_tombstones",),
+            ("navigation_favorites",),
+        }
     assert migrated.list_widget_profiles("user-a")["items"] == [profile]
     assert migrated.widget_grant_context(
         grant["widget_token"], grant["grant"]["id"]

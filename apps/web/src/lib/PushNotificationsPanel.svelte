@@ -32,8 +32,13 @@
 	let currentEndpointHash: string | null = $state(null);
 	let disposed = false;
 	let requestId = 0;
+	class PushBrowserError extends Error {}
 
 	const currentDevice = $derived(devices.find((device) => device.endpoint_hash === currentEndpointHash) ?? null);
+	function withBackupAlertState(device: Omit<PushDevice, 'backup_alerts_enabled'> & { backup_alerts_enabled?: boolean }): PushDevice {
+		return { ...device, backup_alerts_enabled: device.backup_alerts_enabled === true };
+	}
+
 	function isPushDeviceDirty(): boolean {
 		return deviceName !== deviceNameBaseline;
 	}
@@ -97,24 +102,28 @@
 		return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 	}
 
-	async function inspectLocalSubscription(publicKey: string | null, request: number) {
+	async function inspectLocalSubscription(publicKey: string | null, request: number): Promise<boolean> {
 		currentEndpointHash = null;
 		localKeyMatches = false;
-		if (!supported) return;
+		if (!supported) return true;
 		try {
 			const registration = await navigator.serviceWorker.getRegistration();
+			if (disposed || request !== requestId) return false;
 			const subscription = await registration?.pushManager.getSubscription();
-			if (!subscription || disposed || request !== requestId) return;
+			if (disposed || request !== requestId) return false;
+			if (!subscription) return true;
 			const endpointHash = await endpointDigest(subscription.endpoint);
-			if (disposed || request !== requestId) return;
+			if (disposed || request !== requestId) return false;
 			currentEndpointHash = endpointHash;
 			const localKey = subscription.options.applicationServerKey;
 			if (publicKey) {
 				const expected = decodeBase64Url(publicKey);
 				localKeyMatches = localKey !== null && equalBytes(new Uint8Array(localKey), expected);
 			}
+			return true;
 		} catch {
-			// A local browser API failure does not reveal subscription material.
+			// Unknown local state must not be presented as an absent subscription.
+			return false;
 		}
 	}
 
@@ -133,13 +142,17 @@
 		error = '';
 		try {
 			const nextCapabilities = await notifications.capabilities();
+			if (disposed || request !== requestId) return;
 			const nextDevices = await notifications.devices();
 			if (disposed || request !== requestId) return;
 			capabilities = nextCapabilities;
-			devices = nextDevices.items;
+			devices = nextDevices.items.map(withBackupAlertState);
 			maxDevices = nextDevices.max_devices;
 			loaded = true;
-			await inspectLocalSubscription(nextCapabilities.application_server_key, request);
+			const inspected = await inspectLocalSubscription(nextCapabilities.application_server_key, request);
+			if (!disposed && request === requestId && !inspected) {
+				error = 'No se pudo comprobar la suscripción de este navegador. Reintenta la consulta antes de cambiar los avisos.';
+			}
 		} catch {
 			if (!disposed && request === requestId) error = 'No se pudo consultar la disponibilidad o la lista de dispositivos. Inténtalo de nuevo.';
 		} finally {
@@ -157,6 +170,7 @@
 
 	function fixedActionError(error: unknown, fallback: string): string {
 		if (error instanceof DOMException && error.name === 'NotAllowedError') return 'El navegador no concedió permiso para las notificaciones.';
+		if (error instanceof PushBrowserError) return error.message;
 		return fallback;
 	}
 
@@ -177,24 +191,39 @@
 		};
 	}
 
-	async function getOrCreateSubscription(forceReplace = false): Promise<PushSubscription> {
+	async function unsubscribeAndVerify(registration: ServiceWorkerRegistration, subscription: PushSubscription): Promise<boolean> {
+		await subscription.unsubscribe();
+		if (disposed) return false;
+		// false can also mean that the subscription was already removed. Read back
+		// the browser state instead of assuming either success or failure.
+		const remaining = await registration.pushManager.getSubscription();
+		if (disposed) return false;
+		if (remaining) throw new PushBrowserError('El navegador conserva una suscripción. No se pudo confirmar su baja; actualiza el estado antes de reintentarlo.');
+		return true;
+	}
+
+	async function getOrCreateSubscription(forceReplace = false): Promise<PushSubscription | null> {
 		const registration = await navigator.serviceWorker.getRegistration();
-		if (!registration) throw new Error('No se encontró el service worker de Pulse. Recarga la aplicación e inténtalo de nuevo.');
+		if (disposed) return null;
+		if (!registration) throw new PushBrowserError('No se encontró el service worker de Pulse. Recarga la aplicación e inténtalo de nuevo.');
 		let subscription = await registration.pushManager.getSubscription();
+		if (disposed) return null;
 		const key = capabilities?.application_server_key;
-		if (!key) throw new Error('El servidor no tiene disponible una clave de notificaciones.');
+		if (!key) throw new PushBrowserError('El servidor no tiene disponible una clave de notificaciones.');
 		if (subscription && !forceReplace) {
 			const localKey = subscription.options.applicationServerKey;
 			if (!localKey || !equalBytes(new Uint8Array(localKey), decodeBase64Url(key))) {
-				throw new Error('La clave de notificaciones cambió. Usa «Renovar suscripción» para actualizar este navegador.');
+				throw new PushBrowserError('La clave de notificaciones cambió. Usa «Renovar suscripción» para actualizar este navegador.');
 			}
 			return subscription;
 		}
 		if (subscription && forceReplace) {
 			const oldHash = await endpointDigest(subscription.endpoint);
+			if (disposed) return null;
 			const serverDevice = devices.find((device) => device.endpoint_hash === oldHash);
 			if (serverDevice) await notifications.revoke(serverDevice.id);
-			await subscription.unsubscribe();
+			if (disposed) return null;
+			if (!await unsubscribeAndVerify(registration, subscription) || disposed) return null;
 			subscription = null;
 		}
 		const decodedKey = decodeBase64Url(key);
@@ -204,7 +233,7 @@
 
 	async function registerCurrentSubscription(subscription: PushSubscription) {
 		const input = subscriptionInput(subscription);
-		if (!input) throw new Error('El navegador no pudo preparar una suscripción válida.');
+		if (!input) throw new PushBrowserError('El navegador no pudo preparar una suscripción válida.');
 		const submittedName = deviceName;
 		const registeredName = submittedName.trim();
 		await notifications.register(registeredName, input);
@@ -234,7 +263,7 @@
 				if (disposed || permission !== 'granted') return;
 				try {
 					const subscription = await getOrCreateSubscription();
-					if (disposed) return;
+					if (!subscription || disposed) return;
 					await registerCurrentSubscription(subscription);
 				} catch (error) {
 					// A failed response can leave a valid local subscription. Reconcile the server list without retrying the write.
@@ -274,9 +303,9 @@
 					'Renovar suscripción'
 				);
 				if (!confirmed || disposed || loading) return;
-				const subscription = await getOrCreateSubscription(true);
-				if (disposed) return;
 				try {
+					const subscription = await getOrCreateSubscription(true);
+					if (!subscription || disposed) return;
 					await registerCurrentSubscription(subscription);
 				} catch (error) {
 					if (canReconcile(error)) try { await loadData(true); } catch { /* Do not retry registration automatically. */ }
@@ -300,20 +329,24 @@
 		actionMessage = '';
 		actionError = '';
 		actionBusy = true;
+		let revokedOnServer = false;
 		try {
 			await runNotificationAction(async () => {
 				const confirmed = await confirmAction('Desactivar notificaciones', `Se desactivarán los avisos en «${device.name}». El permiso del navegador seguirá activo.`, 'Desactivar');
 				if (!confirmed || disposed || loading) return;
 				await notifications.revoke(device.id);
+				revokedOnServer = true;
 				if (disposed) return;
 				if (device.endpoint_hash === currentEndpointHash && supported) {
 					const registration = await navigator.serviceWorker.getRegistration();
 					if (disposed) return;
 					const subscription = await registration?.pushManager.getSubscription();
 					if (disposed) return;
-					if (subscription && await endpointDigest(subscription.endpoint) === device.endpoint_hash) {
+					if (subscription) {
+						const actualHash = await endpointDigest(subscription.endpoint);
 						if (disposed) return;
-						await subscription.unsubscribe();
+						if (actualHash !== device.endpoint_hash) throw new PushBrowserError('La suscripción de este navegador cambió. Actualiza el estado antes de retirar otra suscripción.');
+						if (!await unsubscribeAndVerify(registration!, subscription) || disposed) return;
 					}
 					if (disposed) return;
 					currentEndpointHash = null;
@@ -326,7 +359,44 @@
 			if (disposed) return;
 		} catch (error) {
 			if (canReconcile(error)) try { await loadData(true); } catch { /* A fixed error remains visible if reconciliation also fails. */ }
-			if (!disposed) actionError = fixedActionError(error, 'No se pudo desactivar este dispositivo. Inténtalo de nuevo.');
+			if (!disposed) actionError = revokedOnServer
+				? `Los avisos se desactivaron en Pulse. ${fixedActionError(error, 'No se pudo confirmar la baja en este navegador. Comprueba su suscripción local antes de reintentarlo.')}`
+				: fixedActionError(error, 'No se pudo confirmar la desactivación de este dispositivo. Comprueba la lista antes de reintentarlo.');
+		} finally {
+			if (!disposed) {
+				actionBusy = false;
+				await restorePanelFocus(previousFocus);
+			}
+		}
+	}
+
+	async function removeLocalSubscription() {
+		if (busy || actionBusy || loading || !online || !currentEndpointHash || currentDevice) return;
+		const expectedHash = currentEndpointHash;
+		const previousFocus = capturePanelFocus();
+		actionMessage = '';
+		actionError = '';
+		actionBusy = true;
+		try {
+			await runNotificationAction(async () => {
+				const confirmed = await confirmAction('Retirar suscripción local', 'Este navegador conserva una suscripción que no figura en Pulse. Puedes retirarla para completar la desactivación.', 'Retirar suscripción');
+				if (!confirmed || disposed) return;
+				const registration = await navigator.serviceWorker.getRegistration();
+				if (disposed) return;
+				const subscription = await registration?.pushManager.getSubscription();
+				if (disposed) return;
+				if (subscription) {
+					const actualHash = await endpointDigest(subscription.endpoint);
+					if (disposed) return;
+					if (actualHash !== expectedHash) throw new PushBrowserError('La suscripción de este navegador cambió. Actualiza el estado antes de retirarla.');
+					if (!await unsubscribeAndVerify(registration!, subscription) || disposed) return;
+				}
+				await loadData(true);
+				if (!disposed) actionMessage = 'Suscripción retirada de este navegador. El permiso de notificaciones sigue activo.';
+			});
+		} catch (error) {
+			if (canReconcile(error)) await loadData(true);
+			if (!disposed) actionError = fixedActionError(error, 'No se pudo confirmar la baja local. Actualiza el estado antes de reintentarlo.');
 		} finally {
 			if (!disposed) {
 				actionBusy = false;
@@ -356,6 +426,73 @@
 			if (!disposed) actionError = error instanceof ApiError && error.status === 429
 				? 'Las pruebas están limitadas a una por minuto. Espera antes de enviar otra.'
 				: fixedActionError(error, 'No se pudo enviar la prueba. El servidor no confirma la entrega física.');
+		} finally {
+			if (!disposed) {
+				actionBusy = false;
+				await restorePanelFocus(previousFocus);
+			}
+		}
+	}
+
+	function validBackupAlertResponse(value: PushDevice, id: string, enabled: boolean): boolean {
+		return value !== null && typeof value === 'object' && value.id === id &&
+			typeof value.backup_alerts_enabled === 'boolean' && value.backup_alerts_enabled === enabled &&
+			(value.state === 'active' || value.state === 'session_required');
+	}
+
+	async function setBackupAlerts(device: PushDevice) {
+		const originalEnabled = device.backup_alerts_enabled;
+		const enabled = !originalEnabled;
+		if (busy || actionBusy || loading || !online || capabilities?.backup_alerts_available !== true || device.state !== 'active') return;
+		const canSubmit = (insideNotificationAction = false): boolean => {
+			if (disposed) return false;
+			const current = devices.find((item) => item.id === device.id);
+			const allowed = online && (!busy || insideNotificationAction) && !loading &&
+				capabilities?.backup_alerts_available === true && current?.state === 'active' &&
+				current.backup_alerts_enabled === originalEnabled;
+			if (!allowed) actionError = 'Cambió la conexión, disponibilidad o estado del dispositivo. No se aplicó el cambio; consulta el estado antes de intentarlo de nuevo.';
+			return allowed;
+		};
+		const previousFocus = capturePanelFocus();
+		actionMessage = '';
+		actionError = '';
+		actionBusy = true;
+		try {
+			await runNotificationAction(async () => {
+				if (enabled) {
+					const confirmed = await confirmAction(
+						'Activar avisos de copias',
+						'Pulse mostrará avisos genéricos de comprobaciones de copias o recuperación. No informan sobre la integridad del contenido ni garantizan la entrega del aviso.',
+						'Activar avisos'
+					);
+					if (!confirmed || !canSubmit(true)) return;
+				}
+				// runNotificationAction owns the global busy flag while its callback runs; allow that
+				// busy state here, while still rechecking connectivity, capability, loading and row state.
+				if (!canSubmit(true)) return;
+				const updated = await notifications.setBackupAlerts(device.id, enabled);
+				if (disposed) return;
+				if (!validBackupAlertResponse(updated, device.id, enabled)) {
+					throw new PushBrowserError('La respuesta no confirmó el estado solicitado. Comprueba el dispositivo antes de volver a cambiarlo.');
+				}
+				devices = devices.map((item) => item.id === device.id
+					? { ...item, backup_alerts_enabled: updated.backup_alerts_enabled }
+					: item);
+				actionMessage = enabled
+					? 'Avisos de copias activados para este dispositivo. La entrega no está garantizada.'
+					: 'Avisos de copias desactivados para este dispositivo.';
+			});
+		} catch (error) {
+			// A failed or malformed response may follow a committed write. Read once to reconcile; never repeat the POST.
+			if (canReconcile(error)) {
+				try {
+					const latest = await notifications.devices();
+					if (!disposed) devices = latest.items.map(withBackupAlertState);
+				} catch {
+					// Keep the last confirmed state and show the fixed error below.
+				}
+			}
+			if (!disposed) actionError = fixedActionError(error, 'No se pudo confirmar el cambio de avisos de copias. Consulta el estado antes de volver a intentarlo.');
 		} finally {
 			if (!disposed) {
 				actionBusy = false;
@@ -399,6 +536,10 @@
 		{#if !online}<p class="push-note" role="status">Sin conexión. No se pueden consultar ni cambiar las suscripciones.</p>{/if}
 		{#if loading && !loaded}<p class="push-loading" role="status">Consultando el servicio…</p>{/if}
 		{#if error}<div class="push-error" role="alert"><span>{error}</span><button class="button button-small button-secondary" type="button" disabled={!online || busy || actionBusy || loading} onclick={() => void loadData()}>Reintentar</button></div>{/if}
+		{#if !error && supported && loaded && currentEndpointHash && !currentDevice}
+			<p class="push-note" role="status">Este navegador conserva una suscripción que no figura en Pulse. Puedes retirarla para completar la desactivación.</p>
+			<button class="button button-secondary button-block" type="button" disabled={busy || actionBusy || loading || !online} onclick={() => void removeLocalSubscription()}>Retirar suscripción local</button>
+		{/if}
 		{#if !error && supported && capabilities?.enabled && permission !== 'denied'}
 			<div class="push-activation">
 				{#if currentDevice?.state !== 'active'}<div class="push-name-field"><label for="push-device-name">Nombre de este dispositivo</label><input id="push-device-name" bind:value={deviceName} maxlength="60" autocomplete="off" aria-describedby="push-name-hint" disabled={busy || actionBusy} /><span id="push-name-hint">Máximo 60 caracteres. Solo se usa para reconocerlo aquí.</span></div>{/if}
@@ -421,6 +562,16 @@
 				{#each devices as device (device.id)}
 					<li class="push-device-row">
 						<div class="push-device-info"><strong>{device.name}</strong><span>{expiryLabel(device.expires_at)}</span><span>{deviceState(device)}</span></div>
+						<div class="push-backup-alerts">
+							<div><strong>Avisos de copias</strong><span>Comprobaciones generales de copias y recuperación.</span></div>
+							<button class="push-switch" type="button" role="switch" aria-checked={device.backup_alerts_enabled} aria-label="Avisos de copias para {device.name}" disabled={!online || busy || actionBusy || loading || capabilities?.backup_alerts_available !== true || device.state !== 'active'} onclick={() => void setBackupAlerts(device)}>
+								<span class="push-switch-track" aria-hidden="true"><span class="push-switch-thumb"></span></span>
+								<span>{device.backup_alerts_enabled ? 'Activados' : 'Desactivados'}</span>
+							</button>
+							{#if capabilities?.backup_alerts_available !== true}<span class="push-backup-explanation">{capabilities ? 'El servidor no tiene disponibles los avisos de copias.' : 'La disponibilidad de los avisos de copias aún no se ha confirmado.'}</span>
+							{:else if device.state !== 'active'}<span class="push-backup-explanation">Reactiva este dispositivo para cambiar esta opción.</span>{/if}
+							<p class="push-backup-disclaimer">El aviso no informa sobre la integridad de una copia ni garantiza su entrega.</p>
+						</div>
 						<div class="push-device-actions">
 							{#if device.state === 'active'}<button class="button button-small button-secondary" type="button" disabled={!online || busy || actionBusy || loading} onclick={() => void sendTest(device)}>{actionBusy ? 'Enviando…' : 'Enviar prueba'}</button>{/if}
 							<button class="button button-small button-quiet push-revoke" type="button" disabled={!online || busy || actionBusy || loading} onclick={() => void revokeDevice(device)}>Desactivar</button>
@@ -453,6 +604,19 @@
 	.push-device-row { display: grid; gap: 7px; min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-soft); }
 	.push-device-info { display: grid; gap: 3px; min-width: 0; color: var(--muted); font-size: .75rem; line-height: 1.45; overflow-wrap: anywhere; }
 	.push-device-info strong { overflow-wrap: anywhere; color: var(--ink); font-size: 1rem; font-weight: 640; }
+	.push-backup-alerts { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+	.push-backup-alerts > div { display: grid; gap: 3px; min-width: 0; }
+	.push-backup-alerts strong { color: var(--ink); font-size: .875rem; }
+	.push-backup-alerts span, .push-backup-disclaimer { margin: 0; color: var(--muted); font-size: .75rem; line-height: 1.45; overflow-wrap: anywhere; }
+	.push-backup-explanation, .push-backup-disclaimer { grid-column: 1 / -1; }
+	.push-switch { display: inline-flex; align-items: center; justify-content: flex-end; gap: 7px; min-width: 44px; min-height: 44px; padding: 4px; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: .75rem; cursor: pointer; }
+	.push-switch:disabled { color: var(--muted); cursor: not-allowed; }
+	.push-switch:disabled .push-switch-track { opacity: .55; }
+	.push-switch-track { display: inline-flex; align-items: center; width: 38px; height: 22px; padding: 3px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface); transition: background-color .12s ease, border-color .12s ease; }
+	.push-switch[aria-checked="true"] .push-switch-track { border-color: var(--forest); background: var(--forest); }
+	.push-switch-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--ink); transition: transform .12s ease, background-color .12s ease; }
+	.push-switch[aria-checked="true"] .push-switch-thumb { transform: translateX(16px); background: var(--surface); }
+	.push-switch:focus-visible { outline: 3px solid var(--focus, var(--forest)); outline-offset: 2px; border-radius: 6px; }
 	.push-device-actions { display: flex; flex-wrap: wrap; gap: 5px; }
 	.push-panel :global(.button) { min-height: 44px; font-size: .875rem; }
 	.push-revoke { color: var(--danger); }
@@ -463,5 +627,5 @@
 	.push-footnote { padding-top: 8px; border-top: 1px solid var(--line); font-size: .75rem; }
 	.push-panel :global(.button) { transition: background-color .12s ease, color .12s ease, border-color .12s ease, opacity .12s ease; }
 	@media (max-width: 430px) { .push-device-actions { display: grid; grid-template-columns: 1fr; } .push-device-actions .button { width: 100%; } }
-	@media (prefers-reduced-motion: reduce) { .push-panel :global(.button) { transition: none; } }
+	@media (prefers-reduced-motion: reduce) { .push-panel :global(.button), .push-switch-track, .push-switch-thumb { transition: none; } }
 </style>

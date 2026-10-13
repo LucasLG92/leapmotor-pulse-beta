@@ -94,6 +94,49 @@ def check_shared_scheme(path: Path, expected: dict[str, tuple[str, str]]) -> Non
             check_reference(elements[0].find("./BuildableProductRunnable/BuildableReference"), "App")
 
 
+def check_startup_ci_scheme(path: Path, expected: dict[str, tuple[str, str]]) -> None:
+    """The CI scheme tests all products but never archives or skips its UI test."""
+    scheme = ET.parse(path).getroot()
+    assert scheme.tag == "Scheme" and scheme.get("version") == "1.3"
+    assert not scheme.findall(".//PreActions") and not scheme.findall(".//PostActions")
+    build = scheme.find("BuildAction")
+    assert build is not None and build.get("buildImplicitDependencies") == "YES"
+    entries = build.findall("./BuildActionEntries/BuildActionEntry")
+    assert len(entries) == len(expected) == 3
+    seen = set()
+    for entry in entries:
+        references = entry.findall("BuildableReference")
+        assert len(references) == 1
+        ref = references[0]
+        name = ref.get("BlueprintName")
+        assert name in expected and name not in seen
+        identifier, product = expected[name]
+        assert ref.attrib == {
+            "BuildableIdentifier": "primary", "BlueprintIdentifier": identifier,
+            "BuildableName": product, "BlueprintName": name,
+            "ReferencedContainer": "container:App.xcodeproj",
+        }
+        assert entry.get("buildForTesting") == "YES"
+        assert all(entry.get(action) == "NO" for action in (
+            "buildForRunning", "buildForProfiling", "buildForArchiving", "buildForAnalyzing"))
+        seen.add(name)
+    assert seen == set(expected)
+    actions = scheme.findall("TestAction")
+    assert len(actions) == 1 and actions[0].get("buildConfiguration") == "Debug"
+    testables = actions[0].findall("./Testables/TestableReference")
+    assert len(testables) == 1
+    testable = testables[0]
+    assert testable.get("skipped") == "NO" and testable.get("parallelizable") == "NO"
+    references = testable.findall("BuildableReference")
+    assert len(references) == 1
+    identifier, product = expected["PulseStartupUITests"]
+    assert references[0].attrib == {
+        "BuildableIdentifier": "primary", "BlueprintIdentifier": identifier,
+        "BuildableName": product, "BlueprintName": "PulseStartupUITests",
+        "ReferencedContainer": "container:App.xcodeproj",
+    }
+
+
 def check() -> dict:
     reader = OpenStepReader((IOS / "App/App.xcodeproj/project.pbxproj").read_text())
     project = reader.read()
@@ -113,9 +156,10 @@ def check() -> dict:
 
     references(project)
     targets = {item["name"]: item for item in objects.values() if item["isa"] == "PBXNativeTarget"}
-    assert set(targets) == {"App", "PulseWidget"}
+    assert set(targets) == {"App", "PulseWidget", "PulseStartupUITests"}
     assert targets["App"]["productType"] == "com.apple.product-type.application"
     assert targets["PulseWidget"]["productType"] == "com.apple.product-type.app-extension"
+    assert targets["PulseStartupUITests"]["productType"] == "com.apple.product-type.bundle.ui-testing"
     paths = {}
 
     def walk(identifier: str, parent: Path):
@@ -131,7 +175,7 @@ def check() -> dict:
         else:
             generated = {IOS / "App/App/public", IOS / "App/App/config.xml",
                          IOS / "App/App/capacitor.config.json"}
-            assert path.exists() or path in generated, f"Missing file: {path.relative_to(IOS)}"
+            assert path.exists() or path in generated, "Missing referenced project source file"
 
     walk(objects[project["rootObject"]]["mainGroup"], IOS / "App")
     cache = (IOS / "App/AppGroup/PulseWidgetCache.swift").resolve()
@@ -140,16 +184,28 @@ def check() -> dict:
         phases = [objects[identifier] for identifier in target["buildPhases"]]
         source = next(phase for phase in phases if phase["isa"] == "PBXSourcesBuildPhase")
         sources[name] = {paths[objects[identifier]["fileRef"]] for identifier in source["files"]}
-        assert cache in sources[name]
+        if name in {"App", "PulseWidget"}:
+            assert cache in sources[name]
         framework = next(phase for phase in phases if phase["isa"] == "PBXFrameworksBuildPhase")
         products = {objects[objects[identifier]["productRef"]]["productName"] for identifier in framework["files"]}
-        assert products == ({"PulseCore", "CapApp-SPM"} if name == "App" else {"PulseCore"})
+        assert products == ({"PulseCore", "CapApp-SPM"} if name == "App"
+                            else {"PulseCore"} if name == "PulseWidget" else set())
         configs = objects[target["buildConfigurationList"]]["buildConfigurations"]
         for identifier in configs:
             config = objects[identifier]
-            assert paths[config["baseConfigurationReference"]] == (IOS / "Pulse.xcconfig").resolve()
             settings = config["buildSettings"]
             assert settings["IPHONEOS_DEPLOYMENT_TARGET"] == "17.4"
+            if name == "PulseStartupUITests":
+                assert "baseConfigurationReference" not in config
+                assert settings["TEST_TARGET_NAME"] == "App"
+                assert settings["GENERATE_INFOPLIST_FILE"] == "YES"
+                assert settings["SKIP_INSTALL"] == "YES"
+                assert settings["SUPPORTED_PLATFORMS"] == "iphonesimulator"
+                assert settings["PRODUCT_BUNDLE_IDENTIFIER"] == "com.lucas.pulse.PulseStartupUITests"
+                assert settings["MARKETING_VERSION"] == "0.1.1" and settings["CURRENT_PROJECT_VERSION"] == "2"
+                assert "CODE_SIGN_ENTITLEMENTS" not in settings and "DEVELOPMENT_TEAM" not in settings
+                continue
+            assert paths[config["baseConfigurationReference"]] == (IOS / "Pulse.xcconfig").resolve()
             for key in ["INFOPLIST_FILE", "CODE_SIGN_ENTITLEMENTS"]:
                 assert (IOS / "App" / settings[key]).is_file()
             if name == "PulseWidget":
@@ -159,6 +215,12 @@ def check() -> dict:
     native |= {path.resolve() for path in (IOS / "App/App/NativeBridge").glob("*.swift")}
     assert sources["App"] == native | {cache}
     assert sources["PulseWidget"] == {(IOS / "App/PulseWidget/PulseWidget.swift").resolve(), cache}
+    assert sources["PulseStartupUITests"] == {(ROOT / "tests/ios/PulseStartupUITests.swift").resolve()}
+    assert not targets["PulseWidget"]["dependencies"]
+    assert {objects[key]["target"] for key in targets["App"]["dependencies"]} == {
+        next(key for key, value in objects.items() if value is targets["PulseWidget"])}
+    assert {objects[key]["target"] for key in targets["PulseStartupUITests"]["dependencies"]} == {
+        next(key for key, value in objects.items() if value is targets["App"])}
     embed = next(objects[key] for key in targets["App"]["buildPhases"]
                  if objects[key]["isa"] == "PBXCopyFilesBuildPhase")
     assert embed["dstSubfolderSpec"] == "13" and len(embed["files"]) == 1
@@ -187,10 +249,13 @@ def check() -> dict:
                objects[target["productReference"]]["path"])
         for name, target in targets.items()
     }
-    check_shared_scheme(IOS / "App/App.xcodeproj/xcshareddata/xcschemes/App.xcscheme", expected)
+    check_shared_scheme(IOS / "App/App.xcodeproj/xcshareddata/xcschemes/App.xcscheme",
+                        {name: expected[name] for name in ("App", "PulseWidget")})
+    check_startup_ci_scheme(IOS / "App/App.xcodeproj/xcshareddata/xcschemes/PulseStartupCI.xcscheme", expected)
     return {"objects": len(objects), "targets": sorted(targets),
             "sources": {name: len(value) for name, value in sources.items()},
             "shared_scheme": "App",
+            "startup_ci_scheme": "PulseStartupCI",
             "xcode_compiled": False, "signed": False}
 
 

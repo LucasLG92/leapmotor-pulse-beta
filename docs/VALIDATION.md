@@ -1,29 +1,25 @@
-# Validación del candidato local
+# Validación del incremento de cargas manuales
 
-**Fecha del resumen:** 12 de octubre de 2026. Este documento resume resultados locales comprobados para los stages de publicación. No es un informe de CI y no enlaza logs, paquetes ni recibos externos.
+Resumen del 13 de octubre de 2026. El contenido actual añade solicitudes de alta manual reservadas por propietario, intención/carga atómicas y reintentos explícitos sin duplicación. SQLite19/JSON15; el ledger operativo no forma parte de la exportación JSON. La compatibilidad sin `request_id` no ofrece deduplicación. [Contrato](API-CONTRACT.md), [recibo](CHARGE-SAVE-QUALIFICATION.json).
 
-## Candidato y suite Python
+La fuente canónica se comprobó localmente:1242pruebas backend y126subcasos correctos, con34omisiones por SDK opcional ausente;51web/7móvil, tipado y builds web/móvil correctos, Svelte0errores/0avisos. La policy Android compilada con Java17/JUnit pasa8casos. Estas cifras son de validación local, no de CI ni de un vehículo. Los resultados del stage y las nuevas compilaciones nativas se registran después de congelar el contenido; no se anticipa su resultado aquí.
 
-Android se identifica como **0.1.1/versionCode 2** e iOS como **0.1.1/build 2**. Ambos son candidatos locales no entregados.
+La QA del formulario real sustituye una respuesta por503después de guardar en SQLite propio. El reintento de la misma solicitud no aumenta filas ni coste. Campos vaciados, navegación/edición/descarte cancelados y fallo de reserva antes del alta conservan el intento o borrador según el caso. El fixture final contiene4cargas/28kWh/4,20EUR y4solicitudes enlazadas. La captura se observó en la herramienta, sin archivo de captura entregado. Revisión independiente sinP1/P2 confirmados; red móvil, lectores de pantalla, cargador, coche y clientes físicos siguen pendientes.
 
-La primera ejecución limpia reveló que `test_navigation_http` esperaba un directorio estático `dist` previo al test runner. El fixture del test se ajustó en ambos stages para crear un directorio temporal cuando falta. Tras la corrección, la suite Python completa terminó con **1.174 pruebas y 87 subcasos en cada stage**. La corrección solo afecta al fixture de prueba; no cambia el runtime. Las 20 pruebas focales de ese arreglo también pasaron. Estos resultados son locales; no hay una nueva ejecución de CI asociada al candidato.
+Los APK/IPA y recibos históricos conservan su versión y límites. No prueban esta modificación de policy/UI. Los clientes actuales siguen siendo candidatos genéricos0.1.1/build2 sin firma o aceptación física. No se cambia la configuración de una instalación, se despliega runtime ni se solicita acceso al coche o cuentas.
 
-La validación final del código web y móvil compartido registró **43 pruebas web**, **7 móviles**, **0 errores y 0 avisos de Svelte**, TypeScript correcto y builds web/móvil correctos. Las fuentes compartidas son idénticas en ambos stages; estos resultados se aplican a su contenido actual. Todos los resultados anteriores son locales; no se atribuyen a CI.
+Se conservan nueve fases, siete puertas reales pendientes y A0–A12. Centinela/cámaras es la fase final. Recuperación futura: artefacto previo junto con su copia SQLite18 coherente; el código antiguo no puede abrir una SQLite19 migrada.
 
-Android se ensambló sin firma; su APK no forma parte de los stages ni de la publicación. Para iOS solo se completó la sincronización de Capacitor: no se ejecutó build Xcode, firma, distribución ni prueba física para este candidato.
+## Fase 5: diario manual privado, 13 de octubre
 
-## Datos, interfaz e integraciones
+Suite final:1285backend/131subcasos/34skip del SDK opcional ausente,57web/7mobile; Svelte0errores0avisos, contratos/tipos y builds correctos.39pruebas nuevas de dominio/HTTP cubren aislamiento, CSRF, concurrencia/replay, revision, UTC/paradas/null, informe, export/restores y límites. La revisión corrige validación de enteros enormes, deriva no finita, revisión agotada, procesamiento fila a fila para informes/export y cantidades pequeñas conservadas por el editor. No acredita RSS con100000filas.
 
-El candidato conserva esquema SQLite **17** y formato JSON **15**, con importación de formatos anteriores. Los códigos de diagnóstico se almacenan como valores crudos, junto con el origen y el momento de observación disponible. Semántica, disponibilidad en un vehículo, cobertura y relación con vigilancia siguen sin cualificar.
+QA del componente real con SQLite/HTTP loopback propios: POSTcommit503/reintento mismo ID/fila, PUTcommit503/reintento revisión2, cambio de intención bloqueado, aviso al vaciar campos, cancelación de guardas, reserva fallida/recuperada, nulos y6e-7, reinicio con4filas, fallo de consulta/recuperación e informe anual con13meses. Formulario oscuro390px sin overflow, objetivos48px y consola limpia. Capturas observadas inline; no archivo guardado por falta de API admitida. Recepción de descarga y borrado UI no ejecutados; no se eluden permisos anteriores.
 
-Las selecciones nuevas MQTT son optativas y empiezan desactivadas. Las pruebas de software no demuestran recepción por un broker o Home Assistant reales. Las correcciones de UX probadas con datos sintéticos cubren errores persistentes de formularios, conservación de borradores y foco, y reflujo móvil. Accesibilidad con tecnologías de asistencia, pérdida de red real y aceptación en teléfonos siguen pendientes.
+Android completo:77JUnit/0skip; Lint0errores17avisos, assemble/CRC/zipalign correctos.44assets móviles idénticos en APK y2bridgesvacíos; siete campos de conexión vacíos. APK genérico sin firma o instalación. Apple nuevo pendiente al congelar estas fuentes; el run histórico fase4 no cualifica este incremento. [Cualificación](MANUAL-JOURNEY-QUALIFICATION.json).
 
-### Monitor de metadatos
+## Fase 5: exportación nativa del informe, 13 de octubre
 
-El monitor genérico se limita a metadatos de copias: estado, antigüedad, tamaño, permisos y espacio. Su prueba focal registró **29 pruebas y 45 subcasos**; esto no valida el contenido de una copia, una restauración ni la entrega de avisos. La guía autocontenida está en [deploy/community/README.md](../deploy/community/README.md). Esta publicación no documenta el estado de una instalación particular.
+Check.py1319backend+131subtests sin skips (SDK opcional disponible en caché en esta ejecución),63web,8mobile,contratos/tipos/build y Svelte0/0. Las correcciones posteriores de política nativa requieren su compilación propia; esta suite no acredita selectores o archivos físicos. QA del componente con puente nativo simulado: cancelación, finalización, error persistente, app anterior, resultado inválido, sesión caducada, callback tardío, borrador/foco y390oscuro sin overflow/objetivos48px. Cero errores de consola; seis avisos sólo del fixture por bindings no reactivos. Server/tab/viewport retirados.
 
-## Fases, puertas y aceptación
-
-El registro estructurado conserva **nueve fases** y **siete puertas reales pendientes**. La aceptación física y la finalización del objetivo permanecen abiertas. El estado por fase, las versiones y los criterios están en [DELIVERY-STATUS.json](DELIVERY-STATUS.json).
-
-El historial de aceptación conserva observaciones humanas acotadas de instalación PWA, funcionamiento offline y recepción de avisos en dispositivos concretos, incluida una notificación recibida con un teléfono bloqueado. No demuestra el candidato actual, compatibilidad universal, entrega general de avisos, autenticación tras reinicio, app/widget nativos, conexión del vehículo ni aceptación final.
+La revisión encontró I/O del proveedor Android bajo el monitor de ciclo de vida y parsing recursivo antes del límite de forma. Se corrigieron con I/O fuera del monitor y scanner JSON estricto/profundidad16/duplicados/EOF previo, además de UTF-8 estricto sólo en esta respuesta. El harness focal Android pasa20casos; compilación completa y Swift/Apple siguen pendientes en esta instantánea. Fuentes originales, sin nuevas dependencias/permisos/API/esquema. [Cualificación y límites](NATIVE-REPORT-EXPORT-QUALIFICATION.json).

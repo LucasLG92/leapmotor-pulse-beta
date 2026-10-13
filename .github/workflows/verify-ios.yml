@@ -2,6 +2,12 @@ name: verify-ios
 
 on:
   workflow_dispatch:
+    inputs:
+      device_ipa:
+        description: Build a generic unsigned iPhone IPA with WidgetKit (not installable without signing)
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -18,6 +24,7 @@ jobs:
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       PULSE_CHECK_PYTHON: python
+      PULSE_CHECK_IOS_DEVICE_IPA: ${{ inputs.device_ipa && '1' || '0' }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -43,7 +50,9 @@ jobs:
         with:
           name: ios-simulator-startup
           path: |
+            apps/mobile/ios/App/output/ci-smoke/startup-initial.png
             apps/mobile/ios/App/output/ci-smoke/startup.png
+            apps/mobile/ios/App/output/ci-smoke/startup-diagnostic.png
             apps/mobile/ios/App/output/ci-smoke/receipt.json
           retention-days: 7
           if-no-files-found: warn
@@ -58,5 +67,16 @@ jobs:
             apps/mobile/ios/App/output/ci-spm/inventory.json
             apps/mobile/ios/App/output/ci-spm/osv-query.json
             apps/mobile/ios/App/output/ci-spm/receipt.json
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Retain generic unsigned iPhone artifact
+        if: ${{ always() && inputs.device_ipa }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ios-device-unsigned
+          path: |
+            apps/mobile/ios/App/output/ci-device/unsigned.ipa
+            apps/mobile/ios/App/output/ci-device/receipt.json
           retention-days: 7
           if-no-files-found: error

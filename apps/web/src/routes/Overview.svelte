@@ -61,6 +61,19 @@
 		pulseState.mode === 'demo' ? 'Datos simulados' :
 		pulseState.mode === 'telemetry_read_only' ? pulseState.telemetry?.quality.temporal_status === 'unavailable' ? 'Lectura caducada' : 'Solo lectura' : 'Preparación'
 	);
+	let readingStatus = $derived.by(() => {
+		if (pulseState.mode === 'demo') return 'Datos de demostración';
+		if (pulseState.mode !== 'telemetry_read_only') return 'Sin datos disponibles';
+		const status = pulseState.telemetry?.quality.temporal_status;
+		if (status === 'fresh') return 'Dentro de ventana temporal de Pulse';
+		if (status === 'stale') return 'Lectura atrasada';
+		if (status === 'unavailable') return 'Lectura caducada';
+		return 'Vigencia desconocida';
+	});
+	let readingIsUncertain = $derived(
+		pulseState.mode !== 'demo' &&
+		(pulseState.mode !== 'telemetry_read_only' || pulseState.telemetry?.quality.temporal_status !== 'fresh')
+	);
 	let profileUpdatedAt = $derived(pulseState.updated_at);
 	let observedAt = $derived(
 		pulseState.mode === 'demo' ? pulseState.vehicle?.observed_at ?? null : latestTelemetry?.observed_at ?? null
@@ -281,48 +294,60 @@
 	}
 </script>
 
-<div class="overview-page">
-	<article class="overview-hero" aria-labelledby="vehicle-profile-title">
-		<header class="overview-heading">
-			<div class="profile-heading">
-				<h2 id="vehicle-profile-title">{profileName}</h2>
-				<p>{profileModel} <span>· Perfil de Pulse</span></p>
-			</div>
-			<span class="status-pill" class:status-demo={pulseState.mode === 'demo'} class:status-neutral={pulseState.mode !== 'demo'}>
-				<span class="status-dot"></span>{displayMode}
-			</span>
-		</header>
+<div class="overview-page cockpit-page">
+	<header class="overview-heading cockpit-intro">
+		<div class="profile-heading">
+			<span class="cockpit-eyebrow">MI COCHE · B10</span>
+			<h2 id="vehicle-profile-title">{profileName}</h2>
+			<p>{profileModel} <span>· Perfil personal</span></p>
+		</div>
+		<span class="status-pill" class:status-demo={pulseState.mode === 'demo'} class:status-neutral={pulseState.mode !== 'demo'}>
+			<span class="status-dot"></span>{displayMode}
+		</span>
+	</header>
 
-		<div class="overview-layout">
-			<section class="vehicle-scene" aria-label="Vehículo y lecturas">
-				<div class="vehicle-display">
-				<dl class="vehicle-readings" aria-label="Autonomía y batería">
-					<div class="range-reading">
-						<dt>Autonomía estimada</dt>
-						<dd>{number(vehicleValues?.range_km)}{vehicleValues?.range_km == null ? '' : ' km'}</dd>
+	<article class="overview-hero cockpit-console" aria-labelledby="vehicle-profile-title">
+		<div class="overview-layout cockpit-layout">
+			<section class="vehicle-scene cockpit-vehicle" aria-label="Vehículo y lecturas">
+				<div class="vehicle-display cockpit-stage">
+					<div class="cockpit-artwork">
+						<VehicleArtwork color={pulseState.settings.vehicle_color ?? null} />
 					</div>
-					<div class="battery-reading">
-						<dt>Batería</dt>
-						<dd><Glyph name="battery" size={19} /><span>{number(vehicleValues?.battery_pct)}{vehicleValues?.battery_pct == null ? '' : '%'}</span></dd>
+					<div class="cockpit-instruments">
+						<div class="cockpit-reading-state" class:cockpit-reading-stale={readingIsUncertain} class:cockpit-reading-demo={pulseState.mode === 'demo'}>
+							<Glyph name="clock" size={15} />
+							<span>{readingStatus}</span>
+						</div>
+						<dl class="vehicle-readings cockpit-readings" aria-label="Autonomía y batería">
+							<div class="range-reading">
+								<dt>Autonomía estimada</dt>
+								<dd>{number(vehicleValues?.range_km)}{vehicleValues?.range_km == null ? '' : ' km'}</dd>
+							</div>
+							<div class="battery-reading">
+								<dt>Batería</dt>
+								<dd><Glyph name="battery" size={19} /><span>{number(vehicleValues?.battery_pct)}{vehicleValues?.battery_pct == null ? '' : '%'}</span></dd>
+							</div>
+						</dl>
+						{#if batteryPercentage !== null}
+							<meter class="battery-level cockpit-battery-meter" aria-label="Nivel de batería recibido" min="0" max="100" value={batteryPercentage}>{number(batteryPercentage)} %</meter>
+						{/if}
+						<div class="reading-caption cockpit-provenance" aria-label="Procedencia de las lecturas del coche">
+							<p>{sourceLabel} <span aria-hidden="true">·</span> {observedAt ? absoluteDateTime(observedAt) : 'Sin lectura disponible'}</p>
+							{#if pulseState.mode === 'telemetry_read_only'}<p class="temporal-explanation">{temporalExplanation} Vigencia física sin comprobar.</p>{:else if pulseState.mode !== 'demo'}<p>{connectionReason}</p>{/if}
+						</div>
+						{#if chargerStatus?.observation}
+							<a class="charge-glance" href="/energy" aria-label="Abrir Energía y el estado del punto de carga">
+								<Glyph name="plug" size={18} /><span><strong>Punto de carga · {chargerStateLabel(chargerStatus)}</strong><span>{chargerStatus.observation.power_w == null ? 'Potencia sin dato' : `${number(chargerStatus.observation.power_w / 1000, true)} kW`} · {chargerStatus.observation.charged_kwh == null ? 'Energía sin dato' : `${number(chargerStatus.observation.charged_kwh)} kWh recibidos`}</span></span><Glyph name="chevron" size={16} />
+							</a>
+						{/if}
 					</div>
-				</dl>
-				<div class="reading-caption" aria-label="Procedencia de las lecturas del coche">
-					<p>{sourceLabel} <span aria-hidden="true">·</span> {observedAt ? absoluteDateTime(observedAt) : 'Sin lectura disponible'}</p>
-					{#if pulseState.mode === 'telemetry_read_only'}<p class="temporal-explanation">{temporalExplanation} Vigencia física sin comprobar.</p>{:else if pulseState.mode !== 'demo'}<p>{connectionReason}</p>{/if}
 				</div>
 
-
-				{#if batteryPercentage !== null}
-					<meter class="battery-level" aria-label="Nivel de batería recibido" min="0" max="100" value={batteryPercentage}>{number(batteryPercentage)} %</meter>
-				{/if}
-				{#if chargerStatus?.observation}
-					<a class="charge-glance" href="/energy" aria-label="Abrir Energía y el estado del punto de carga">
-						<Glyph name="plug" size={18} /><span><strong>Punto de carga · {chargerStateLabel(chargerStatus)}</strong><span>{chargerStatus.observation.power_w == null ? 'Potencia sin dato' : `${number(chargerStatus.observation.power_w / 1000, true)} kW`} · {chargerStatus.observation.charged_kwh == null ? 'Energía sin dato' : `${number(chargerStatus.observation.charged_kwh)} kWh recibidos`}</span></span><Glyph name="chevron" size={16} />
-					</a>
-				{/if}
-				<VehicleArtwork color={pulseState.settings.vehicle_color ?? null} />
-				</div>
-
+				<nav class="cockpit-quick-actions" aria-label="Accesos frecuentes">
+					<a href="/energy"><Glyph name="energy" size={18} /><span>Registrar carga</span></a>
+					<a href="/activity"><Glyph name="activity" size={18} /><span>Cuaderno de viaje</span></a>
+					<a href="/settings#preparation"><Glyph name="plug" size={18} /><span>Preparar conexión</span></a>
+				</nav>
 
 				<details class="color-picker"><summary>Personalizar color <span>{currentColorLabel}</span><Glyph name="chevron" size={16} /></summary>
 				<div class="vehicle-colors" role="group" aria-label="Color del perfil del vehículo">
@@ -502,7 +527,7 @@
 
 			</aside>
 		</div>
-		<section class="connection-context" aria-labelledby="connection-context-title">
+		<section class="connection-context cockpit-status-band" aria-labelledby="connection-context-title">
 			<div class="context-heading"><h3 id="connection-context-title">Conexión y lecturas</h3><span class="badge">{connectionLabel}</span></div>
 			<dl class="connection-readings">
 				<div><dt>Lector del coche</dt><dd>{collectorLabel}</dd></div>
@@ -515,10 +540,10 @@
 		</section>
 	</article>
 
-	<section class="overview-mobility" aria-labelledby="mobility-title">
-	<header class="mobility-heading"><div><h2 id="mobility-title">Tu actividad reciente</h2></div><a class="context-link" href="/activity">Abrir diario <Glyph name="arrow" size={16} /></a></header>
-	<div class="overview-records" aria-label="Energía, actividad y mantenimiento">
-		<article class="record-summary energy-summary">
+	<section class="overview-mobility cockpit-journal" aria-labelledby="mobility-title">
+	<header class="mobility-heading"><div><span class="cockpit-eyebrow">CUADERNO DE VIAJE</span><h2 id="mobility-title">Tu actividad reciente</h2></div><a class="context-link" href="/activity">Abrir diario <Glyph name="arrow" size={16} /></a></header>
+	<div class="overview-records cockpit-journal-grid" aria-label="Energía, actividad y mantenimiento">
+		<article class="record-summary cockpit-journal-entry energy-summary">
 			<div class="record-heading"><h2>Energía registrada</h2><a href="/energy">Ver cargas <Glyph name="arrow" size={16} /></a></div>
 			<div class="record-totals">
 				<div><span>Registros manuales</span><strong>{number(pulseState.energy.totals_by_source.manual.kwh)} <small>kWh</small></strong><span>{euros(pulseState.energy.totals_by_source.manual.cost_eur)} guardados</span></div>
@@ -534,7 +559,7 @@
 			<p class="record-note">Los importes guardados y los ejemplos permanecen separados. Las sesiones detectadas del cargador están en Energía.</p>
 		</article>
 
-		<article class="record-summary journey-summary">
+		<article class="record-summary cockpit-journal-entry journey-summary">
 			<div class="record-heading"><h2>Último trayecto</h2><a href="/activity">Abrir diario <Glyph name="arrow" size={16} /></a></div>
 			{#if latestJourney}
 				<p class="journey-source">{pulseState.mode === 'demo' ? 'Trayecto ficticio · demo' : 'Registro guardado en Pulse'} · {absoluteDateTime(latestJourney.started_at)}</p>
@@ -545,7 +570,7 @@
 			{/if}
 		</article>
 
-		<article class="record-summary maintenance-summary">
+		<article class="record-summary cockpit-journal-entry maintenance-summary">
 			<div class="record-heading"><h2>Tu coche, al día</h2><a href="/activity">Mantenimiento <Glyph name="arrow" size={16} /></a></div>
 			{#if nextMaintenance}
 				<p class="maintenance-date"><Glyph name="clock" size={18} />{dateOnly(nextMaintenance.due_date)}</p>
@@ -554,7 +579,7 @@
 			{:else}<div class="quiet-empty"><Glyph name="check" size={26} /><h3>Sin recordatorios pendientes</h3><p>Añade revisiones y tareas a tu diario para tenerlas a mano. Esto no confirma el mantenimiento del coche.</p></div>{/if}
 		</article>
 
-		<article class="record-summary protection-summary">
+		<article class="record-summary cockpit-journal-entry protection-summary">
 			<div class="record-heading"><h2>Historial de estados</h2><a href="/protection">Ver cambios <Glyph name="arrow" size={16} /></a></div>
 			<strong class="protection-count">{count(protectionCount)} <span>{protectionDescription}</span></strong>
 			<p>{pulseState.mode === 'demo' ? 'Eventos ficticios de la demostración.' : protectionCount ? 'Cambios guardados entre observaciones recibidas.' : 'Aún no hay cambios observados en Pulse.'} No hay cámaras ni modo centinela.</p>
@@ -566,188 +591,203 @@
 </div>
 
 <style>
- .overview-page { display: grid; gap: 32px; min-width: 0; }
- .overview-hero, .profile-heading, .vehicle-scene, .vehicle-task { min-width: 0; }
- .overview-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
- .overview-heading h2 { margin: 0; font-size: clamp(2rem, 3.3vw, 3rem); font-weight: 600; line-height: 1.12; letter-spacing: -.035em; overflow-wrap: anywhere; }
- .overview-heading p { margin: 8px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; overflow-wrap: anywhere; }
- .overview-heading :global(.status-pill) { flex: 0 0 auto; min-height: 32px; font-size: .75rem; }
- .overview-layout { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(290px, .85fr); gap: 36px; align-items: start; }
- .vehicle-display { position: relative; padding-top: 0; }
- .reading-caption { margin: 10px 0; text-align: center; }
- .reading-caption p { margin: 4px 0; color: var(--muted); font-size: .75rem; line-height: 1.5; overflow-wrap: anywhere; }
- .reading-caption .temporal-explanation { color: var(--muted-strong); }
- .charge-glance { display: flex; align-items: center; gap: 12px; width: fit-content; max-width: 100%; min-height: 60px; margin: 18px auto 0; padding: 10px 16px; border: 1px solid var(--line); border-radius: 16px; color: var(--forest); background: var(--forest-soft); text-decoration: none; }
- .charge-glance > span { display: grid; gap: 4px; min-width: 0; }
- .charge-glance strong { font-size: .8125rem; overflow-wrap: anywhere; }
- .charge-glance span span { font-size: .75rem; color: var(--muted-strong); overflow-wrap: anywhere; }
- .charge-glance :global(svg) { flex-shrink: 0; }
- .vehicle-readings { display: flex; align-items: center; justify-content: center; gap: 40px; margin: 0; font-variant-numeric: tabular-nums; }
- .vehicle-readings > div { min-width: 0; }
- .vehicle-readings dt { color: var(--muted); font-size: .8125rem; line-height: 1.5; }
- .vehicle-readings dd { margin: 5px 0 0; overflow-wrap: anywhere; }
- .range-reading { text-align: center; }
- .range-reading dd { font-size: clamp(2.75rem, 5vw, 4.25rem); font-weight: 550; letter-spacing: -.04em; line-height: 1.08; }
- .battery-reading dd { display: flex; align-items: center; gap: 7px; font-size: 1.25rem; font-weight: 600; }
- .battery-level { display: block; width: 166px; height: 5px; margin: 14px auto 0; border: 0; border-radius: 9px; background: var(--line); }
- .battery-level::-webkit-meter-bar { height: 5px; border: 0; border-radius: 9px; background: var(--line); }
- .battery-level::-webkit-meter-optimum-value { background: var(--forest); border-radius: 9px; }
- .battery-level::-moz-meter-bar { background: var(--forest); border-radius: 9px; }
- .vehicle-scene :global(.vehicle-frame) { height: clamp(215px, 22vw, 270px); }
- .vehicle-scene :global(figcaption) { padding: 0 10px 12px; font-size: .6875rem; }
- .color-picker { margin: 8px auto 16px; }
- .color-picker > summary { display: flex; width: fit-content; min-height: 44px; align-items: center; justify-content: center; gap: 8px; margin: auto; color: var(--forest); font-size: .75rem; cursor: pointer; list-style: none; }
- .color-picker > summary::-webkit-details-marker { display: none; }
- .color-picker > summary span { color: var(--muted); }
- .vehicle-colors { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px; }
- .color-swatch { display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid transparent; border-radius: 50%; background: transparent; cursor: pointer; }
- .color-swatch span { width: 22px; height: 22px; border: 1px solid var(--line-strong); border-radius: 50%; background: var(--swatch); box-shadow: inset 0 2px 5px rgb(255 255 255 / 25%); }
- .color-swatch.selected { border-color: var(--forest); }
- .color-swatch:disabled { cursor: not-allowed; opacity: .55; }
- .color-name { color: var(--muted); font-size: .75rem; margin-left: 6px; }
- .vehicle-state { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 0 18px; padding: 18px 0; border-block: 1px solid var(--line); }
- .vehicle-state > div { min-width: 0; text-align: center; }
- .vehicle-state dt { display: flex; justify-content: center; align-items: center; gap: 6px; color: var(--muted); font-size: .75rem; }
- .vehicle-state dd { margin: 8px 0 0; font-size: .8125rem; font-weight: 600; overflow-wrap: anywhere; }
- .control-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; max-width: 500px; margin-inline: auto; }
- .control-action, .alternate-action { display: flex; min-width: 0; min-height: 82px; flex-direction: column; align-items: center; gap: 10px; padding: 3px; border: 0; border-radius: 12px; background: transparent; color: var(--ink); cursor: pointer; font-size: .75rem; line-height: 1.35; text-align: center; text-decoration: none; }
- .control-circle { display: grid; width: 52px; height: 52px; flex: 0 0 52px; place-items: center; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); color: var(--ink); transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease; }
- .control-action:hover:not(:disabled) .control-circle, .alternate-action:hover:not(:disabled) .control-circle { border-color: var(--forest); background: var(--forest-soft); color: var(--forest); }
- .control-action:disabled, .alternate-action:disabled { color: var(--muted); cursor: not-allowed; }
- .control-action:disabled .control-circle, .alternate-action:disabled .control-circle { color: var(--muted); }
- .control-label { font-weight: 600; overflow-wrap: anywhere; }
- .alternate-actions { margin-top: 12px; }
- .alternate-actions summary, .field-source-details summary, .charger-details summary { min-height: 44px; display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--muted-strong); font-size: .75rem; font-weight: 600; list-style: revert; }
- .alternate-actions summary { justify-content: center; }
- .alternate-action-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; padding: 10px 0; }
- .control-footnote { color: var(--muted); text-align: center; font-size: .6875rem; line-height: 1.5; margin: 0; }
- .field-source-details { margin-top: 6px; }
- .sensor-readings { margin-top: 6px; }
- .sensor-readings summary { min-height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted-strong); font-size: .75rem; font-weight: 600; list-style: revert; }
- .sensor-readings dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 20px; margin: 12px 0; }
- .sensor-readings dl > div { min-width: 0; }
- .sensor-readings dt { color: var(--muted); font-size: .75rem; }
- .sensor-readings dd { margin: 5px 0 0; font-size: .875rem; font-weight: 650; overflow-wrap: anywhere; }
- .sensor-readings p { color: var(--muted); font-size: .75rem; line-height: 1.6; }
- .field-source-details summary { justify-content: center; }
- .field-source-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin: 8px 0; }
- .field-source-list div { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
- .field-source-list dt, .received-times span { color: var(--muted); }
- .field-source-list dd { margin: 0; overflow-wrap: anywhere; }
- .field-source-list, .received-times { font-size: .75rem; line-height: 1.6; }
- .received-times p { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0; }
- .received-times strong { font-weight: 500; overflow-wrap: anywhere; }
- .vehicle-task { display: grid; gap: 16px; }
- .charger-context { padding: 22px; border-radius: 24px; background: var(--surface); border: 1px solid var(--line); }
- .context-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
- .context-heading h3 { margin: 0; font-size: .9375rem; font-weight: 600; line-height: 1.45; }
- .charger-context .context-heading h3 { font-size: 1.25rem; letter-spacing: -.025em; }
- .context-heading :global(.badge) { font-size: .6875rem; }
- .charge-connection { display: flex; align-items: center; gap: 16px; color: var(--muted); margin: 16px 0; }
- .charge-connection span { flex: 1; height: 2px; background: var(--line); }
- .charge-connection .flow-active { background: var(--forest); }
- .charger-secondary { margin: 10px 0; display: grid; gap: 8px; font-size: .75rem; }
- .charger-secondary dd { margin: 4px 0; }
- .charger-readings { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 12px; margin: 20px 0 0; }
- .charger-readings > div { min-width: 0; }
- .charger-readings dt { font-size: .75rem; color: var(--muted); line-height: 1.5; }
- .charger-readings dd { margin: 6px 0 0; font-size: .8125rem; font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
- .charger-metric { padding-bottom: 16px; border-bottom: 1px solid var(--line); }
- .charger-metric dd { font-size: clamp(1.3rem, 2.2vw, 1.8rem); font-weight: 550; letter-spacing: -.035em; }
- .charger-source { color: var(--muted); font-size: .75rem; margin: 18px 0 8px; overflow-wrap: anywhere; }
- .charger-received, .charge-cost-status { color: var(--muted); font-size: .75rem; line-height: 1.5; margin: 8px 0; overflow-wrap: anywhere; }
- .source-notice { margin: 12px 0 0; padding: 12px 0; border-block: 1px solid var(--line); color: var(--muted-strong); font-size: .75rem; line-height: 1.6; }
- .session-timing, .connection-readings { display: grid; gap: 10px; margin: 14px 0 0; font-size: .75rem; line-height: 1.5; }
- .session-timing > div, .connection-readings > div { min-width: 0; display: grid; gap: 4px; }
- .session-timing dt, .connection-readings dt { color: var(--muted); }
- .session-timing dd, .connection-readings dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
- .context-copy, .charger-details p { color: var(--muted); font-size: .75rem; line-height: 1.6; margin: 10px 0; overflow-wrap: anywhere; }
- .context-link { display: inline-flex; min-height: 44px; align-items: center; gap: 9px; color: var(--forest); font-size: .8125rem; font-weight: 600; text-decoration: none; }
- .charger-context .context-link { display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
- .latest-charge { padding-inline: 4px; }
- .charge-date { color: var(--muted); font-size: .6875rem; line-height: 1.55; margin: 8px 0; }
- .latest-charge-values { display: flex; justify-content: space-between; gap: 16px; font-size: 1.125rem; margin-top: 10px; font-variant-numeric: tabular-nums; }
- .latest-charge-values strong { font-size: 1.5rem; font-weight: 550; letter-spacing: -.03em; }
- .latest-charge + .latest-charge { border-top: 1px solid var(--line); padding-top: 12px; }
- .connection-context { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
- .connection-readings { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px 24px; }
- .connection-context > .context-link { margin-top: 4px; }
- .overview-mobility { border-top: 1px solid var(--line); padding-top: 32px; }
- .mobility-heading { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-bottom: 30px; }
- .mobility-heading h2 { margin: 0; font-size: clamp(1.5rem, 2.2vw, 2rem); font-weight: 550; letter-spacing: -.035em; line-height: 1.25; }
- .overview-records { display: grid; grid-template-columns: 1.1fr 1fr; gap: 30px 40px; }
- .record-summary { min-width: 0; }
- .record-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
- .record-heading h2 { font-size: .9375rem; font-weight: 600; line-height: 1.45; margin: 0; }
- .record-heading a { display: inline-flex; min-height: 44px; align-items: center; gap: 6px; font-size: .75rem; color: var(--forest); text-decoration: none; }
- .record-totals { display: flex; flex-wrap: wrap; gap: 20px 36px; margin-bottom: 20px; }
- .record-totals > div { display: grid; gap: 6px; }
- .record-totals span { color: var(--muted); font-size: .75rem; }
- .record-totals strong { font-size: 1.5rem; font-weight: 550; letter-spacing: -.035em; }
- .record-totals strong small { font-size: .875rem; font-weight: 400; letter-spacing: normal; }
- .charge-history-mini { list-style: none; margin: 0; padding: 0; }
- .charge-history-mini li { border-bottom: 1px solid var(--line); }
- .charge-history-mini a { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(44px, .8fr) auto auto; align-items: center; gap: 12px; min-height: 64px; text-decoration: none; font-size: .75rem; }
- .mini-charge-label { color: var(--muted-strong); line-height: 1.55; overflow-wrap: anywhere; }
- .mini-charge-label small { display: block; color: var(--muted); font-size: .6875rem; }
- .mini-charge-bar { height: 4px; border-radius: 9px; background: var(--line); }
- .mini-charge-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--forest); }
- .record-summary p { color: var(--muted); line-height: 1.6; font-size: .8125rem; }
- .record-summary .record-note, .journey-source { font-size: .6875rem; }
- .journey-path { display: flex; align-items: center; gap: 10px; padding: 20px 0; min-width: 0; }
- .journey-path strong { font-size: .875rem; min-width: 0; overflow-wrap: anywhere; }
- .journey-stop { width: 8px; height: 8px; flex: 0 0 8px; border: 2px solid var(--forest); border-radius: 50%; }
- .journey-line { height: 1px; background: var(--line-strong); flex: 1; min-width: 8px; }
- .journey-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; }
- .journey-metrics dt { color: var(--muted); font-size: .75rem; }
- .journey-metrics dd { font-size: 1.125rem; font-weight: 550; margin: 8px 0 0; overflow-wrap: anywhere; }
- .quiet-empty { padding: 16px 0; }
- .quiet-empty :global(svg) { color: var(--muted); }
- .record-summary h3 { font-size: 1rem; font-weight: 600; line-height: 1.4; margin: 12px 0 0; overflow-wrap: anywhere; }
- .maintenance-summary, .protection-summary { border-top: 1px solid var(--line); padding-top: 22px; }
- .maintenance-date { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; }
- .protection-count { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; margin-top: 18px; font-size: 1.75rem; font-weight: 550; }
- .protection-count span { color: var(--muted); font-size: .8125rem; font-weight: 400; }
- .overview-footer { color: var(--muted); font-size: .6875rem; line-height: 1.6; overflow-wrap: anywhere; padding-top: 20px; border-top: 1px solid var(--line); }
- summary:focus-visible, .color-swatch:focus-visible, .control-action:focus-visible, .alternate-action:focus-visible, .context-link:focus-visible, .record-heading a:focus-visible, .charge-history-mini a:focus-visible, .inline-action:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
- @media (max-width: 1120px) {
-  .overview-layout { grid-template-columns: 1fr; gap: 30px; }
-  .vehicle-scene { max-width: 760px; width: 100%; margin-inline: auto; }
-  .vehicle-task { grid-template-columns: 1fr 1fr; gap: 24px; }
-  .charger-context { grid-row: span 3; }
-  .latest-charge + .latest-charge { border-top: 0; padding-top: 0; }
- }
- @media (max-width: 700px) {
-  .overview-page { gap: 30px; }
-  .overview-heading { margin-bottom: 12px; gap: 12px; }
-  .overview-heading h2 { font-size: 1.875rem; }
-  .overview-heading :global(.status-pill) { max-width: 40%; white-space: normal; }
-  .overview-heading p { font-size: .75rem; }
-  .overview-heading p span { display: none; }
-  .vehicle-readings { gap: 28px; }
-  .range-reading dd { font-size: 3.25rem; }
-  .vehicle-scene :global(.vehicle-frame) { height: 165px; }
-  .vehicle-state { gap: 6px; padding-block: 16px; }
-  .vehicle-state dt { flex-direction: row; gap: 5px; font-size: .6875rem; }
-  .vehicle-state dt :global(svg) { display: none; }
-  .color-picker { margin-bottom: 8px; }
-  .vehicle-state dd { font-size: .75rem; }
-  .control-actions { gap: 4px; }
-  .control-action { font-size: .6875rem; }
-  .control-circle { width: 48px; height: 48px; flex-basis: 48px; border-radius: 16px; }
-  .vehicle-task { grid-template-columns: 1fr; gap: 22px; }
-  .charger-context { padding: 22px; border-radius: 22px; }
-  .charger-readings { gap: 16px; }
-  .charger-metric dd { font-size: 1.75rem; }
-  .latest-charge + .latest-charge { border-top: 1px solid var(--line); padding-top: 20px; }
-  .field-source-list { grid-template-columns: 1fr; }
-  .mobility-heading { display: block; margin-bottom: 20px; }
-  .mobility-heading > a { margin-top: 8px; }
-  .overview-records { grid-template-columns: 1fr; gap: 28px; }
-  .connection-readings { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-  .record-heading { gap: 12px; }
-  .mini-charge-bar { display: none; }
-  .charge-history-mini a { grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; }
- }
- @media (prefers-reduced-motion: reduce) { .control-circle { transition: none; } }
+	.overview-page { display: grid; gap: clamp(34px, 4.4vw, 58px); min-width: 0; }
+	.overview-hero, .profile-heading, .vehicle-scene, .vehicle-task { min-width: 0; }
+	.overview-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin: 0; }
+	.overview-heading h2 { margin: 0; font-size: clamp(2.125rem, 4.2vw, 3.5rem); font-weight: 590; line-height: 1.05; letter-spacing: -.05em; overflow-wrap: anywhere; }
+	.overview-heading p { margin: 10px 0 0; color: var(--muted); font-size: var(--text-label); line-height: 1.5; overflow-wrap: anywhere; }
+	.overview-heading :global(.status-pill) { flex: 0 1 auto; min-height: 36px; font-size: var(--text-caption); }
+	.overview-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(19rem, .82fr); gap: clamp(24px, 3.2vw, 48px); align-items: start; }
+	.vehicle-display { display: grid; min-width: 0; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); align-items: center; gap: clamp(20px, 3vw, 40px); padding: 0; border: 0; border-radius: 0; background: transparent; }
+	.vehicle-scene :global(.vehicle-artwork) { min-width: 0; margin: 0; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+	.vehicle-scene :global(.vehicle-frame) { height: clamp(220px, 23vw, 330px); }
+	.vehicle-scene :global(figcaption) { padding: 8px 0 0; color: var(--muted); font-size: var(--text-caption); line-height: 1.45; text-align: left; }
+	.vehicle-readings { display: grid; grid-template-columns: minmax(0, 1fr); align-items: end; gap: 20px; margin: 0; padding-top: 0; font-variant-numeric: tabular-nums; }
+	.vehicle-readings > div { min-width: 0; }
+	.vehicle-readings dt { color: var(--muted); font-size: var(--text-caption); font-weight: 650; letter-spacing: .04em; line-height: 1.5; text-transform: uppercase; }
+	.vehicle-readings dd { margin: 5px 0 0; overflow-wrap: anywhere; }
+	.range-reading dd { font-size: clamp(3rem, 5.4vw, 5.25rem); font-weight: 570; letter-spacing: -.055em; line-height: .98; }
+	.battery-reading { align-self: end; padding-bottom: 0; }
+	.battery-reading dd { display: flex; align-items: center; gap: 7px; font-size: clamp(1.125rem, 2.2vw, 1.5rem); font-weight: 610; }
+	.battery-reading dd :global(svg) { flex-shrink: 0; color: var(--forest); }
+	.reading-caption { max-width: 68ch; margin: 15px 0 0; }
+	.reading-caption p { margin: 4px 0; color: var(--muted); font-size: var(--text-caption); line-height: 1.55; overflow-wrap: anywhere; }
+	.reading-caption .temporal-explanation { color: var(--muted-strong); }
+	.battery-level { display: block; width: min(100%, 420px); height: 7px; margin: 10px 0 0; border: 0; border-radius: 9px; background: var(--line); }
+	.battery-level::-webkit-meter-bar { height: 6px; border: 0; border-radius: 9px; background: var(--line); }
+	.battery-level::-webkit-meter-optimum-value { border-radius: 9px; background: var(--forest); }
+	.battery-level::-moz-meter-bar { border-radius: 9px; background: var(--forest); }
+	.charge-glance { display: flex; width: fit-content; max-width: 100%; min-height: 56px; align-items: center; gap: 12px; margin: 18px 0 0; padding: 10px 14px; border: 1px solid color-mix(in srgb, var(--forest) 22%, var(--line)); border-radius: 14px; background: var(--forest-soft); color: var(--forest); text-decoration: none; }
+	.charge-glance > span { display: grid; min-width: 0; gap: 4px; }
+	.charge-glance strong { font-size: var(--text-caption); overflow-wrap: anywhere; }
+	.charge-glance span span { color: var(--muted-strong); font-size: var(--text-caption); overflow-wrap: anywhere; }
+	.charge-glance :global(svg) { flex: 0 0 auto; }
+	.color-picker { margin: 14px 0 26px; }
+	.color-picker > summary { display: flex; width: fit-content; min-height: 48px; align-items: center; gap: 8px; color: var(--forest); font-size: var(--text-caption); cursor: pointer; list-style: none; }
+	.color-picker > summary::-webkit-details-marker { display: none; }
+	.color-picker > summary span { color: var(--muted); }
+	.vehicle-colors { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 4px; }
+	.color-swatch { display: grid; width: 48px; height: 48px; place-items: center; border: 1px solid transparent; border-radius: 50%; background: transparent; cursor: pointer; }
+	.color-swatch span { width: 24px; height: 24px; border: 1px solid var(--line-strong); border-radius: 50%; background: var(--swatch); box-shadow: inset 0 2px 5px rgb(255 255 255 / 25%); }
+	.color-swatch.selected { border-color: var(--forest); }
+	.color-swatch:disabled { cursor: not-allowed; opacity: .55; }
+	.color-name { margin-left: 6px; color: var(--muted); font-size: var(--text-caption); }
+	.vehicle-state { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 12px; margin: 0 0 18px; padding: 18px 0; border-block: 1px solid var(--line); }
+	.vehicle-state > div { min-width: 0; }
+	.vehicle-state dt { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: var(--text-caption); line-height: 1.4; }
+	.vehicle-state dt :global(svg) { flex: 0 0 auto; }
+	.vehicle-state dd { margin: 7px 0 0; font-size: var(--text-label); font-weight: 610; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+	.control-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; max-width: 540px; }
+	.control-action, .alternate-action { display: flex; min-width: 48px; min-height: 88px; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 8px; padding: 6px; border: 1px solid transparent; border-radius: 14px; background: transparent; color: var(--ink); cursor: pointer; font-size: var(--text-caption); line-height: 1.35; text-align: left; text-decoration: none; }
+	.control-action:hover:not(:disabled), .alternate-action:hover:not(:disabled) { background: var(--surface-soft); }
+	.control-circle { display: grid; width: 52px; height: 52px; flex: 0 0 52px; place-items: center; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); color: var(--muted-strong); transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease, color var(--motion-fast) ease; }
+	.control-action:hover:not(:disabled) .control-circle, .alternate-action:hover:not(:disabled) .control-circle { border-color: var(--forest); background: var(--forest-soft); color: var(--forest); }
+	.control-action:disabled, .alternate-action:disabled { color: var(--muted); cursor: not-allowed; }
+	.control-action:disabled .control-circle, .alternate-action:disabled .control-circle { color: var(--muted); }
+	.control-label { font-weight: 600; overflow-wrap: anywhere; }
+	.inline-action { display: inline-flex; min-width: 48px; min-height: 48px; align-items: center; justify-content: center; padding: 8px 14px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface); color: var(--ink); font-size: var(--text-caption); font-weight: 600; cursor: pointer; }
+	.inline-action:hover:not(:disabled) { border-color: var(--forest); background: var(--forest-soft); color: var(--forest); }
+	.inline-action:disabled { opacity: .55; cursor: not-allowed; }
+	.alternate-actions { margin-top: 12px; }
+	.alternate-actions summary, .field-source-details summary, .charger-details summary { display: flex; min-height: 48px; align-items: center; gap: 10px; color: var(--muted-strong); font-size: var(--text-caption); font-weight: 600; cursor: pointer; list-style: revert; }
+	.alternate-actions summary { justify-content: flex-start; }
+	.alternate-action-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr)); gap: 8px; padding: 8px 0; }
+	.control-footnote { max-width: 70ch; margin: 8px 0 0; color: var(--muted); font-size: var(--text-caption); line-height: 1.55; }
+	.control-footnote a { color: var(--forest); text-decoration: underline; text-underline-offset: 3px; }
+	.field-source-details { margin-top: 6px; }
+	.sensor-readings { margin-top: 6px; }
+	.sensor-readings summary { display: flex; min-height: 48px; align-items: center; justify-content: flex-start; color: var(--muted-strong); font-size: var(--text-caption); font-weight: 600; cursor: pointer; list-style: revert; }
+	.sensor-readings dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: 14px 20px; margin: 12px 0; }
+	.sensor-readings dl > div { min-width: 0; }
+	.sensor-readings dt { color: var(--muted); font-size: var(--text-caption); }
+	.sensor-readings dd { margin: 5px 0 0; font-size: var(--text-label); font-weight: 650; overflow-wrap: anywhere; }
+	.sensor-readings p { color: var(--muted); font-size: var(--text-caption); line-height: 1.6; }
+	.field-source-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: 10px 16px; margin: 8px 0; }
+	.field-source-list div { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+	.field-source-list dt, .received-times span { color: var(--muted); }
+	.field-source-list dd { margin: 0; overflow-wrap: anywhere; }
+	.field-source-list, .received-times { font-size: var(--text-caption); line-height: 1.6; }
+	.received-times p { display: flex; flex-wrap: wrap; gap: 5px 8px; margin: 8px 0; }
+	.received-times strong { font-weight: 500; overflow-wrap: anywhere; }
+	.vehicle-task { display: grid; min-width: 0; gap: 20px; }
+	.charger-context { min-width: 0; padding: clamp(20px, 2.3vw, 30px); border: 1px solid var(--line); border-radius: 24px; background: var(--surface-soft); }
+	.context-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+	.context-heading h3 { margin: 0; font-size: 1rem; font-weight: 620; line-height: 1.4; }
+	.charger-context .context-heading h3 { font-size: clamp(1.25rem, 2vw, 1.5rem); letter-spacing: -.035em; }
+	.context-heading :global(.badge) { font-size: var(--text-caption); }
+	.charge-connection { display: flex; align-items: center; gap: 16px; margin: 18px 0; color: var(--muted); }
+	.charge-connection span { height: 2px; flex: 1; background: var(--line-strong); }
+	.charge-connection .flow-active { background: var(--forest); }
+	.charger-secondary { display: grid; gap: 8px; margin: 10px 0; font-size: var(--text-caption); }
+	.charger-secondary dd { margin: 4px 0; }
+	.charger-readings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 16px; margin: 22px 0 0; }
+	.charger-readings > div { min-width: 0; }
+	.charger-readings dt { color: var(--muted); font-size: var(--text-caption); line-height: 1.5; }
+	.charger-readings dd { margin: 6px 0 0; font-size: var(--text-label); font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+	.charger-metric { padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+	.charger-metric dd { font-size: clamp(1.5rem, 2.5vw, 2rem); font-weight: 570; letter-spacing: -.04em; }
+	.charger-source { margin: 18px 0 8px; color: var(--muted); font-size: var(--text-caption); overflow-wrap: anywhere; }
+	.charger-received, .charge-cost-status { margin: 8px 0; color: var(--muted); font-size: var(--text-caption); line-height: 1.5; overflow-wrap: anywhere; }
+	.source-notice { margin: 12px 0 0; padding: 12px 0; border-block: 1px solid var(--line); color: var(--muted-strong); font-size: var(--text-caption); line-height: 1.6; }
+	.session-timing, .connection-readings { display: grid; gap: 10px; margin: 14px 0 0; font-size: var(--text-caption); line-height: 1.5; }
+	.session-timing > div, .connection-readings > div { display: grid; min-width: 0; gap: 4px; }
+	.session-timing dt, .connection-readings dt { color: var(--muted); }
+	.session-timing dd, .connection-readings dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+	.context-copy, .charger-details p { margin: 10px 0; color: var(--muted); font-size: var(--text-caption); line-height: 1.6; overflow-wrap: anywhere; }
+	.context-link { display: inline-flex; min-height: 48px; align-items: center; gap: 9px; color: var(--forest); font-size: var(--text-label); font-weight: 600; text-decoration: none; }
+	.context-link:hover, .record-heading a:hover { text-decoration: underline; text-underline-offset: 4px; }
+	.charger-context .context-link { display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+	.latest-charge { min-width: 0; padding: 8px 2px 0; }
+	.charge-date { margin: 8px 0; color: var(--muted); font-size: var(--text-caption); line-height: 1.55; }
+	.latest-charge-values { display: flex; justify-content: space-between; gap: 16px; margin-top: 10px; font-size: 1.125rem; font-variant-numeric: tabular-nums; }
+	.latest-charge-values strong { font-size: 1.5rem; font-weight: 570; letter-spacing: -.035em; }
+	.latest-charge + .latest-charge { padding-top: 20px; border-top: 1px solid var(--line); }
+	.connection-context { margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--line); }
+	.connection-readings { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px 24px; }
+	.connection-context > .context-link { margin-top: 4px; }
+	.overview-mobility { padding-top: clamp(26px, 3.4vw, 42px); border-top: 1px solid var(--line); }
+	.mobility-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
+	.mobility-heading h2 { margin: 0; font-size: clamp(1.75rem, 3vw, 2.5rem); font-weight: 570; letter-spacing: -.045em; line-height: 1.12; }
+	.overview-records { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 34px 48px; }
+	.record-summary { min-width: 0; padding-top: 18px; border-top: 1px solid var(--line); }
+	.record-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
+	.record-heading h2 { margin: 0; font-size: var(--text-label); font-weight: 620; line-height: 1.45; }
+	.record-heading a { display: inline-flex; min-height: 48px; align-items: center; gap: 6px; color: var(--forest); font-size: var(--text-caption); text-decoration: none; }
+	.record-totals { display: flex; flex-wrap: wrap; gap: 20px 36px; margin-bottom: 20px; }
+	.record-totals > div { display: grid; min-width: 0; gap: 6px; }
+	.record-totals span { color: var(--muted); font-size: var(--text-caption); }
+	.record-totals strong { font-size: 1.625rem; font-weight: 570; letter-spacing: -.04em; }
+	.record-totals strong small { font-size: var(--text-label); font-weight: 400; letter-spacing: normal; }
+	.charge-history-mini { margin: 0; padding: 0; list-style: none; }
+	.charge-history-mini li { border-bottom: 1px solid var(--line); }
+	.charge-history-mini a { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(44px, .8fr) auto auto; align-items: center; gap: 12px; min-height: 64px; font-size: var(--text-caption); text-decoration: none; }
+	.mini-charge-label { color: var(--muted-strong); line-height: 1.55; overflow-wrap: anywhere; }
+	.mini-charge-label small { display: block; color: var(--muted); font-size: var(--text-caption); }
+	.mini-charge-bar { height: 4px; border-radius: 9px; background: var(--line); }
+	.mini-charge-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--forest); }
+	.record-summary p { color: var(--muted); font-size: var(--text-label); line-height: 1.6; }
+	.record-summary .record-note, .journey-source { font-size: var(--text-caption); }
+	.journey-path { display: flex; min-width: 0; align-items: center; gap: 10px; padding: 18px 0; }
+	.journey-path strong { min-width: 0; font-size: var(--text-label); overflow-wrap: anywhere; }
+	.journey-stop { width: 8px; height: 8px; flex: 0 0 8px; border: 2px solid var(--forest); border-radius: 50%; }
+	.journey-line { height: 1px; min-width: 8px; flex: 1; background: var(--line-strong); }
+	.journey-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; }
+	.journey-metrics dt { color: var(--muted); font-size: var(--text-caption); }
+	.journey-metrics dd { margin: 7px 0 0; font-size: 1.125rem; font-weight: 570; overflow-wrap: anywhere; }
+	.quiet-empty { padding: 16px 0; }
+	.quiet-empty :global(svg) { color: var(--forest); }
+	.record-summary h3 { margin: 12px 0 0; font-size: 1rem; font-weight: 610; line-height: 1.4; overflow-wrap: anywhere; }
+	.maintenance-date { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; }
+	.protection-count { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; margin-top: 18px; font-size: 2rem; font-weight: 570; letter-spacing: -.04em; }
+	.protection-count span { color: var(--muted); font-size: var(--text-label); font-weight: 400; letter-spacing: normal; }
+	.overview-footer { padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: var(--text-caption); line-height: 1.6; overflow-wrap: anywhere; }
+	.overview-page summary:focus-visible, .color-swatch:focus-visible, .control-action:focus-visible, .alternate-action:focus-visible, .context-link:focus-visible, .record-heading a:focus-visible, .charge-history-mini a:focus-visible, .inline-action:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+	@media (max-width: 1120px) {
+		.overview-layout { grid-template-columns: minmax(0, 1fr); gap: 26px; }
+		.vehicle-scene { max-width: 860px; width: 100%; margin-inline: auto; }
+		.vehicle-task { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 20px 28px; }
+		.charger-context { grid-row: span 2; }
+		.latest-charge + .latest-charge { padding-top: 0; border-top: 0; }
+	}
+	@media (max-width: 700px) {
+		.overview-page { gap: 38px; }
+		.overview-heading { align-items: flex-start; gap: 12px; }
+		.overview-heading h2 { font-size: clamp(1.875rem, 8vw, 2.5rem); }
+		.overview-heading :global(.status-pill) { max-width: 45%; white-space: normal; }
+		.overview-heading p { font-size: var(--text-caption); }
+		.overview-heading p span { display: none; }
+		.overview-layout { gap: 24px; }
+		.vehicle-display { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+		.vehicle-scene :global(.vehicle-frame) { height: clamp(190px, 52vw, 250px); }
+		.vehicle-readings { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; }
+		.range-reading dd { font-size: clamp(2.75rem, 12vw, 3.5rem); }
+		.battery-reading dd { font-size: 1.125rem; }
+		.color-picker { margin-bottom: 20px; }
+		.vehicle-state { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; padding-block: 16px; }
+		.control-actions { gap: 4px; }
+		.control-action { align-items: center; padding-inline: 2px; text-align: center; }
+		.control-circle { width: 50px; height: 50px; flex-basis: 50px; border-radius: 17px; }
+		.vehicle-task { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+		.charger-context { grid-row: auto; padding: 20px; border-radius: 20px; }
+		.charger-readings { gap: 16px 12px; }
+		.field-source-list { grid-template-columns: minmax(0, 1fr); }
+		.connection-readings { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+		.mobility-heading { align-items: flex-start; flex-direction: column; gap: 4px; margin-bottom: 18px; }
+		.overview-records { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+		.record-summary { padding-top: 16px; }
+		.charge-history-mini a { grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; }
+		.mini-charge-bar { display: none; }
+		.journey-path { flex-wrap: wrap; }
+		.journey-line { flex-basis: 16px; }
+	}
+	@media (max-width: 360px) {
+		.overview-heading { flex-wrap: wrap; }
+		.overview-heading :global(.status-pill) { max-width: 100%; }
+		.vehicle-state { gap: 14px 8px; }
+		.control-label { max-width: 7ch; }
+		.journey-metrics { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+		.journey-metrics > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+		.journey-metrics dd { text-align: right; }
+		.latest-charge-values { flex-wrap: wrap; }
+	}
 </style>

@@ -211,6 +211,64 @@ class BackupMonitorTests(unittest.TestCase):
         self.assertEqual(json.loads((self.state / "sqlite.json").read_text()), healthy)
         self.assertFalse(list(self.state.glob("*.tmp")))
 
+    def test_v1_upgrade_starts_empty_journal_and_keeps_new_transition(self):
+        self.backup()
+        prior = monitor.persist(self.state, self.check(), self.uid)
+        legacy = {key: value for key, value in prior.items()
+                  if key not in {"journal_id", "event_sequence", "events"}}
+        legacy["schema_version"] = 1
+        (self.state / "sqlite.json").write_text(json.dumps(legacy))
+
+        alert = self.check(now=self.now + timedelta(minutes=1), reported_failure=True)
+        upgraded = monitor.persist(self.state, alert, self.uid)
+        self.assertEqual(upgraded["schema_version"], 2)
+        self.assertEqual(upgraded["transition"], "alert_started")
+        self.assertEqual(upgraded["event_sequence"], 1)
+        self.assertEqual([event["kind"] for event in upgraded["events"]], ["backup_alert"])
+        self.assertNotEqual(upgraded["journal_id"], legacy.get("journal_id"))
+        self.assertEqual(upgraded["artifact_content_hash_verified"], False)
+        self.assertEqual(upgraded["restore_verified"], False)
+        self.assertEqual(upgraded["notification_delivered"], False)
+
+    def test_journal_retains_latest_64_with_monotonic_sequence(self):
+        self.backup()
+        for index in range(130):
+            moment = self.now + timedelta(minutes=index)
+            report = self.check(now=moment, reported_failure=index % 2 == 0)
+            monitor.persist(self.state, report, self.uid)
+        current = json.loads((self.state / "sqlite.json").read_text())
+        self.assertEqual(current["event_sequence"], 130)
+        self.assertEqual(len(current["events"]), 64)
+        self.assertEqual([event["sequence"] for event in current["events"]], list(range(67, 131)))
+        self.assertEqual(current["events"][-1]["kind"], "backup_recovery")
+
+    def test_malformed_v2_journal_and_reordered_events_fail_before_replace(self):
+        self.backup()
+        baseline = monitor.persist(self.state, self.check(reported_failure=True), self.uid)
+        second = monitor.persist(self.state, self.check(now=self.now + timedelta(minutes=1)), self.uid)
+        self.assertEqual(second["transition"], "recovered")
+        target = self.state / "sqlite.json"
+        for mutate in [
+            lambda raw: raw.update(journal_id="not-an-id"),
+            lambda raw: raw.update(event_sequence=True),
+            lambda raw: raw.update(events=list(reversed(raw["events"]))),
+            lambda raw: raw["events"][1].update(sequence=1),
+            lambda raw: raw["events"][1].update(kind="unsupported-reason"),
+            lambda raw: raw["events"][1].update(kind=["unsupported-reason"]),
+            lambda raw: raw["events"][1].update(id=raw["events"][0]["id"]),
+            lambda raw: raw.update(events=raw["events"][:-1]),
+            lambda raw: raw["events"][1].update(at="2026-10-12T03:00:00Z"),
+        ]:
+            with self.subTest(mutate=mutate):
+                content = json.loads(json.dumps(second))
+                mutate(content)
+                encoded = json.dumps(content).encode()
+                target.write_bytes(encoded)
+                with self.assertRaises(monitor.MonitorError):
+                    monitor.persist(self.state, self.check(now=self.now + timedelta(minutes=2)), self.uid)
+                self.assertEqual(target.read_bytes(), encoded)
+        self.assertEqual(baseline["journal_id"], second["journal_id"])
+
     def test_older_poll_cannot_erase_newer_failure(self):
         self.backup()
         newer = self.check(now=self.now + timedelta(minutes=1), reported_failure=True)

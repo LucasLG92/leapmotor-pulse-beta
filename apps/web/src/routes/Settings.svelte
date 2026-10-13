@@ -956,6 +956,8 @@
 
 <section class="settings-layout">
 	<div class="settings-primary">
+		<div class="settings-purpose-group" role="group" aria-labelledby="settings-services-group">
+			<p id="settings-services-group" class="settings-group-label">Vehículo y servicios</p>
 		<section class="settings-card card" aria-labelledby="profile-heading">
 			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="settings" size={18} /></span><div><h2 id="profile-heading">Tu B10 y tu tarifa</h2><p>Información propia para organizar los registros de Pulse.</p></div></div>
 			<form class="settings-form" onsubmit={saveSettings}>
@@ -1022,7 +1024,10 @@
 			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="navigation" size={18} /></span><div><h2 id="abrp-integration-heading">ABRP</h2><p>Comparte solo una lectura válida de batería y su hora de observación.</p></div></div>
 			<AbrpIntegrationPanel abrp={pulseState.integrations?.abrp} mode={pulseState.mode} {online} {busy} {mutate} {confirmAction} />
 		</section>
+		</div>
 
+		<div class="settings-purpose-group" role="group" aria-labelledby="settings-backup-group">
+			<p id="settings-backup-group" class="settings-group-label">Copias y continuidad</p>
 		<section class="settings-card card" aria-labelledby="backup-heading">
 			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="download" size={18} /></span><div><h2 id="backup-heading">Exportar o restaurar</h2><p>Los archivos se procesan en esta sesión y se envían al servidor solo al restaurar.</p></div></div>
 			<div class="backup-actions">
@@ -1038,9 +1043,12 @@
 			{#if backupError}<p class="form-error" role="alert">{backupError}</p>{/if}
 			<p class="fine-print">No cargues archivos que contengan claves, contraseñas o datos que no quieras importar. No es posible restaurar un archivo SQL.</p>
 		</section>
+		</div>
 	</div>
 
 	<aside class="settings-secondary">
+		<div class="settings-purpose-group" role="group" aria-labelledby="settings-preferences-group">
+			<p id="settings-preferences-group" class="settings-group-label">Preferencias de uso</p>
 		<section class="settings-card card" aria-labelledby="appearance-heading">
 			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="sun" size={18} /></span><div><h2 id="appearance-heading">Apariencia</h2></div></div>
 			<div class="field theme-field"><label for="theme-select">Tema</label><select id="theme-select" value={theme} onchange={(event) => { const value = event.currentTarget.value; if (value === 'system' || value === 'light' || value === 'dark') setTheme(value as ThemePreference); }}>
@@ -1058,7 +1066,10 @@
 			<p class="fine-print">La disponibilidad de instalación depende del navegador y de la configuración del dispositivo.</p>
 		</section>
 		{/if}
+		</div>
 
+		<div class="settings-purpose-group" role="group" aria-labelledby="settings-access-group">
+			<p id="settings-access-group" class="settings-group-label">Notificaciones, dispositivos y acceso</p>
 		<PushNotificationsPanel {online} {revision} {busy} native={isNativeApp()} {notifications} {runNotificationAction} {confirmAction} {drafts} />
 
 		<section bind:this={widgetSection} class="settings-card card" aria-labelledby="widgets-heading">
@@ -1198,6 +1209,7 @@
 			<p class="muted-copy">Sesión: <strong>{user || 'Desarrollo local'}</strong>. La autenticación la gestiona el servidor.</p>
 			<button class="button button-quiet button-block" type="button" disabled={busy} onclick={onLogout}>Cerrar sesión</button>
 		</section>
+		</div>
 	</aside>
 </section>
 
@@ -1255,12 +1267,12 @@
 	.loading-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--forest); box-shadow: 0 0 0 4px var(--forest-soft); }
 	.widget-profile-list { display: grid; gap: 7px; margin: 12px 0 0; padding: 0; list-style: none; }
 	.widget-profile-row { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 5px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-soft); }
-	.widget-profile-choice { display: grid; flex: 1 1 auto; gap: 3px; min-width: 0; min-height: 44px; padding: 5px 7px; border: 0; border-radius: 7px; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+	.widget-profile-choice { display: grid; flex: 1 1 auto; gap: 3px; min-width: 0; min-height: 48px; padding: 5px 7px; border: 0; border-radius: 7px; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
 	.widget-profile-choice:hover, .widget-profile-active { background: var(--surface); }
 	.widget-profile-choice strong { overflow: hidden; font-size: .875rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 	.widget-profile-choice span { color: var(--muted); font-size: .875rem; line-height: 1.5; overflow-wrap: anywhere; }
 	.widget-profile-actions { display: flex; flex: 0 0 auto; gap: 1px; }
-	.widget-profile-actions .button { min-height: 44px; padding-inline: 8px; font-size: .875rem; }
+	.widget-profile-actions .button { min-height: 48px; padding-inline: 8px; font-size: .875rem; }
 	.widget-delete { color: var(--danger); }
 	.widget-preview-wrap { display: grid; gap: 7px; margin-top: 13px; }
 	.widget-preview-label { color: var(--muted); font-size: 0.75rem; font-weight: 700; letter-spacing: .1em; }
@@ -1280,19 +1292,19 @@
 	.native-grant-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
 	.native-grant-details { display: grid; gap: 3px; min-width: 0; color: var(--muted); font-size: 0.75rem; line-height: 1.4; }
 	.native-grant-details strong { overflow-wrap: anywhere; color: var(--ink); font-size: .875rem; font-weight: 640; }
-	.native-revoke { min-height: 44px; flex: 0 0 auto; color: var(--danger); }
+	.native-revoke { min-height: 48px; flex: 0 0 auto; color: var(--danger); }
 	.native-pairing-actions { display: grid; gap: 5px; }
-	.native-pairing-actions .button { min-height: 44px; }
+	.native-pairing-actions .button { min-height: 48px; }
 	.native-pairing-actions .field-hint { margin: 0; font-size: .875rem; line-height: 1.5; }
 	.native-pairing-error { margin: 0; color: var(--danger); font-size: .875rem; line-height: 1.5; }
 	.native-pairing-result { display: grid; gap: 9px; padding: 11px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); }
 	.native-pairing-result > p { margin: 0; color: var(--ink); font-size: .875rem; line-height: 1.5; }
 	.native-code-row { display: flex; align-items: center; gap: 5px; min-width: 0; }
-	.native-code-row input { width: 0; min-width: 0; min-height: 44px; flex: 1 1 auto; padding: 8px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface-soft); color: var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1rem; letter-spacing: .04em; }
-	.native-code-row .button { min-height: 44px; flex: 0 0 auto; }
+	.native-code-row input { width: 0; min-width: 0; min-height: 48px; flex: 1 1 auto; padding: 8px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface-soft); color: var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1rem; letter-spacing: .04em; }
+	.native-code-row .button { min-height: 48px; flex: 0 0 auto; }
 	.native-pairing-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 0.75rem; }
 	.native-pairing-footer > div { display: flex; gap: 4px; }
-	.native-pairing-footer .button { min-height: 44px; }
+	.native-pairing-footer .button { min-height: 48px; }
 	.native-code-status { color: var(--danger); font-size: .875rem; line-height: 1.5; }
 	.native-grant-details, .native-pairing-footer { font-size: .75rem; }
 	.widget-new-profile { margin-top: 12px; }
@@ -1302,15 +1314,15 @@
 	.widget-form-title .button { flex: 0 0 auto; }
 	.widget-fields { display: grid; gap: 3px; min-width: 0; margin: 0; padding: 9px; border: 1px solid var(--line); border-radius: 10px; }
 	.widget-fields legend { padding: 0 4px; color: var(--ink); font-size: .875rem; font-weight: 600; }
-	.widget-fields label { display: flex; align-items: center; gap: 8px; min-height: 44px; color: var(--ink); font-size: .875rem; cursor: pointer; }
+	.widget-fields label { display: flex; align-items: center; gap: 8px; min-height: 48px; color: var(--ink); font-size: .875rem; cursor: pointer; }
 	.widget-fields input { width: 17px; height: 17px; margin: 0; accent-color: var(--forest); }
 	.widget-form-grid { display: grid; gap: 11px; }
 	.widget-form-grid .field label { font-size: .875rem; }
-	.widget-form-grid select, .widget-profile-form input:not([type='checkbox']) { min-height: 44px; font-size: 1rem; }
+	.widget-form-grid select, .widget-profile-form input:not([type='checkbox']) { min-height: 48px; font-size: 1rem; }
 	.widget-age-field .field-hint { margin-top: 5px; font-size: .875rem; }
 	.widget-profile-form .form-error { margin: -4px 0 0; font-size: .875rem; }
 	.widget-form-actions { display: grid; gap: 4px; }
-	.widget-form-actions .button { min-height: 44px; }
+	.widget-form-actions .button { min-height: 48px; }
 	.widget-native-note { line-height: 1.55; }
 	.widget-energy-note { margin: 2px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.55; }
 	.widget-templates { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
@@ -1345,8 +1357,13 @@
 	.paint-swatch { width: 24px; height: 24px; flex: 0 0 24px; border: 1px solid #7d838b; border-radius: 50%; }
 	@media (max-width: 1100px) { .vehicle-personalization { grid-template-columns: 1fr; } }
 
-	.settings-layout{grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:48px}.settings-primary,.settings-secondary{gap:0}.settings-card{padding:24px 0;border:0;border-top:1px solid var(--line);border-radius:0;background:transparent;box-shadow:none}.settings-primary>.settings-card:first-of-type,.settings-secondary>.settings-card:first-child{border-top:0;padding-top:0}.settings-card-heading h2{font-size:1.125rem;margin-top:0}.settings-card-heading p:not(.section-label){font-size:.875rem}.settings-icon{width:24px;height:24px;flex-basis:24px;background:transparent;border-radius:0}.settings-form{margin-top:12px}.vehicle-personalization{grid-template-columns:minmax(0,1fr);margin:0 0 24px;padding:0 0 24px;border-top:0;border-bottom:1px solid var(--line);gap:12px}.vehicle-color-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.vehicle-color-option{background:transparent;min-height:48px;padding:8px;border-color:transparent;border-radius:8px;font-size:.8125rem}.vehicle-color-option.selected{border-color:var(--forest)}.vehicle-color-option:hover{background:var(--surface-soft)}.paint-swatch{border-color:var(--line-strong)}.connection-status-card{padding:14px 0;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent}.pvpc-setting-note{border:0;background:var(--forest-soft);color:var(--forest)}.form-grid{gap:20px 16px}.settings-current-rate{font-size:.8125rem}
-	@media(max-width:1000px){.settings-layout{grid-template-columns:minmax(0,1fr);gap:24px}.settings-secondary{grid-template-columns:minmax(0,1fr)}.settings-secondary>.settings-card:first-child{border-top:1px solid var(--line);padding-top:24px}}
+	.settings-layout{grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:48px}.settings-primary,.settings-secondary{gap:0}.settings-card{padding:24px 0;border:0;border-top:1px solid var(--line);border-radius:0;background:transparent;box-shadow:none}.settings-card-heading h2{font-size:1.125rem;margin-top:0}.settings-card-heading p:not(.section-label){font-size:.875rem}.settings-icon{width:24px;height:24px;flex-basis:24px;background:transparent;border-radius:0}.settings-form{margin-top:12px}.vehicle-personalization{grid-template-columns:minmax(0,1fr);margin:0 0 24px;padding:0 0 24px;border-top:0;border-bottom:1px solid var(--line);gap:12px}.vehicle-color-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.vehicle-color-option{background:transparent;min-height:48px;padding:8px;border-color:transparent;border-radius:8px;font-size:.8125rem}.vehicle-color-option.selected{border-color:var(--forest)}.vehicle-color-option:hover{background:var(--surface-soft)}.paint-swatch{border-color:var(--line-strong)}.connection-status-card{padding:14px 0;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent}.pvpc-setting-note{border:0;background:var(--forest-soft);color:var(--forest)}.form-grid{gap:20px 16px}.settings-current-rate{font-size:.8125rem}
+	.settings-purpose-group { display: grid; gap: 0; min-width: 0; }
+	.settings-group-label { margin: 0; padding: 0 0 13px; border-bottom: 1px solid var(--line-strong); color: var(--forest); font-size: .75rem; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
+	.settings-purpose-group > .settings-card:first-of-type { border-top: 0; padding-top: 17px; }
+	.settings-primary > .settings-purpose-group:first-child > .settings-card:first-of-type { padding-top: 18px; }
+	.settings-secondary { grid-template-columns: minmax(0, 1fr); }
+	@media(max-width:1000px){.settings-layout{grid-template-columns:minmax(0,1fr);gap:24px}.settings-secondary{grid-template-columns:minmax(0,1fr)}}
 	@media(max-width:700px){.settings-layout{gap:0}.settings-card{padding:24px 0}.vehicle-color-options{gap:4px}.settings-form .field-hint{font-size:.8125rem}.settings-form .form-actions>.button{width:100%}}
 	@media(max-width:359px){.vehicle-color-options{grid-template-columns:minmax(0,1fr)}}
 

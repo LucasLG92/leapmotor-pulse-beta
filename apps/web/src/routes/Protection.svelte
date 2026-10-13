@@ -49,7 +49,9 @@
 
 <section class="protection-stage" class:protection-stage-demo={pulseState.mode === 'demo'}>
 {#if pulseState.mode !== 'demo'}
+	<div class="state-history">
 	<ObservedEventsPanel {online} {revision} mode={pulseState.mode} {onSessionExpired} />
+	</div>
 {/if}
 
 <section class="protection-layout">
@@ -88,9 +90,9 @@
 		{#if events.length === 0}
 			<div class="empty-state"><span class="empty-mark"><Glyph name="protection" /></span><h3>No hay eventos de demostración</h3><p>Al añadir un evento ficticio aparecerá aquí con la hora recibida del servidor.</p></div>
 		{:else}
-			<div class="event-list card">
+			<div class="event-list card evolution-list">
 				{#each events as event (event.id)}
-					<article class="event-row">
+					<article class="event-row evolution-item">
 						<span class="event-mark"><Glyph name="protection" size={17} /></span>
 						<div><strong>{event.message}</strong><span>{event.kind}</span></div>
 						<time datetime={event.created_at}>{dateTime(event.created_at)}</time>
@@ -121,13 +123,14 @@
 
 <style>
 	.page-intro h2 { margin: 0; font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing: -.035em; }
-	.protection-stage { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(270px, .8fr); align-items: start; gap: 22px; }
-	:global(.protection-stage > .observed-section) { grid-column: 1; grid-row: 1; min-width: 0; margin-top: 0; }
-	:global(.protection-stage > .observed-section .section-label) { display: none; }
+	.protection-stage { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: clamp(22px, 3vw, 34px); }
+	:global(.protection-stage > .state-history) { grid-column: 1; grid-row: 1; min-width: 0; }
+	:global(.state-history .observed-section) { margin-top: 0; }
+	:global(.state-history .section-label) { display: none; }
 	.protection-stage:has(:global(.observed-section[data-initial-loading="true"])) .protection-layout { visibility: hidden; }
-	.protection-layout { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; grid-column: 2; gap: 16px; min-width: 0; }
+	.protection-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(270px, .85fr); align-content: start; grid-column: 1; grid-row: 2; gap: 22px; min-width: 0; }
 	.protection-stage-demo { grid-template-columns: minmax(0, 1fr); }
-	.protection-stage-demo .protection-layout { grid-column: 1; grid-template-columns: minmax(0, 1.4fr) minmax(270px, .8fr); }
+	.protection-stage-demo .protection-layout { grid-column: 1; grid-row: 1; grid-template-columns: minmax(0, 1.15fr) minmax(270px, .85fr); }
 	.protection-feature, .protection-boundaries { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 	.protection-boundaries { padding-top: 18px; border-top: 1px solid var(--line); }
 	.protection-feature-heading { display: flex; align-items: center; gap: 14px; }
@@ -138,7 +141,7 @@
 	.protection-control-row > div { display: grid; gap: 4px; }
 	.protection-control-row strong { font-size: .875rem; }
 	.protection-control-row span:not(.switch-control span) { color: var(--muted); font-size: .875rem; line-height: 1.5; }
-	.switch-control { position: relative; display: flex; width: 58px; min-width: 58px; height: 44px; align-items: center; justify-content: flex-start; padding: 0 5px; border: 0; border-radius: 99px; background: transparent; cursor: pointer; }
+	.switch-control { position: relative; display: flex; width: 58px; min-width: 58px; min-height: 48px; align-items: center; justify-content: flex-start; padding: 0 5px; border: 0; border-radius: 99px; background: transparent; cursor: pointer; }
 	.switch-control::before { position: absolute; inset: 7px 4px; border: 1px solid var(--line-strong); border-radius: 99px; background: var(--surface-soft); content: ''; transition: background-color 140ms ease, border-color 140ms ease; }
 	.switch-control[aria-checked="true"] { justify-content: flex-end; }
 	.switch-control[aria-checked="true"]::before { border-color: var(--forest); background: var(--forest); }
@@ -157,8 +160,8 @@
 	.protection-events-section { grid-column: 1 / -1; margin-top: 8px; }
 	.protection-events-section .section-heading { margin-top: 0; }
 	.protection-events-copy { margin: 6px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
-	.event-list { overflow: visible; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-	.event-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto auto; align-items: center; gap: 11px; min-height: 68px; padding: 10px 15px; border-bottom: 1px solid var(--line); }
+	.event-list.evolution-list { display: grid; gap: 0; overflow: visible; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+	.event-row.evolution-item { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto auto; align-items: center; gap: 11px; min-height: 68px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 	.event-row:first-child { border-top: 1px solid var(--line); }
 	.event-row:last-child { border-bottom: 0; }
 	.event-mark { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 9px; background: var(--surface-soft); color: var(--forest); }
@@ -166,7 +169,12 @@
 	.event-row strong { font-size: .875rem; font-weight: 630; }
 	.event-row > div span { color: var(--muted); font-size: .75rem; text-transform: capitalize; }
 	.event-row time { color: var(--muted); font-size: .75rem; white-space: nowrap; }
-	@media (max-width: 850px) { .protection-stage { grid-template-columns: minmax(0, 1fr); } .protection-layout, .protection-stage-demo .protection-layout { grid-column: 1; grid-template-columns: minmax(0, 1fr); } .protection-stage-demo .protection-boundaries { padding: 18px 0 0; border-top: 1px solid var(--line); border-left: 0; } }
-	@media (max-width: 700px) { .protection-feature, .protection-boundaries { padding: 0; } .protection-boundaries { padding-top: 17px; } .event-row { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; padding-inline: 10px; } .event-row time { grid-column: 2; grid-row: 2; } .event-row > .badge { grid-column: 3; grid-row: 1 / span 2; } }
-	@media (max-width: 360px) { .protection-feature-heading { align-items: flex-start; } .protection-control-row { align-items: flex-start; flex-wrap: wrap; } .event-row { grid-template-columns: 28px minmax(0, 1fr); } .event-row time, .event-row > .badge { grid-column: 2; grid-row: auto; justify-self: start; } }
+	:global(.state-history .observed-list.card) { overflow: visible; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+	:global(.state-history .observed-row) { position: relative; grid-template-columns: 16px minmax(0, 1fr); gap: 14px; padding: 18px 0; }
+	:global(.state-history .observed-row:not(:last-child)::before) { position: absolute; top: 42px; bottom: -18px; left: 7px; width: 1px; background: var(--line-strong); content: ''; }
+	:global(.state-history .observed-mark) { width: 15px; height: 15px; margin-top: 5px; border: 2px solid var(--forest); border-radius: 50%; background: var(--canvas); }
+	:global(.state-history .observed-mark span) { display: none; }
+	@media (max-width: 850px) { .protection-layout, .protection-stage-demo .protection-layout { grid-column: 1; grid-row: auto; grid-template-columns: minmax(0, 1fr); } .protection-stage-demo .protection-boundaries { padding: 18px 0 0; border-top: 1px solid var(--line); border-left: 0; } }
+	@media (max-width: 700px) { .protection-feature, .protection-boundaries { padding: 0; } .protection-boundaries { padding-top: 17px; } .event-row.evolution-item { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; padding-inline: 0; } .event-row time { grid-column: 2; grid-row: 2; } .event-row > .badge { grid-column: 3; grid-row: 1 / span 2; } }
+	@media (max-width: 360px) { .protection-feature-heading { align-items: flex-start; } .protection-control-row { align-items: flex-start; flex-wrap: wrap; } .event-row.evolution-item { grid-template-columns: 28px minmax(0, 1fr); } .event-row time, .event-row > .badge { grid-column: 2; grid-row: auto; justify-self: start; } }
 </style>

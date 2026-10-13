@@ -10,6 +10,9 @@ import java.io.OutputStream;
 import java.net.Proxy;
 import java.net.URI;
 import java.net.URL;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -48,6 +51,30 @@ final class NativeHttpClient {
             Exchange response = exchange(method, rawPath, requestBytes, session.cookie,
                     isMutation(method) ? session.csrf : null, null, MAX_BODY_BYTES);
             return publicResponse(response);
+        } catch (Exception ignored) {
+            throw NativeTransportException.transport();
+        }
+    }
+
+    /** Purpose-bound aggregate report read with a strict header and body limit. */
+    NativeResponse requestManualJourneyReport(int days, NativeSessionState.SessionSnapshot session)
+            throws NativeTransportException {
+        if ((days != 30 && days != 90 && days != 365)
+                || !NativeApiPolicy.allows("/api/journeys/report?days=" + days, "GET")) {
+            throw NativeTransportException.invalidRequest();
+        }
+        if (session == null || !NativeSessionState.validCookie(session.cookie)) {
+            throw NativeTransportException.unauthenticated();
+        }
+        try {
+            String path = "/api/journeys/report?days=" + days;
+            Exchange response = exchange("GET", path, null, session.cookie, null, null,
+                    NativeJourneyReportPolicy.MAX_BODY_BYTES, true, true);
+            return new NativeResponse(response.status, response.contentType, response.body);
+        } catch (NativeTransportException error) {
+            throw error;
+        } catch (ResponseTooLargeException ignored) {
+            throw NativeTransportException.response();
         } catch (Exception ignored) {
             throw NativeTransportException.transport();
         }
@@ -207,6 +234,11 @@ final class NativeHttpClient {
     /** Can return a definitive non-200 status without reading an untrusted error body. */
     private Exchange exchange(String method, String path, byte[] body, String cookie, String csrf,
             String bearer, int responseLimit, boolean skipNon200Body) throws Exception {
+        return exchange(method, path, body, cookie, csrf, bearer, responseLimit, skipNon200Body, false);
+    }
+
+    private Exchange exchange(String method, String path, byte[] body, String cookie, String csrf,
+            String bearer, int responseLimit, boolean skipNon200Body, boolean requireJsonOn200) throws Exception {
         URL url = new URI(config.apiOrigin + path).toURL();
         if (!"https".equalsIgnoreCase(url.getProtocol())) throw new IOException();
         HttpsURLConnection connection = (HttpsURLConnection) url.openConnection(Proxy.NO_PROXY);
@@ -248,16 +280,30 @@ final class NativeHttpClient {
                 }
             }
             int status = connection.getResponseCode();
-            String contentType = normalizedContentType(connection.getContentType());
+            String rawContentType = connection.getContentType();
+            String contentType = normalizedContentType(rawContentType);
+            if (requireJsonOn200 && status == 200 && !hasStrictJsonContentType(rawContentType)) {
+                throw NativeTransportException.response();
+            }
             byte[] bytes;
             if (skipNon200Body && status != 200) {
                 bytes = new byte[0];
             } else {
                 InputStream stream = status >= 400 ? connection.getErrorStream() : connection.getInputStream();
-                bytes = stream == null ? new byte[0] : readBounded(stream, responseLimit);
+                bytes = stream == null ? new byte[0] : requireJsonOn200 && status == 200
+                        ? readJourneyReportBody(stream) : readBounded(stream, responseLimit);
             }
-            return new Exchange(status, contentType, new String(bytes, StandardCharsets.UTF_8),
-                    connection.getHeaderFields());
+            String responseBody;
+            if (requireJsonOn200 && status == 200) {
+                try {
+                    responseBody = decodeJourneyReportBody(bytes);
+                } catch (CharacterCodingException ignored) {
+                    throw NativeTransportException.response();
+                }
+            } else {
+                responseBody = new String(bytes, StandardCharsets.UTF_8);
+            }
+            return new Exchange(status, contentType, responseBody, connection.getHeaderFields());
         } finally {
             connection.disconnect();
         }
@@ -287,15 +333,37 @@ final class NativeHttpClient {
     }
 
     private static byte[] readBounded(InputStream stream, int limit) throws IOException {
+        return readBounded(stream, limit, false);
+    }
+
+    private static byte[] readBounded(InputStream stream, int limit, boolean reportResponse) throws IOException {
         try (InputStream input = stream; ByteArrayOutputStream output = new ByteArrayOutputStream(Math.min(8192, limit))) {
             byte[] buffer = new byte[8192];
             int count;
             while ((count = input.read(buffer)) != -1) {
-                if (count > limit - output.size()) throw new IOException();
+                if (count > limit - output.size()) {
+                    if (reportResponse) throw new ResponseTooLargeException();
+                    throw new IOException();
+                }
                 output.write(buffer, 0, count);
             }
             return output.toByteArray();
         }
+    }
+
+    static byte[] readJourneyReportBody(InputStream stream) throws IOException {
+        return readBounded(stream, NativeJourneyReportPolicy.MAX_BODY_BYTES, true);
+    }
+
+    static String decodeJourneyReportBody(byte[] body) throws CharacterCodingException {
+        return StandardCharsets.UTF_8.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT)
+                .decode(ByteBuffer.wrap(body)).toString();
+    }
+
+    static boolean hasStrictJsonContentType(String contentType) {
+        return contentType != null && !contentType.trim().isEmpty() && isJson(normalizedContentType(contentType));
     }
 
     private static String parseSessionCookie(Map<String, List<String>> headers, int expectedTtl)
@@ -423,6 +491,10 @@ final class NativeHttpClient {
             this.contentType = contentType;
             this.body = body;
         }
+    }
+
+    private static final class ResponseTooLargeException extends IOException {
+        private ResponseTooLargeException() { super("Response exceeds its byte limit."); }
     }
 
     private static final class Exchange {

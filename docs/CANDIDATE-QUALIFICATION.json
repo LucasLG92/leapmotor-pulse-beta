@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "date": "2026-10-12",
+  "date": "2026-10-13",
   "classification": "local_software_candidate_not_delivered",
   "delivered": false,
   "physical_acceptance": false,
   "web": {
-    "types": "passed",
-    "tests_passed": 43,
+    "types": "0 errors / 0 warnings",
+    "tests_passed": 46,
     "build_passed": true,
     "browser_synthetic_checks_passed": 13,
     "browser_offline_simulation": "not_run_permission_denied",
@@ -88,7 +88,9 @@
       "physical_real_grants_or_abrp": "not_tested"
     },
     "phase9_diagnostic_browser_receipt": "docs/VALIDATION.md#fases-puertas-y-aceptacion",
-    "phase9_diagnostic_browser_receipt_sha256": null
+    "phase9_diagnostic_browser_receipt_sha256": null,
+    "phase8_build_rerun": true,
+    "scope_note": "The phase 8 alert UI and local software checks are staged; Push receipt, device acceptance, and real deployment remain unverified."
   },
   "mobile_shared": {
     "typescript_passed": true,
@@ -98,7 +100,9 @@
     "tests_rerun_for_mqtt_increment": false,
     "tests_rerun_for_action_increment": false,
     "tests_rerun_for_consent_action_increment": false,
-    "tests_rerun_for_phase9": true
+    "tests_rerun_for_phase9": true,
+    "phase8_tests_rerun": true,
+    "phase8_build_rerun": true
   },
   "android": {
     "generic_release_build_passed": true,
@@ -153,7 +157,9 @@
   "scope_limits": [
     "Current metrics are local software results; no new CI result is claimed.",
     "No APK, signing hash, credentials, external receipt or private server record is included.",
-    "Physical vehicle, charger, phone, native authentication and habitual acceptance remain pending."
+    "Physical vehicle, charger, phone, native authentication and habitual acceptance remain pending.",
+    "The phase 8 source stages remain unpublished; the metadata monitor itself never sends Push, and protected metadata transfer plus real alert/recovery receipt remain unverified.",
+    "Schema 17 is only the local software predecessor; the deployed schema is unknown and rollback must preserve that real state with its compatible artifact."
   ],
   "independent_review": {
     "result": "Scoped historic reviews are not a new CI run or physical acceptance for this candidate.",
@@ -199,8 +205,8 @@
     "implicit_activation": false
   },
   "backend_current_tests": {
-    "passed": 1174,
-    "subtests_passed": 87,
+    "passed": 1241,
+    "subtests_passed": 118,
     "single_full_run_passed": true,
     "receipt": "docs/VALIDATION.md"
   },
@@ -216,20 +222,22 @@
   },
   "build_manifest": "docs/VALIDATION.md#candidato-y-suite-python",
   "backup_monitor": {
-    "qualification": "docs/VALIDATION.md",
-    "qualification_sha256": null,
-    "focused_tests": 29,
-    "subtests": 45,
+    "qualification": "docs/BACKUP-ALERTS.md",
+    "focused_tests": 32,
+    "subtests": 54,
     "metadata_only": true,
-    "systemd_statically_verified": true,
+    "journal_format": 2,
+    "max_transitions_per_profile": 64,
+    "monitor_sends_notifications": false,
     "deployed": false,
     "notification_delivered": false
   },
   "current_storage": {
-    "sqlite_schema": 17,
-    "export_format": 15,
-    "phase3_receipt_is_historical": true,
-    "qualification": "docs/PHASE9-QUALIFICATION.json"
+    "sqlite": 20,
+    "json_export": 16,
+    "migration": "19→20 manual_journeys and private request ledger",
+    "json_ledger_exported": false,
+    "real_database_migrated": false
   },
   "phase9": {
     "status": "software_verified_not_delivered",
@@ -237,5 +245,211 @@
     "local_diagnostics_only": true,
     "physical_acceptance": false,
     "qualification_sha256": null
+  },
+  "backup_alerts": {
+    "qualification": "docs/BACKUP-ALERTS-QUALIFICATION.json",
+    "sqlite_schema": 18,
+    "export_format": 15,
+    "focused_tests": 174,
+    "focused_subtests": 54,
+    "web_tests": 46,
+    "mobile_tests": 7,
+    "consumer_opt_in": true,
+    "consumer_enabled_by_default": false,
+    "community_actual_host_profile": "archive",
+    "logical_backend_profile": "host",
+    "source_published": false,
+    "runtime_deployed": false,
+    "physical_acceptance": false
+  },
+  "phase8_native_artifact_alignment": {
+    "date": "2026-10-13",
+    "android_unsigned_artifact": {
+      "sha256": "8618a4bc87530214bb3e44d14c50f6a46224480c00557bc7ac70cdf791c6eff4",
+      "size_bytes": 6535400,
+      "verified_native_asset_count": 44,
+      "empty_placeholder_count": 2,
+      "canonical_phase8_ui_asset_alignment_verified": true,
+      "byte_identity_with_source_stage_verified": false,
+      "byte_identity_limit": "CSS path mapping prevents a byte-for-byte source-stage identity claim.",
+      "jar_signature_present": false,
+      "apk_signature_scheme_v2_present": false,
+      "apk_signature_scheme_v3_present": false,
+      "published_or_distributed": false
+    },
+    "ios": {
+      "previous_pr9_ipa_includes_phase8_canonical_ui": false,
+      "phase8_ipa_build_qualified": false,
+      "signed_distribution_verified": false
+    },
+    "limits": [
+      "This records native asset/UI source alignment only; it does not establish a signed or distributed Android package, a current Phase 8 IPA, physical acceptance, or runtime deployment."
+    ]
+  },
+  "current_local_ui_increment": {
+    "name": "Diario privado de trayectos manuales e informes",
+    "status": "local_software_verified_native_android_unsigned_apple_pending",
+    "source_published": false,
+    "runtime_delivered": false,
+    "signed_or_distributed": false,
+    "qualification": "docs/MANUAL-JOURNEY-QUALIFICATION.json",
+    "validation": {
+      "backend": {
+        "passed": 1285,
+        "subtests": 131,
+        "skipped": 34,
+        "skip_reason": "optional leapmotor_cloud absent"
+      },
+      "web": 57,
+      "mobile": 7,
+      "svelte_errors": 0,
+      "svelte_warnings": 0,
+      "contracts_types_builds": "passed",
+      "focal_manual_backend": 39
+    },
+    "browser": {
+      "scope": "own_loopback_real_component_SQLite_HTTP_synthetic_failures_and_records",
+      "bundle": "assets/index-Cu8bUkpr.js",
+      "records": 4,
+      "post_commit503_then_same_intent_replay": "one row",
+      "edit_commit503_then_same_intent_replay": "same revision2",
+      "nullable_metrics": "no fabricated values or unpaired denominator",
+      "small_quantities": "6e-7 survives create/edit/retry",
+      "stops_minutes": [
+        60,
+        10,
+        50
+      ],
+      "guards": "uncertainty survives clearing fields; cancelled navigation/edit/discard",
+      "reservation_failure_recovery": "passed",
+      "read_failure_recovery": "passed",
+      "restart_persistence": "passed",
+      "annual_empty_months": 13,
+      "viewport_width": 390,
+      "horizontal_overflow": false,
+      "form_targets_min_height": 48,
+      "dark_form_visual_review": "passed",
+      "console_errors_warnings": 0,
+      "real_network_loss": false,
+      "export_download_reception": "pending_previous_browser_permission_denial_not_bypassed",
+      "ui_delete": "not_executed",
+      "screenshots": "observed_inline_no_supported_file_save"
+    },
+    "android": {
+      "path": "outputs/pulse-android-unsigned-phase5-20261013.apk",
+      "sha256": "3fa15babad48b3f20214dad9d3d76f1eb8dfa43b91dfc3aea00d993c57361a14",
+      "bytes": 6544876,
+      "unit_tests": 77,
+      "unit_skipped": 0,
+      "lint_errors": 0,
+      "lint_warnings": 17,
+      "dist_assets": 44,
+      "empty_bridges": 2,
+      "runtime_connection_fields_empty": 7,
+      "signed": false,
+      "installed": false,
+      "physical_acceptance": false
+    },
+    "ios": {
+      "status": "pending_new_source_apple_build",
+      "previous_phase4_run_does_not_qualify_this_increment": true,
+      "signed": false,
+      "physical_acceptance": false
+    }
+  },
+  "manual_journeys": {
+    "schema_version": 1,
+    "date": "2026-10-13",
+    "increment": "phase5-manual-journeys",
+    "status": "local_software_verified_native_android_unsigned_apple_pending",
+    "goal_status": "active",
+    "phases": 9,
+    "real_gates_pending": 7,
+    "storage_schema": 20,
+    "export_version": 16,
+    "source": "manual",
+    "coverage": "unknown",
+    "automatic_ingestion": false,
+    "real_vehicle_or_charger": false,
+    "runtime_deployed": false,
+    "source_publication": {
+      "status": "pending_at_source_freeze",
+      "scope": "generic_sources_only_reviewed_branches_no_main_or_production"
+    },
+    "validation": {
+      "backend": {
+        "passed": 1285,
+        "subtests": 131,
+        "skipped": 34,
+        "skip_reason": "optional leapmotor_cloud absent"
+      },
+      "web": 57,
+      "mobile": 7,
+      "svelte_errors": 0,
+      "svelte_warnings": 0,
+      "contracts_types_builds": "passed",
+      "focal_manual_backend": 39
+    },
+    "android": {
+      "path": "outputs/pulse-android-unsigned-phase5-20261013.apk",
+      "sha256": "3fa15babad48b3f20214dad9d3d76f1eb8dfa43b91dfc3aea00d993c57361a14",
+      "bytes": 6544876,
+      "unit_tests": 77,
+      "unit_skipped": 0,
+      "lint_errors": 0,
+      "lint_warnings": 17,
+      "dist_assets": 44,
+      "empty_bridges": 2,
+      "runtime_connection_fields_empty": 7,
+      "signed": false,
+      "installed": false,
+      "physical_acceptance": false
+    },
+    "ios": {
+      "status": "pending_new_source_apple_build",
+      "previous_phase4_run_does_not_qualify_this_increment": true,
+      "signed": false,
+      "physical_acceptance": false
+    },
+    "browser": {
+      "scope": "own_loopback_real_component_SQLite_HTTP_synthetic_failures_and_records",
+      "bundle": "assets/index-Cu8bUkpr.js",
+      "records": 4,
+      "post_commit503_then_same_intent_replay": "one row",
+      "edit_commit503_then_same_intent_replay": "same revision2",
+      "nullable_metrics": "no fabricated values or unpaired denominator",
+      "small_quantities": "6e-7 survives create/edit/retry",
+      "stops_minutes": [
+        60,
+        10,
+        50
+      ],
+      "guards": "uncertainty survives clearing fields; cancelled navigation/edit/discard",
+      "reservation_failure_recovery": "passed",
+      "read_failure_recovery": "passed",
+      "restart_persistence": "passed",
+      "annual_empty_months": 13,
+      "viewport_width": 390,
+      "horizontal_overflow": false,
+      "form_targets_min_height": 48,
+      "dark_form_visual_review": "passed",
+      "console_errors_warnings": 0,
+      "real_network_loss": false,
+      "export_download_reception": "pending_previous_browser_permission_denial_not_bypassed",
+      "ui_delete": "not_executed",
+      "screenshots": "observed_inline_no_supported_file_save"
+    },
+    "review": {
+      "status": "final_closure_review_pending",
+      "previous_material_findings": "streaming report/export, huge numeric validation and tiny quantity editor corrected"
+    },
+    "limits": [
+      "Manual entries do not qualify automatic B10 trips, coverage, fresh vehicle timestamps or measured energy.",
+      "No phone, signing, OAuth, WidgetKit runtime, charger, real network failure or production acceptance.",
+      "No 100000-row RSS stress acceptance; streaming structure and bounded-export tests only.",
+      "All A0-A12, nine phases and seven real gates remain pending as applicable; sentry/cameras final."
+    ],
+    "rollback": "Source snapshot in evidence/phase5-manual-journeys-20261013/before; future runtime rollback requires coherent SQLite19 backup. No operational database migrated.",
+    "evidence": "evidence/phase5-manual-journeys-20261013"
   }
 }

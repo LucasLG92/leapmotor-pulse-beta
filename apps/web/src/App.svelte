@@ -6,7 +6,7 @@
 	import { observeServiceWorkerUpdate } from './lib/pwa-update';
 	import { createStartupAttempt } from './lib/startup-read';
 	import { internalAppPath, preparationSection } from './lib/app-links';
-import type { BackupActionResult, ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, PageProps, PulseState, Route, SessionState, ThemePreference, WebPushSubscriptionInput, WidgetPairingResult, PushDevice, PushTestResult } from './lib/types';
+import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuotePayload, HttpMethod, ManualJourneyCreationRequest, MutationPayload, PageProps, PulseState, Route, SessionState, ThemePreference, WebPushSubscriptionInput, WidgetPairingResult, PushDevice, PushTestResult } from './lib/types';
 	import Glyph from './lib/Glyph.svelte';
 
 	type ViewComponent = Component<PageProps>;
@@ -484,6 +484,44 @@ import type { BackupActionResult, ChargeQuote, ChargeQuotePayload, HttpMethod, M
 		}
 	}
 
+	async function reserveChargeCreation(): Promise<ChargeCreationRequest> {
+		if (updateBusy) throw new Error('Pulse se está actualizando. Espera antes de guardar la carga.');
+		busyCount += 1;
+		try {
+			const result = await mutateApi<ChargeCreationRequest>('/api/charges/requests', 'POST', csrfToken);
+			if (!result || typeof result.id !== 'string' || !/^[a-f0-9]{32}$/.test(result.id)
+				|| typeof result.expires_at !== 'string' || !Number.isFinite(Date.parse(result.expires_at))) {
+				throw new Error('No se pudo preparar el guardado de la carga.');
+			}
+			return result;
+		} catch (error) {
+			if (error instanceof ApiError && error.status === 401) expireSession();
+			throw error;
+		} finally {
+			busyCount = Math.max(0, busyCount - 1);
+			if (!isBusy && eventRefreshPending) scheduleEventRefresh();
+		}
+	}
+
+	async function reserveJourneyCreation(): Promise<ManualJourneyCreationRequest> {
+		if (updateBusy) throw new Error('Pulse se está actualizando. Espera antes de guardar el trayecto.');
+		busyCount += 1;
+		try {
+			const result = await mutateApi<ManualJourneyCreationRequest>('/api/journeys/requests', 'POST', csrfToken);
+			if (!result || typeof result.id !== 'string' || !/^[a-f0-9]{32}$/.test(result.id)
+				|| typeof result.expires_at !== 'string' || !Number.isFinite(Date.parse(result.expires_at))) {
+				throw new Error('No se pudo preparar el guardado del trayecto.');
+			}
+			return result;
+		} catch (error) {
+			if (error instanceof ApiError && error.status === 401) expireSession();
+			throw error;
+		} finally {
+			busyCount = Math.max(0, busyCount - 1);
+			if (!isBusy && eventRefreshPending) scheduleEventRefresh();
+		}
+	}
+
 	async function quoteCharge(payload: ChargeQuotePayload): Promise<ChargeQuote> {
 		if (updateBusy) throw new Error('Pulse se está actualizando. Espera antes de calcular el coste.');
 		busyCount += 1;
@@ -560,6 +598,11 @@ import type { BackupActionResult, ChargeQuote, ChargeQuotePayload, HttpMethod, M
 			try {
 				return await mutateApi<PushTestResult>(`/api/push/subscriptions/${encodeURIComponent(id)}/test`, 'POST', csrfToken, { confirmed: true });
 			} catch (error) { return handleNotificationApiError(error); }
+		},
+		setBackupAlerts: async (id: string, enabled: boolean): Promise<PushDevice> => {
+			try {
+				return await mutateApi<PushDevice>(`/api/push/subscriptions/${encodeURIComponent(id)}/backup-alerts`, 'POST', csrfToken, { enabled, confirmed: enabled });
+			} catch (error) { return handleNotificationApiError(error); }
 		}
 	};
 
@@ -626,6 +669,10 @@ import type { BackupActionResult, ChargeQuote, ChargeQuotePayload, HttpMethod, M
 
 	async function approveDraftExit(title = 'Cambios sin guardar', label = 'Descartar y salir'): Promise<boolean> {
 		if (!drafts.hasDirty()) return true;
+		if (drafts.hasUnconfirmedSave()) {
+			return confirmAction(title === 'Cambios sin guardar' ? 'Guardado sin confirmar' : title,
+				'El guardado anterior podría haberse completado. Revisa el historial antes de continuar. Si sales, se descartará el formulario; puedes cancelar para conservarlo.', label);
+		}
 		return confirmAction(title, 'Hay cambios sin guardar en esta pantalla. Si continúas, se descartarán. Puedes cancelar para seguir editando.', label);
 	}
 
@@ -840,7 +887,9 @@ import type { BackupActionResult, ChargeQuote, ChargeQuotePayload, HttpMethod, M
 			}
 			const confirmed = await confirmAction(
 				'Restaurar una copia',
-				'Esta operación sustituirá los datos actuales de Pulse por el contenido del archivo. El servidor validará la copia antes de aplicarla.' + (drafts.hasDirty() ? ' También se descartarán los cambios sin guardar de esta pantalla.' : ''),
+				'Esta operación sustituirá los datos actuales de Pulse por el contenido del archivo. El servidor validará la copia antes de aplicarla.' + (drafts.hasUnconfirmedSave()
+					? ' También se descartará el formulario de un guardado sin confirmar, que podría haberse completado.'
+					: drafts.hasDirty() ? ' También se descartarán los cambios sin guardar de esta pantalla.' : ''),
 				'Restaurar datos'
 			);
 			if (confirmed) {
@@ -1092,7 +1141,7 @@ import type { BackupActionResult, ChargeQuote, ChargeQuotePayload, HttpMethod, M
 
 			{@render updateNotice()}
 
-			<main id="pulse-content" class="page-content" tabindex="-1" aria-labelledby="page-title">
+			<main id="pulse-content" class="page-content" class:cockpit-content={route === 'overview'} tabindex="-1" aria-labelledby="page-title">
 				{#if View}
 					{#key formContextRevision}
 					<View
@@ -1107,6 +1156,8 @@ import type { BackupActionResult, ChargeQuote, ChargeQuotePayload, HttpMethod, M
 						{canInstall}
 						{mutate}
 						{quoteCharge}
+						{reserveChargeCreation}
+						{reserveJourneyCreation}
 						onSessionExpired={expireSession}
 						navigation={navigationClient}
 						{createWidgetPairing}
@@ -1140,7 +1191,18 @@ import type { BackupActionResult, ChargeQuote, ChargeQuotePayload, HttpMethod, M
 					<Glyph name={item.icon} size={20} /><span>{item.route === 'navigation' ? 'Mapa' : item.label}</span>
 				</a>
 			{/each}
-
+			<details class="mobile-more" bind:open={moreNavigationOpen}>
+				<summary class:active={route === 'protection' || route === 'settings'} aria-expanded={moreNavigationOpen} aria-label={`Más secciones${route === 'protection' || route === 'settings' ? ` · ${titles[route]}` : ''}`}>
+					<Glyph name="more" size={20} /><span>Más</span>
+				</summary>
+				<nav aria-label="Más secciones">
+					{#each navigation.filter((item) => ['protection', 'settings'].includes(item.route)) as item (item.route)}
+						<a class:active={route === item.route} href={item.path} aria-current={route === item.route ? 'page' : undefined} onclick={(event) => navigate(event, item.path)}>
+							<Glyph name={item.icon} size={19} /><span>{item.label}</span>
+						</a>
+					{/each}
+				</nav>
+			</details>
 		</nav>
 		</div>
 	</div>

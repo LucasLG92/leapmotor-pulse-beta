@@ -28,7 +28,7 @@ El SDK opcional de Pulse sigue fijado al commit `5b7d30c30ae10eb18677214e36a9d42
 
 Antes de normalizar y persistir viajes hacen falta identidad estable de registro y vehículo, inicio/fin con unidad y huso inequívocos, distancia en km, energía en kWh cuando exista y una interpretación documentada de la cobertura. También falta una muestra B10 autorizada que permita verificar ese contrato. Origen/destino y paradas requerirán ubicación disponible y autorizada.
 
-La diferencia de odómetro permanece como observación con sus límites en [ANALYTICS.md](ANALYTICS.md). No se convierte en viajes ni consumo por suposición. Las funciones de ingestión, agregados y exportación de viajes reales conservan su estado pendiente.
+La diferencia de odómetro permanece como observación con sus límites en [ANALYTICS.md](ANALYTICS.md). No se convierte en viajes ni consumo por suposición. La ingestión automática y la cualificación de viajes reales conservan su estado pendiente. El diario manual actual tiene origen introducido por usuario explícito.
 
 ### Referencia LPB10: muestras y trayectos reconstruidos
 
@@ -38,10 +38,21 @@ Revisión primaria del 12 de octubre de 2026, fijada al commit `38cd101f8790e9c7
 
 Esta referencia no resuelve identidad remota del trayecto, frescura ni cobertura. Pulse conserva `observed_at` separado de la recepción y no adopta esos segmentos como viajes reales ni SoC convertido a kWh como energía medida. La ingestión real de fase 5 sigue pendiente del contrato y la muestra autorizada descritos arriba.
 
-## Incremento local comprobado en formularios
+## Incremento histórico del 11 de octubre: formularios
 
 La QA sintética detectó que un error HTTP al guardar una carga dejaba solamente un aviso temporal y perdía el foco al deshabilitar el botón. El formulario de Energía ahora conserva un error visible con `role="alert"` tanto si la mutación devuelve `false` como si lanza una excepción. El borrador permanece intacto; el foco se recupera únicamente si lo perdió el control del formulario y no pasó a otro elemento.
 
 El mensaje indica que no se pudo confirmar el guardado y pide revisar el historial antes de reintentar. No declara que una respuesta incierta equivalga a una operación no ejecutada. Esta corrección no añade replay automático ni acredita idempotencia ante una respuesta perdida después de guardar.
 
 Se comprobaron teclado, fallo sintético 503 en claro/oscuro, persistencia del error tras desaparecer el aviso temporal y reflujo a 390 px. Al retirar el fallo se guardó una carga; su edición actualizó ese mismo registro, con comprobación SQLite de una única fila de 12 kWh/1,80 €. Los formularios restantes, pérdida real de red, lectores y teléfonos siguen pendientes. El resumen autocontenido está en [VALIDATION.md](VALIDATION.md); no se hicieron lecturas externas ni cambios en producción.
+
+
+## Incremento del 13 de octubre: reintentos de cargas manuales
+
+La pérdida sintética de respuesta después de un commit SQLite reprodujo el riesgo de duplicar energía y coste. El contrato nuevo reserva solicitudes en servidor para el propietario autenticado y enlaza la intención normalizada con la carga de forma atómica. La UI conserva la solicitud en memoria y el mismo intento devuelve la fila existente; conflictos, caducidad, eliminación, restauración y propietarios ajenos no crean una fila. El endpoint antiguo sin solicitud conserva su comportamiento por compatibilidad.
+
+Pruebas del dominio/HTTP y QA del formulario real cubren commit seguido de503, conflicto por cambio de campos, campos vaciados, cancelación de navegación/edición/descarte, reintento sin duplicar y fallo de reserva antes del alta. El aviso explica que el guardado podría haberse completado. SQLite19 añade el ledger operativo, JSON15 lo excluye; una importación válida invalida intentos anteriores, incluso al terminar una cotización en curso. La cobertura es local y sintética: no cualifica red móvil real, cargador, PVPC real de esta versión, iPhone ni B10. El adaptador de intervalos y los trayectos siguen pendientes del origen descrito arriba. [Recibo](CHARGE-SAVE-QUALIFICATION.json).
+
+## Incremento del 13 de octubre: diario manual privado
+
+La alternativa manual de PRODUCT.md ya permite registrar trayectos cerrados sin fabricar distancia o energía ausentes. Paradas declaradas y tiempo restante no se presentan como conducción observada. El informe conserva recuentos conocidos y calcula consumo sólo sobre pares; no acredita cobertura del periodo. Reintentos reservados, edición con revisión, aislamiento de propietario y restauración están comprobados con datos sintéticos. SQLite20/JSON16; no se ha migrado una base operativa ni instalado el SDK. El contrato B10, frescura, identidad y cobertura automáticas siguen pendientes. [Contrato](MANUAL-JOURNEYS.md) y [recibo](MANUAL-JOURNEY-QUALIFICATION.json).

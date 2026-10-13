@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, Path as PathParam, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
@@ -21,7 +21,7 @@ from pulse import __version__
 from pulse.auth import Sessions, build_oidc, register_auth
 from pulse.config import Config
 from pulse.collector import Collector, quality
-from pulse.contracts import (ChargePage, ChargeQuote, ChargerStatus, ChargerSessionPage, CommandHistory, EnergyAnalytics, StateResponse, TelemetryPage, TelemetryResponse, WidgetProfileList,
+from pulse.contracts import (ChargeCreationRequest, ChargePage, ChargeQuote, ChargerStatus, ChargerSessionPage, CommandHistory, EnergyAnalytics, StateResponse, TelemetryPage, TelemetryResponse, WidgetProfileList,
                              WidgetProfileResult)
 from pulse.coordinator import Coordinator
 from pulse.domain import DomainError
@@ -35,6 +35,12 @@ from pulse.static import PublicStaticFiles
 from pulse.push_service import PushService, register_push
 from pulse.charger import ChargerReader
 from pulse.contracts import ChargerPricingHistoryPage
+from pulse.contracts import (
+    ManualJourney,
+    ManualJourneyCreationRequest,
+    ManualJourneyPage,
+    ManualJourneyReport,
+)
 from pulse.navigation import Navigation
 from pulse.abrp import AbrpBridge
 from pulse.contracts import NavigationStatus, NavigationSearch, NavigationChargers, NavigationTile, ObservedEventPage
@@ -85,6 +91,7 @@ class ChargePayload(Payload):
     kwh: float = Field(gt=0, le=500)
     ended_at: str | None = Field(default=None, max_length=64)
     pricing_method: Literal["manual", "pvpc"] | None = None
+    request_id: str = Field(default=None, pattern=r"^[0-9a-f]{32}$", min_length=32, max_length=32)
 
 
 class ChargeEditPayload(Payload):
@@ -93,6 +100,35 @@ class ChargeEditPayload(Payload):
     tariff_eur_kwh: float | None = Field(default=None, ge=0, le=5)
     ended_at: str | None = Field(default=None, max_length=64)
     pricing_method: Literal["manual", "pvpc"] | None = None
+
+
+class ManualJourneyStopPayload(Payload):
+    started_at: str = Field(max_length=64)
+    ended_at: str = Field(max_length=64)
+
+
+class ManualJourneyFieldsPayload(Payload):
+    started_at: str = Field(max_length=64)
+    ended_at: str = Field(max_length=64)
+    from_label: str | None = Field(max_length=120)
+    to_label: str | None = Field(max_length=120)
+    distance_km: float | None = Field(ge=0, le=50_000, allow_inf_nan=False)
+    energy_kwh: float | None = Field(ge=0, le=5_000, allow_inf_nan=False)
+    stops: list[ManualJourneyStopPayload] = Field(max_length=32)
+    notes: str | None = Field(default=None, max_length=2000)
+    tags: list[str] = Field(default_factory=list, max_length=8)
+
+
+class ManualJourneyPayload(ManualJourneyFieldsPayload):
+    request_id: str = Field(pattern=r"^[0-9a-f]{32}$", min_length=32, max_length=32)
+
+
+class ManualJourneyEditPayload(ManualJourneyFieldsPayload):
+    revision: int = Field(ge=1, strict=True)
+
+
+class ManualJourneyDeletePayload(Payload):
+    revision: int = Field(ge=1, strict=True)
 
 
 class MaintenancePayload(Payload):
@@ -146,7 +182,8 @@ def create_app(db_path: str | Path | None = None, *, name: str | None = None,
         raise ValueError("El proveedor no implementa connection_status().")
     # Únicamente un bootstrap autorizado puede inyectar un cliente configurado.
     # El arranque normal no construye SDKs, lee material privado ni programa consultas.
-    push = PushService(config.push, coordinator, sessions, config.cookie_name, transport=push_transport)
+    push = PushService(config.push, coordinator, sessions, config.cookie_name, transport=push_transport,
+                       backup_config=config.backup_alerts)
     abrp = AbrpBridge(config.abrp, coordinator, transport=abrp_transport,
                       on_status_change=lambda _status: coordinator._publish())
 
@@ -377,6 +414,70 @@ def create_app(db_path: str | Path | None = None, *, name: str | None = None,
     async def event(values: Payload):
         return {"ok": True, "event": await coordinator.call("simulate_event", write=True)}
 
+    @app.get("/api/journeys", response_model=ManualJourneyPage)
+    async def manual_journeys(
+        request: Request,
+        limit: int = Query(default=20, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
+        tag: str | None = Query(default=None, max_length=32),
+        search: str | None = Query(default=None, max_length=100),
+    ):
+        return await coordinator.call(
+            "list_manual_journeys", owner_id(request), limit, offset,
+            tag=tag, search=search
+        )
+
+    @app.get("/api/journeys/report", response_model=ManualJourneyReport)
+    async def manual_journeys_report(
+        request: Request,
+        days: str = Query(default="30", pattern=r"^(30|90|365)$"),
+    ):
+        return await coordinator.call(
+            "report_manual_journeys", owner_id(request), int(days)
+        )
+
+    @app.post("/api/journeys/requests", response_model=ManualJourneyCreationRequest)
+    async def reserve_manual_journey_creation(request: Request, values: Payload):
+        return await coordinator.call(
+            "reserve_manual_journey_creation", owner_id(request)
+        )
+
+    @app.post("/api/journeys", response_model=ManualJourney)
+    async def create_manual_journey(request: Request, values: ManualJourneyPayload):
+        data = values.model_dump()
+        request_id = data.pop("request_id")
+        return await coordinator.call(
+            "add_manual_journey", owner_id(request), request_id, data, write=True
+        )
+
+    @app.put("/api/journeys/{journey_id}", response_model=ManualJourney)
+    async def edit_manual_journey(
+        request: Request,
+        values: ManualJourneyEditPayload,
+        journey_id: str = PathParam(
+            pattern=r"^[0-9a-f]{32}$", min_length=32, max_length=32
+        ),
+    ):
+        data = values.model_dump(exclude={"revision"}, exclude_unset=True)
+        return await coordinator.call(
+            "update_manual_journey", owner_id(request), journey_id,
+            values.revision, data, write=True,
+        )
+
+    @app.delete("/api/journeys/{journey_id}")
+    async def delete_manual_journey(
+        request: Request,
+        values: ManualJourneyDeletePayload,
+        journey_id: str = PathParam(
+            pattern=r"^[0-9a-f]{32}$", min_length=32, max_length=32
+        ),
+    ):
+        await coordinator.call(
+            "delete_manual_journey", owner_id(request), journey_id,
+            values.revision, write=True,
+        )
+        return {"ok": True}
+
     @app.get("/api/charges", response_model=ChargePage)
     async def charges(limit: int = Query(default=100, ge=1, le=100), offset: int = Query(default=0, ge=0)):
         return await coordinator.call("list_charges", limit, offset)
@@ -405,17 +506,48 @@ def create_app(db_path: str | Path | None = None, *, name: str | None = None,
     @app.post("/api/charges/quote", response_model=ChargeQuote)
     async def quote(values: ChargePayload):
         data = values.model_dump(exclude_unset=True)
+        if "request_id" in data:
+            raise DomainError("La vista previa no admite metadatos de creación.")
         if data.get("pricing_method") not in (None, "pvpc"):
             raise DomainError("La vista previa por tramos requiere PVPC.")
         return await electricity.quote(data)
 
+    @app.post("/api/charges/requests", response_model=ChargeCreationRequest)
+    async def reserve_charge_creation(request: Request, values: Payload):
+        return await coordinator.call(
+            "reserve_charge_creation", owner_id(request)
+        )
+
     @app.post("/api/charges")
-    async def charge(values: ChargePayload):
+    async def charge(request: Request, values: ChargePayload):
         data = values.model_dump(exclude_unset=True)
+        request_id_supplied = "request_id" in data
+        request_id = data.pop("request_id", None)
+        if request_id_supplied and request_id is None:
+            raise DomainError("request_id debe ser una solicitud reservada.", 422)
+        owner = None
+        request_attempt = None
+        if request_id is not None:
+            owner = owner_id(request)
+            request_attempt = dict(data)
+            preflight = await coordinator.call(
+                "preflight_charge_creation", owner, request_id, request_attempt
+            )
+            if preflight["charge"] is not None:
+                return {"ok": True, "charge": preflight["charge"]}
         settings = await coordinator.call("get_settings")
         data.setdefault("pricing_method", settings["pricing_method"])
         snapshot = await electricity.quote(data) if data["pricing_method"] == "pvpc" else None
-        result = await coordinator.call("add_charge", data, pricing_snapshot=snapshot, write=True)
+        if request_id is None:
+            result = await coordinator.call(
+                "add_charge", data, pricing_snapshot=snapshot, write=True
+            )
+        else:
+            result = await coordinator.call(
+                "add_charge", data, pricing_snapshot=snapshot,
+                request_id=request_id, owner_id=owner,
+                request_attempt=request_attempt, write=True,
+            )
         return {"ok": True, "charge": result}
 
     @app.put("/api/charges/{item_id}")
@@ -460,6 +592,9 @@ def create_app(db_path: str | Path | None = None, *, name: str | None = None,
         if not record or not record.user or not sessions.active(record):
             raise DomainError("Recarga Pulse e inicia sesión para gestionar tus widgets.", 401)
         return record.user["id"]
+
+    from pulse.evolution_api import register_evolution
+    register_evolution(app, coordinator, owner_id)
 
     register_native(app, config, coordinator, native_gateway, owner_id, sessions)
     register_push(app, push, owner_id)
@@ -557,7 +692,7 @@ def create_app(db_path: str | Path | None = None, *, name: str | None = None,
     @app.head("/{path:path}", include_in_schema=False)
     @app.get("/{path:path}", include_in_schema=False)
     async def shell(path: str, request: Request):
-        if path in {"icon.svg", "icon-180.png", "icon-192.png", "icon-512.png", "apple-touch-icon.png"} and (dist / path).is_file():
+        if path in {"icon.svg", "icon-180.png", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "journey-report.css"} and (dist / path).is_file():
             return await public_files.get_response(path, request.scope)
         if path not in {"", "index.html", "energy", "navigation", "activity", "protection", "settings"}:
             raise DomainError("Página no encontrada.", 404)

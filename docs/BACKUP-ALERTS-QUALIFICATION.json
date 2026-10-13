@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-13",
+  "classification": "local_software_candidate_not_delivered",
+  "delivered": false,
+  "source_published": false,
+  "runtime_deployed": false,
+  "physical_acceptance": false,
+  "storage": {
+    "sqlite_schema": 18,
+    "export_format": 15,
+    "prior_phase_receipts_are_historical": true
+  },
+  "producer": {
+    "scope": "community_metadata_only",
+    "journal_format": 2,
+    "max_transitions_per_profile": 64,
+    "community_host_input_profile": "archive",
+    "logical_backend_host_profile": "host",
+    "sends_notifications": false
+  },
+  "consumer": {
+    "separate_from_producer": true,
+    "opt_in": true,
+    "enabled_by_default": false,
+    "requires_per_device_consent": true,
+    "requires_expected_uid_ownership": true,
+    "requires_protected_metadata_transfer": true,
+    "payload_metadata_only": true
+  },
+  "verification_per_stage": {
+    "backend_full_suite": {
+      "passed": 1241,
+      "subtests_passed": 118
+    },
+    "focused_backend_suite": {
+      "passed": 174,
+      "subtests_passed": 54
+    },
+    "community_monitor_suite": {
+      "passed": 32,
+      "subtests_passed": 54
+    },
+    "web_tests": 46,
+    "web_svelte_check": {
+      "errors": 0,
+      "warnings": 0
+    },
+    "web_build_passed": true,
+    "mobile_tests": 7,
+    "mobile_typescript_passed": true,
+    "mobile_build_passed": true,
+    "delivery_status_checker_passed": true
+  },
+  "scope_limits": [
+    "El monitor solo comprueba metadatos; no lee el contenido ni verifica el hash del contenido.",
+    "No se ejecutó restauración ni se demuestra recuperabilidad del host.",
+    "No hay transferencia UID protegida ni recepción Push física cualificadas en esta etapa.",
+    "Las pruebas y builds locales no equivalen a CI, instalación en una instancia, aceptación en teléfono ni aceptación física.",
+    "El esquema de despliegue no se conoce: un rollback debe conservar y restaurar el estado real previo junto con el artefacto/código compatible; 17 solo es el predecesor local de este candidato."
+  ],
+  "deployment_schema_verified": false
+}

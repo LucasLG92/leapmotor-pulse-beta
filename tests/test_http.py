@@ -105,7 +105,7 @@ def test_body_size_limit_for_stream_without_content_length(client):
 def test_restore_preserves_previous_consistent_backup_and_bad_restore_atomic(client):
     mutation(client, "POST", "/api/maintenance", {"title": "Manual", "due_date": "2026-11-01"})
     document = client.get("/api/export").json()
-    assert document["schema_version"] == 15
+    assert document["schema_version"] == 17
     bad = {**document, "schema_version": 999}
     assert mutation(client, "POST", "/api/import", {"confirmed": True, "data": bad}).status_code == 400
     assert client.get("/api/export").json()["maintenance"] == document["maintenance"]
@@ -174,7 +174,7 @@ class MockOIDC:
                 "userinfo": {"sub": "test-owner"}}
 
     async def userinfo(self, token):
-        return {"sub": "test-owner", "preferred_username": "lucas", "name": "Usuario local"}
+        return {"sub": "test-owner", "preferred_username": "lucas", "name": "Lucas"}
 
 
 def test_oidc_session_rotation_and_logout(tmp_path):

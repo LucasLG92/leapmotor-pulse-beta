@@ -73,6 +73,9 @@ Este incremento sigue siendo un candidato local, documentado en [PHASE3-QUALIFIC
 
 ### 4. Cargas y energía
 
+- [x] Reservar altas manuales por propietario, persistir intención/carga atómicamente y reintentar sin duplicar; conflictos, caducidad, restore y fallo de respuesta comprobados localmente. La UI conserva el borrador y reconoce guardados sin confirmar al salir. SQLite19/JSON15; compatibilidad sin reserva no ofrece deduplicación. [Cualificación](CHARGE-SAVE-QUALIFICATION.json).
+
+
 - [ ] Conectar el cargador real y contrastar inicio, fin, pausas, reanudaciones y kWh.
 - [ ] Implementar el adaptador concreto de intervalos vinculado inequívocamente a la sesión; evitar duplicados y conservar huecos.
 - [ ] Reconciliar sesiones y precios pendientes, PVPC histórico y revisiones de coste.
@@ -83,6 +86,10 @@ Identificación de casa/carga pública y comparaciones por lugar son mejoras pro
 La revisión del origen confirma que los buckets de evcc no comparten ID de sesión con el historial cerrado. El motor existente no los promociona a costes. Contrato y evidencia necesaria para el adaptador concreto en [SOURCE-QUALIFICATION.md](SOURCE-QUALIFICATION.md).
 
 ### 5. Trayectos, historial e informes
+
+- [x] Implementar alternativa manual privada: fechas/paradas, distancia y energía opcionales, reintentos sin duplicar, revisión al editar, paginación, informe30/90/365d y meses. SQLite20/JSON16, copia/restauración por propietario.
+- [x] Comprobar UI compartida con SQLite y HTTP reales propios, fallos sintéticos, borradores y datos ausentes; compilar y auditar APK genérico sin firma. El nuevo build Apple y la recepción del JSON descargado tienen su evidencia separada.
+
 
 - [ ] Implementar recepción y persistencia de trayectos reales.
 - [ ] Detectar inicio/fin/paradas con señales verificadas; conservar distancia y duración, origen/destino y recorrido si existe ubicación.
@@ -121,9 +128,11 @@ Las rutinas y los horarios son ampliaciones propuestas, sujetas a capacidades re
 
 - [x] Comprobar los seis locks del candidato con OSV fijado, conservar informe/procedencia/resumen y fallar ante errores, avisos o inventario incompleto. Pruebas focales y ejecución real local; la retención en CI está preparada, sin ejecución externa de esta revisión. [Cualificación acotada](SECURITY-QUALIFICATION.json).
 - [ ] Cerrar revisión integral de dependencias, imagen, componentes nativos y toolchains sobre el artefacto final.
-- [x] Preparar un monitor genérico de metadatos de copias: ausencia, antigüedad, tamaño, permisos, espacio y transiciones de estado. La validación focal registró 29 pruebas y 45 subcasos; la guía comunitaria está en [deploy/community/README.md](../deploy/community/README.md). No valida contenido, restauración, una instancia externa ni entrega de avisos.
+- [x] Mantener el monitor comunitario metadata-only y ampliar el estado con journal formato 2, hasta 64 transiciones por perfil. La suite focal registró 32 pruebas y 54 subcasos; no comprueba contenido, restauración ni instalación real.
 - [x] Instalar y observar el monitor con autorización; hashes, permisos y visibilidad del montaje real verificados; Pulse y scripts de copia conservados, sin ejecutar copias.
-- [ ] Elegir consumidor/canal y comprobar aviso de fallo/recuperación y fallos/ausencia/caducidad del propio monitor; observar ciclos naturales y cualificar recuperación operativa.
+- [x] Preparar un consumidor Push separado, desactivado por defecto, con consentimiento por dispositivo y payload genérico; el productor comunitario nunca envía avisos.
+- [ ] Transferir los metadatos al UID del consumidor mediante un canal protegido y comprobar recepción/ausencia/caducidad con una instancia autorizada; observar ciclos naturales y cualificar recuperación operativa.
+- [ ] Antes de cualquier actualización real, preservar el esquema efectivamente desplegado y su artefacto compatible; la migración local 17→18 no identifica el esquema instalado.
 - [ ] Actualizar recuperación y rollback; completar copia fuera del servidor y restauración integral.
 - [ ] Comprobar rechazo de otra cuenta real y recuperación conjunta de host, Pulse, proxy y autenticación con acceso humano posterior.
 - [ ] Medir rendimiento, tráfico y batería con teléfonos e integraciones reales.
@@ -142,3 +151,33 @@ Las rutinas y los horarios son ampliaciones propuestas, sujetas a capacidades re
 ## Referencias funcionales y opcionales
 
 [Leapmotor Mate](https://github.com/ProtossBlaster/leapmotor-mate) y [LPB10](https://github.com/txurtxil/LPB10) orientan las posibilidades y los flujos; no acreditan capacidades del B10 objetivo ni autorizan copiar su implementación. Android Auto/CarPlay, otros modelos, varios vehículos e idiomas adicionales quedan fuera del cierre actual salvo decisión expresa.
+
+El diario manual es un incremento de software, no una recepción del vehículo. [Contrato](MANUAL-JOURNEYS.md) y [cualificación con límites](MANUAL-JOURNEY-QUALIFICATION.json).
+
+## Fase 5: entrega nativa del informe manual
+
+- [x] Añadir exportación de agregados30/90/365d mediante el selector Android/iOS, con sesión nativa, contrato cerrado, cancelación y errores sin datos privados. [Contrato y límites](NATIVE-REPORT-EXPORT.md).
+- [ ] Cualificar compilación y entrega física de este nuevo cliente según [NATIVE-REPORT-EXPORT-QUALIFICATION.json](NATIVE-REPORT-EXPORT-QUALIFICATION.json); firma, proveedores de archivos y recepción en teléfonos siguen separados.
+
+No cierra la ingestión automática de trayectos ni modifica nueve fases, siete puertas reales o A0–A12. Centinela/cámaras permanece al final.
+
+## Incremento candidato de interfaz y herramientas manuales — 13 de octubre de 2026
+
+El candidato local incorpora la composición cuadro de instrumentos/cuaderno de viaje, registros y simulación informativa de energía, trayectos y planes manuales, favoritos explícitos y ajustes agrupados. La cualificación de software y el QA visual constan en [EVOLUTION-QUALIFICATION.json](EVOLUTION-QUALIFICATION.json). Estos hitos describen código candidato, no una entrega.
+
+### Fase 1: experiencia de usuario
+
+- [x] Aplicar jerarquía del coche y sus lecturas, cronología de Actividad/Estados y filas abiertas para tareas manuales; conservar Claro/Charcoal y estados de borrador/error.
+- [x] Revisar las seis rutas a 1280×720 CSS en ambos temas, borrador del simulador y actualización local de PWA.
+- [ ] Cualificar reflujo de esta revisión en teléfonos, VoiceOver, escala del sistema y uso físico.
+
+### Incrementos candidatos relacionados
+
+- [x] Comparar registros manuales por mes y mantener el simulador como herramienta informativa bajo demanda.
+- [x] Añadir historial de trayectos manuales y planes de mantenimiento con referencias introducidas por la persona.
+- [x] Añadir favoritos con coordenadas manuales y enlaces externos explícitos, sin GPS.
+- [ ] Recibir y validar datos reales de B10, cargador, trayectos e integraciones; aceptar servicios y dispositivos reales.
+- [ ] Completar firma/distribución nativa, autenticación, widgets, accesibilidad y las siete puertas reales pendientes.
+
+El estado global permanece bloqueado, con nueve fases y siete puertas reales abiertas. Consultar [estado de entrega](DELIVERY-STATUS.json); no inferir finalización del producto a partir de pruebas sintéticas o builds.
+

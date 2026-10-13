@@ -11,7 +11,7 @@ import pytest
 from pulse import pvpc
 from pulse.charger_store import MAX_CHARGER_SESSIONS, session_id as canonical_session_id
 from pulse.domain import DomainError, EXPORT_VERSION, SCHEMA_VERSION, Store
-from schema_helpers import downgrade_telemetry_to_v15
+from schema_helpers import downgrade_export_to_v16, downgrade_telemetry_to_v15
 
 
 UTC = timezone.utc
@@ -100,17 +100,20 @@ def test_v8_migration_preserves_sessions_and_installs_cascading_ledger(tmp_path)
         connection.execute("DROP TRIGGER invalidate_charger_pricing_on_session_change")
         connection.execute("DROP TABLE charger_pricing")
         connection.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
+        connection.execute("DROP TABLE IF EXISTS manual_charge_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journey_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journeys")
         connection.execute("PRAGMA user_version = 8")
 
     migrated = Store(path, clock=Clock())
-    assert SCHEMA_VERSION == 17
+    assert SCHEMA_VERSION == 21
     assert migrated.charger_sessions(scope())["items"] == [record | {
         "started_at": "2026-10-08T12:00:00.000000Z",
         "ended_at": "2026-10-08T13:00:00.000000Z",
         "received_at": "2026-10-08T14:00:00.000000Z",
     }]
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 17
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 21
         assert connection.execute(
             "SELECT sql FROM sqlite_master WHERE type='table' AND name='charger_pricing'"
         ).fetchone() is not None
@@ -146,7 +149,7 @@ def test_quotes_persist_without_overwrite_and_status_tracks_global_setting(tmp_p
     assert store.priced_charger_sessions(scope())["items"][0] == ready
     reopened = Store(tmp_path / "pulse.sqlite3", clock=Clock())
     assert reopened.priced_charger_sessions(scope())["items"][0] == ready
-    assert EXPORT_VERSION == 15
+    assert EXPORT_VERSION == 17
 
 
 def test_received_at_only_update_preserves_quote_but_energy_correction_invalidates(tmp_path):
@@ -220,7 +223,7 @@ def test_export_import_roundtrip_and_legacy_versions_leave_ledger_empty(tmp_path
     source.save_charger_pricing(scope(), record, quote)
     stored_quote = source.priced_charger_sessions(scope())["items"][0]["pvpc"]
     archive = source.export_data()
-    assert archive["schema_version"] == 15
+    assert archive["schema_version"] == 17
     assert archive["charger_pricing"] == [
         {"session_id": record["id"], "quote": stored_quote}
     ]
@@ -232,7 +235,9 @@ def test_export_import_roundtrip_and_legacy_versions_leave_ledger_empty(tmp_path
 
     for version in range(1, 8):
         legacy = deepcopy(archive)
+        downgrade_export_to_v16(legacy)
         legacy["schema_version"] = version
+        legacy.pop("manual_journeys")
         legacy["settings"].pop("vehicle_color")
         legacy.pop("charger_pricing_history")
         legacy.pop("charger_energy")
@@ -260,7 +265,7 @@ def test_export_import_roundtrip_and_legacy_versions_leave_ledger_empty(tmp_path
 
 def test_export_rejects_archives_over_the_existing_restore_budget(tmp_path, monkeypatch):
     store = make_store(tmp_path)
-    monkeypatch.setattr("pulse.domain.MAX_V15_IMPORT_BYTES", 1)
+    monkeypatch.setattr("pulse.domain.MAX_V17_IMPORT_BYTES", 1)
     with pytest.raises(DomainError) as error:
         store.export_data()
     assert error.value.status == 413

@@ -16,7 +16,7 @@ from pulse.domain import DomainError, Store
 from pulse.electricity import Electricity
 from pulse import pvpc
 from pulse.app import create_app
-from schema_helpers import downgrade_telemetry_to_v15
+from schema_helpers import downgrade_export_to_v16, downgrade_telemetry_to_v15
 from pulse.config import Config
 from pulse.evcc import EvccConfig
 from pulse.temporal_pvpc import quote_charge_intervals
@@ -102,7 +102,7 @@ def test_temporal_identity_export_and_private_response_fields(tmp_path):
     quote = temporal(item)
     store.save_charger_temporal_pricing(scope(), item, quote, None)
     document = store.export_data()
-    assert document["schema_version"] == 15
+    assert document["schema_version"] == 17
     assert document["charger_pricing"][0]["quote"] == quote
     public = ChargeQuote.model_validate(quote).model_dump()
     distribution = public["pricing"]["energy_distribution"]
@@ -113,10 +113,12 @@ def test_temporal_identity_export_and_private_response_fields(tmp_path):
     assert restored.priced_charger_sessions(scope())["items"][0]["pvpc"] == quote
     assert restored.charger_pricing_history(scope(), item["id"])["total"] == 1
     with sqlite3.connect(restored.path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 17
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 21
     for version in (11, 10, 9, 8):
         old = deepcopy(document)
+        downgrade_export_to_v16(old)
         old["schema_version"] = version
+        old.pop("manual_journeys")
         old["settings"].pop("vehicle_color")
         if version < 11:
             old.pop("charger_pricing_history")
@@ -313,23 +315,81 @@ def test_semantic_migration_preserves_db13_uniform_data(tmp_path):
     with sqlite3.connect(path) as db:
         downgrade_telemetry_to_v15(db)
         db.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
+        db.execute("DROP TABLE IF EXISTS manual_charge_requests")
+        db.execute("DROP TABLE IF EXISTS manual_journey_requests")
+        db.execute("DROP TABLE IF EXISTS manual_journeys")
         db.execute("PRAGMA user_version = 13")
         tables_before = db.execute(
             "SELECT name,sql FROM sqlite_master "
             "WHERE name NOT IN ('settings', 'telemetry_snapshots') ORDER BY name"
         ).fetchall()
+        push_columns_before = {
+            row[1] for row in db.execute("PRAGMA table_info(push_subscriptions)")
+        }
     migrated = Store(path, clock=lambda: NOW)
     assert migrated.export_data() == before
     assert migrated.get_settings()["vehicle_color"] is None
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 17
-        assert db.execute(
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 21
+        tables_after = db.execute(
             "SELECT name,sql FROM sqlite_master "
             "WHERE name NOT IN ('settings', 'telemetry_snapshots') ORDER BY name"
-        ).fetchall() == tables_before
+        ).fetchall()
+        push_columns_after = {
+            row[1] for row in db.execute("PRAGMA table_info(push_subscriptions)")
+        }
         assert "vehicle_color" in {
             row[1] for row in db.execute("PRAGMA table_info(settings)")
         }
+    backup_alert_objects = {
+        "backup_alert_deliveries",
+        "backup_alert_events",
+        "backup_alert_observations",
+        "backup_alert_runtime",
+        "manual_charge_requests",
+        "manual_journeys",
+        "manual_journey_requests",
+        "idx_backup_alert_deliveries_recent",
+        "idx_backup_alert_events_recent",
+        "idx_manual_charge_requests_expiry",
+        "idx_manual_charge_requests_owner_expiry",
+        "idx_manual_journeys_owner_started",
+        "idx_manual_journey_requests_expiry",
+        "idx_manual_journey_requests_owner_expiry",
+        "sqlite_autoindex_backup_alert_deliveries_1",
+        "sqlite_autoindex_backup_alert_events_1",
+        "sqlite_autoindex_backup_alert_observations_1",
+        "sqlite_autoindex_manual_charge_requests_1",
+        "sqlite_autoindex_manual_journeys_1",
+        "sqlite_autoindex_manual_journey_requests_1",
+    }
+    v21_objects = {
+        "maintenance_plan_request_tombstones",
+        "idx_maintenance_plan_tombstones_owner",
+        "sqlite_autoindex_maintenance_plan_request_tombstones_1",
+        "maintenance_completions",
+        "maintenance_plans",
+        "navigation_favorites",
+        "idx_maintenance_completions_plan_date",
+        "idx_maintenance_plans_owner_updated",
+        "sqlite_autoindex_maintenance_completions_1",
+        "sqlite_autoindex_maintenance_plans_1",
+        "sqlite_autoindex_maintenance_plans_2",
+        "sqlite_autoindex_navigation_favorites_1",
+        "sqlite_autoindex_navigation_favorites_2",
+    }
+    names_before = {row[0] for row in tables_before}
+    names_after = {row[0] for row in tables_after}
+    assert v21_objects.isdisjoint(names_before)
+    assert v21_objects <= names_after
+    assert [
+        row for row in tables_after
+        if row[0] not in backup_alert_objects | v21_objects | {"push_subscriptions"}
+    ] == [row for row in tables_before if row[0] != "push_subscriptions"]
+    assert {row[0] for row in tables_after if row[0] in backup_alert_objects} == backup_alert_objects
+    assert push_columns_after == push_columns_before | {
+        "backup_alerts_enabled", "backup_alerts_consented_at",
+    }
 
 
 def test_private_http_quotes_and_history_do_not_expose_association_ids(tmp_path):

@@ -55,13 +55,31 @@ from pulse.widget_profiles import (
     validate_profile_data,
 )
 from pulse.push_store import PushStoreMixin
+from pulse.backup_alert_store import BackupAlertStoreMixin
 from pulse.observed_events import (
     ObservedEventError, ObservedEventsStoreMixin, select_changes,
     validate_observed_events_archive, validate_observed_event_future_dates,
 )
+from pulse.manual_charge_requests import (
+    MAX_REQUESTS_GLOBAL,
+    MAX_REQUESTS_PER_OWNER,
+    REQUEST_TTL_DAYS,
+    attempt_fingerprint,
+    valid_request_id,
+)
+from pulse.manual_journeys import (
+    ManualJourneyStoreMixin,
+    create_manual_journey_schema,
+    migrate_manual_journey_annotations,
+    insert_manual_journey_archive_item,
+    validate_manual_journey_archive,
+)
 
-SCHEMA_VERSION = 17
-EXPORT_VERSION = 15
+from pulse.maintenance_plans import (MaintenancePlanStoreMixin, create_maintenance_plan_schema, validate_maintenance_plan_archive)
+from pulse.navigation_favorites import (NavigationFavoriteStoreMixin, create_navigation_favorite_schema, validate_navigation_favorite_archive)
+
+SCHEMA_VERSION = 21
+EXPORT_VERSION = 17
 MAX_IMPORT_BYTES = 1_000_000
 MAX_V3_IMPORT_BYTES = 5_000_000
 MAX_V4_IMPORT_BYTES = 5_000_000
@@ -76,6 +94,8 @@ MAX_V12_IMPORT_BYTES = 5_000_000
 MAX_V13_IMPORT_BYTES = 5_000_000
 MAX_V14_IMPORT_BYTES = 5_000_000
 MAX_V15_IMPORT_BYTES = 5_000_000
+MAX_V16_IMPORT_BYTES = 5_000_000
+MAX_V17_IMPORT_BYTES = 5_000_000
 MAX_ROWS_PER_COLLECTION = 100_000
 MAX_TEXT_LENGTH = 240
 MAX_STATE_CHARGES = 100
@@ -181,7 +201,8 @@ class DomainError(Exception):
 
 class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin,
             ChargerPricingHistoryStoreMixin,
-            PushStoreMixin, ObservedEventsStoreMixin):
+            PushStoreMixin, BackupAlertStoreMixin, ObservedEventsStoreMixin,
+            ManualJourneyStoreMixin, MaintenancePlanStoreMixin, NavigationFavoriteStoreMixin):
     """A per-call SQLite store with explicit initialization and short transactions."""
 
     def __init__(
@@ -376,6 +397,70 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
         if version == 16:
             self._migrate_v16_to_v17(connection)
             connection.execute("PRAGMA user_version = 17")
+            version = 17
+        if version == 17:
+            self._migrate_v17_to_v18(connection)
+            connection.execute("PRAGMA user_version = 18")
+            version = 18
+        if version == 18:
+            self._migrate_v18_to_v19(connection)
+            connection.execute("PRAGMA user_version = 19")
+            version = 19
+        if version == 19:
+            self._migrate_v19_to_v20(connection)
+            connection.execute("PRAGMA user_version = 20")
+            version = 20
+        if version == 20:
+            migrate_manual_journey_annotations(connection)
+            create_maintenance_plan_schema(connection)
+            create_navigation_favorite_schema(connection)
+            connection.execute("PRAGMA user_version = 21")
+
+    def _migrate_v17_to_v18(self, connection: sqlite3.Connection) -> None:
+        """Add opt-in backup notices and bounded operational state, outside exports."""
+        connection.execute(
+            """ALTER TABLE push_subscriptions ADD COLUMN backup_alerts_enabled INTEGER NOT NULL
+               DEFAULT 0 CHECK (backup_alerts_enabled IN (0, 1))"""
+        )
+        connection.execute(
+            "ALTER TABLE push_subscriptions ADD COLUMN backup_alerts_consented_at TEXT"
+        )
+        self._create_backup_alert_schema(connection)
+
+    def _migrate_v18_to_v19(self, connection: sqlite3.Connection) -> None:
+        """Add operational idempotency reservations, excluded from JSON archives."""
+        connection.execute(
+            """CREATE TABLE manual_charge_requests (
+                id TEXT PRIMARY KEY
+                    CHECK (length(id) = 32 AND id NOT GLOB '*[^0-9a-f]*'),
+                owner_id TEXT NOT NULL
+                    CHECK (length(owner_id) BETWEEN 1 AND 255),
+                created_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                attempt_fingerprint TEXT,
+                charge_id TEXT,
+                CHECK (
+                    (attempt_fingerprint IS NULL AND charge_id IS NULL)
+                    OR (attempt_fingerprint IS NOT NULL
+                        AND length(attempt_fingerprint) = 64
+                        AND attempt_fingerprint NOT GLOB '*[^0-9a-f]*'
+                        AND charge_id IS NOT NULL
+                        AND length(charge_id) = 32
+                        AND charge_id NOT GLOB '*[^0-9a-f]*')
+                )
+            )"""
+        )
+        connection.execute(
+            "CREATE INDEX idx_manual_charge_requests_expiry ON manual_charge_requests(expires_at)"
+        )
+        connection.execute(
+            """CREATE INDEX idx_manual_charge_requests_owner_expiry
+               ON manual_charge_requests(owner_id, expires_at)"""
+        )
+
+    def _migrate_v19_to_v20(self, connection: sqlite3.Connection) -> None:
+        """Add private manual journeys and their bounded creation ledger."""
+        create_manual_journey_schema(connection)
 
     def _migrate_v14_to_v15(self, connection: sqlite3.Connection) -> None:
         connection.execute(
@@ -1664,11 +1749,86 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
             self._touch(connection)
             return event
 
+    def reserve_charge_creation(self, owner_id: str) -> dict[str, str]:
+        """Create a server-generated, owner-bound request with a seven-day TTL."""
+        owner = _validate_profile_owner(owner_id)
+        reservation: dict[str, str] | None = None
+        capacity_reached = False
+        with self._transaction() as connection:
+            now_value = self._clock_now()
+            now = _format_datetime(now_value)
+            expires_at = _format_datetime(now_value + timedelta(days=REQUEST_TTL_DAYS))
+            connection.execute(
+                "DELETE FROM manual_charge_requests WHERE expires_at <= ?", (now,)
+            )
+            owner_count = int(connection.execute(
+                "SELECT COUNT(*) FROM manual_charge_requests WHERE owner_id = ?", (owner,)
+            ).fetchone()[0])
+            global_count = int(connection.execute(
+                "SELECT COUNT(*) FROM manual_charge_requests"
+            ).fetchone()[0])
+            if owner_count >= MAX_REQUESTS_PER_OWNER or global_count >= MAX_REQUESTS_GLOBAL:
+                capacity_reached = True
+            else:
+                request_id = uuid.uuid4().hex
+                connection.execute(
+                    """INSERT INTO manual_charge_requests
+                       (id, owner_id, created_at, expires_at)
+                       VALUES (?, ?, ?, ?)""",
+                    (request_id, owner, now, expires_at),
+                )
+                reservation = {"id": request_id, "expires_at": expires_at}
+        if capacity_reached:
+            raise DomainError("Se alcanzó el límite de solicitudes de carga pendientes.", 429)
+        if reservation is None:
+            raise DomainError("No se pudo reservar la solicitud de carga.", 500)
+        return reservation
+
+    def preflight_charge_creation(
+        self, owner_id: str, request_id: str, values: Mapping[str, Any]
+    ) -> dict[str, Any]:
+        """Check ownership, expiry, and a prior successful attempt before pricing."""
+        owner = _validate_profile_owner(owner_id)
+        if not valid_request_id(request_id):
+            raise DomainError("La solicitud de creación ya no está disponible.", 409)
+        canonical_attempt = _canonical_charge_creation_attempt(values)
+        fingerprint = attempt_fingerprint(canonical_attempt)
+        with self._read_transaction() as connection:
+            now_value = self._clock_now()
+            reservation = connection.execute(
+                "SELECT * FROM manual_charge_requests WHERE id = ?", (request_id,)
+            ).fetchone()
+            if (
+                reservation is None
+                or reservation["owner_id"] != owner
+                or not _manual_charge_request_is_current(reservation, now_value)
+            ):
+                raise DomainError("La solicitud de creación ya no está disponible.", 409)
+            if not _manual_charge_request_link_is_valid(reservation):
+                raise DomainError("La solicitud de creación ya no está disponible.", 409)
+            previous_fingerprint = reservation["attempt_fingerprint"]
+            if previous_fingerprint is None:
+                return {"fingerprint": fingerprint, "charge": None}
+            if previous_fingerprint != fingerprint:
+                raise DomainError("La solicitud ya se utilizó con otros datos.", 409)
+            charge = connection.execute(
+                "SELECT * FROM manual_charges WHERE id = ?", (reservation["charge_id"],)
+            ).fetchone()
+            if charge is None:
+                raise DomainError("La carga de esta solicitud ya no existe.", 409)
+            return {
+                "fingerprint": fingerprint,
+                "charge": _charge_item(charge, "manual"),
+            }
+
     def add_charge(
         self,
         values: Mapping[str, Any],
         *,
         pricing_snapshot: Mapping[str, Any] | None = None,
+        request_id: str | None = None,
+        owner_id: str | None = None,
+        request_attempt: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         if not isinstance(values, Mapping) or set(values) - {
             "started_at", "kwh", "ended_at", "pricing_method"
@@ -1678,10 +1838,63 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
         kwh = _number(values["kwh"], "kwh", minimum=0, maximum=500, exclusive_minimum=True)
         ended_at = _parse_optional_datetime(values.get("ended_at"), "ended_at")
 
+        request_owner = None
+        canonical_attempt = None
+        fingerprint = None
+        if request_id is not None:
+            if not valid_request_id(request_id) or request_attempt is None:
+                raise DomainError("La solicitud de creación ya no está disponible.", 409)
+            request_owner = _validate_profile_owner(owner_id)
+            canonical_attempt = _canonical_charge_creation_attempt(request_attempt)
+            if (
+                canonical_attempt["started_at"] != started_at
+                or canonical_attempt["ended_at"] != ended_at
+                or canonical_attempt["kwh"] != kwh
+                or (
+                    "pricing_method" in canonical_attempt
+                    and values.get("pricing_method") != canonical_attempt["pricing_method"]
+                )
+            ):
+                raise DomainError("La carga no coincide con el intento reservado.", 409)
+            fingerprint = attempt_fingerprint(canonical_attempt)
+        elif owner_id is not None or request_attempt is not None:
+            raise DomainError("La solicitud de creación ya no está disponible.", 409)
+
         with self._transaction() as connection:
+            if request_id is not None:
+                now_value = self._clock_now()
+                now = _format_datetime(now_value)
+                reservation = connection.execute(
+                    "SELECT * FROM manual_charge_requests WHERE id = ?", (request_id,)
+                ).fetchone()
+                if (
+                    reservation is None
+                    or reservation["owner_id"] != request_owner
+                    or not _manual_charge_request_is_current(reservation, now_value)
+                ):
+                    raise DomainError("La solicitud de creación ya no está disponible.", 409)
+                if not _manual_charge_request_link_is_valid(reservation):
+                    raise DomainError("La solicitud de creación ya no está disponible.", 409)
+                previous_fingerprint = reservation["attempt_fingerprint"]
+                if previous_fingerprint is not None:
+                    if previous_fingerprint != fingerprint:
+                        raise DomainError("La solicitud ya se utilizó con otros datos.", 409)
+                    charge = connection.execute(
+                        "SELECT * FROM manual_charges WHERE id = ?", (reservation["charge_id"],)
+                    ).fetchone()
+                    if charge is None:
+                        raise DomainError("La carga de esta solicitud ya no existe.", 409)
+                    return _read_charge(connection, "manual_charges", charge["id"], "manual")
+
             settings = _read_settings(connection)
             method = values.get("pricing_method", settings["pricing_method"])
             _validate_pricing_method(method)
+            if (
+                canonical_attempt is not None
+                and "pricing_method" in canonical_attempt
+                and method != canonical_attempt["pricing_method"]
+            ):
+                raise DomainError("La carga no coincide con el intento reservado.", 409)
             _validate_charge_window(started_at, ended_at)
             if method == "pvpc":
                 if ended_at is None:
@@ -1707,6 +1920,16 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                     method, _encode_json(pricing) if pricing is not None else None,
                 ),
             )
+            if request_id is not None:
+                cursor = connection.execute(
+                    """UPDATE manual_charge_requests
+                       SET attempt_fingerprint = ?, charge_id = ?
+                       WHERE id = ? AND owner_id = ? AND expires_at > ?
+                         AND attempt_fingerprint IS NULL AND charge_id IS NULL""",
+                    (fingerprint, charge_id, request_id, request_owner, now),
+                )
+                if cursor.rowcount != 1:
+                    raise DomainError("La solicitud de creación ya no está disponible.", 409)
             self._touch(connection)
             return _read_charge(connection, "manual_charges", charge_id, "manual")
 
@@ -1911,6 +2134,22 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
         result = self.update_maintenance(id, {"completed": completed})
         return {"ok": True, "id": result["id"], "completed": result["completed"]}
 
+    def manual_charge_comparison(self, days: int = 90) -> dict[str, Any]:
+        from pulse.energy_planning import compare_manual_charges
+        if type(days) is not int or days not in {30, 90, 365}:
+            raise DomainError("El periodo debe ser 30, 90 o 365 días.")
+        now = self._clock_now()
+        start = _format_datetime(now - timedelta(days=days))
+        end = _format_datetime(now)
+        with self._read_transaction() as connection:
+            rows = connection.execute(
+                "SELECT started_at,kwh,cost_eur FROM manual_charges WHERE started_at >= ? AND started_at < ? ORDER BY started_at,id LIMIT 10001",
+                (start,end),
+            ).fetchall()
+            if len(rows) > 10000:
+                raise DomainError("El periodo supera 10000 cargas; reduce el intervalo.", 413)
+            return compare_manual_charges([dict(row) for row in rows], days, now)
+
     def export_data(self, *, owner_id: str | None = None) -> dict[str, Any]:
         owner = None if owner_id is None else _validate_profile_owner(owner_id)
         with self._read_transaction() as connection:
@@ -1953,6 +2192,11 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
             charger_energy = self._export_charger_energy(connection)
             charger_pricing_history = self._export_charger_pricing_history(connection)
             observed_events = self._export_observed_events(connection)
+            manual_journeys = self.export_manual_journeys(
+                connection, owner, byte_limit=MAX_V17_IMPORT_BYTES
+            )
+            maintenance_plans = self.export_maintenance_plans(connection, owner)
+            navigation_favorites = self.export_navigation_favorites(connection, owner)
             result = {
                 "schema_version": EXPORT_VERSION,
                 "exported_at": self._now(),
@@ -1975,6 +2219,9 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                 "charger_energy": charger_energy,
                 "charger_pricing_history": charger_pricing_history,
                 "observed_events": observed_events,
+                "manual_journeys": manual_journeys,
+                "maintenance_plans": maintenance_plans,
+                "navigation_favorites": navigation_favorites,
             }
             if demo:
                 result["demo_vehicle"] = _read_demo_vehicle(connection)
@@ -1984,7 +2231,7 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                 ).encode("utf-8")
             except (TypeError, ValueError, UnicodeEncodeError):
                 raise DomainError("No se pudo validar el documento de exportación.", 500) from None
-            if len(encoded) > MAX_V15_IMPORT_BYTES:
+            if len(encoded) > MAX_V17_IMPORT_BYTES:
                 raise DomainError(
                     "La exportación supera el tamaño máximo admitido para una restauración.", 413
                 )
@@ -2002,9 +2249,24 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
         with self._transaction() as connection:
             # The full document was validated before any write transaction starts.
             # JSON restores never grant permission to an external account.
+            if owner is not None:
+                self._assert_manual_journey_ids_available(
+                    connection, owner, document["manual_journeys"]
+                )
             connection.execute("""UPDATE abrp_preference SET scope = '', enabled = 0,
                 generation = generation + 1, last_attempt_key = NULL, last_attempt_at = NULL
                 WHERE id = 1""")
+            connection.execute("DELETE FROM manual_charge_requests")
+            if owner is None:
+                connection.execute("DELETE FROM manual_journey_requests")
+                connection.execute("DELETE FROM manual_journeys")
+            else:
+                connection.execute(
+                    "DELETE FROM manual_journey_requests WHERE owner_id = ?", (owner,)
+                )
+                connection.execute(
+                    "DELETE FROM manual_journeys WHERE owner_id = ?", (owner,)
+                )
             for table in (
                 "manual_charges",
                 "demo_charges",
@@ -2068,6 +2330,13 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                         item["distance_km"], item["duration_min"], item["energy_kwh"],
                     ),
                 )
+            for item in document["manual_journeys"]:
+                if owner is not None and item["owner_id"] != owner:
+                    # Keep a second ownership guard next to the pre-transaction validation.
+                    raise DomainError("La importación contiene trayectos de otro usuario.")
+                insert_manual_journey_archive_item(connection, item)
+            self.replace_maintenance_plans(connection, owner, document["maintenance_plans"])
+            self.replace_navigation_favorites(connection, owner, document["navigation_favorites"])
             for item in document["maintenance"]:
                 table = "demo_maintenance" if item["source"] == "demo" else "manual_maintenance"
                 connection.execute(
@@ -2162,11 +2431,31 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
         self, data: Any, *, owner_id: str | None
     ) -> tuple[str | None, dict[str, Any]]:
         owner = None if owner_id is None else _validate_profile_owner(owner_id)
-        document = _validate_import(data)
+        document = _validate_import(data, now=self._clock_now())
         if owner is not None and any(
             item["owner_id"] != owner for item in document["widget_profiles"]
         ):
             raise DomainError("La importación contiene perfiles de otro usuario.")
+        if owner is not None and any(
+            item["owner_id"] != owner for item in document["manual_journeys"]
+        ):
+            raise DomainError("La importación contiene trayectos de otro usuario.")
+        for collection in ("maintenance_plans", "navigation_favorites"):
+            if owner is not None and any(item["owner_id"] != owner for item in document[collection]):
+                raise DomainError("La copia contiene datos privados de otro usuario.")
+        # Check state-dependent conflicts and quotas before Coordinator makes a
+        # recovery copy. The mutating restore repeats these checks atomically.
+        with self._read_transaction() as connection:
+            if owner is not None and document["manual_journeys"]:
+                self._assert_manual_journey_ids_available(
+                    connection, owner, document["manual_journeys"]
+                )
+            self.validate_maintenance_plan_replacement(
+                connection, owner, document["maintenance_plans"]
+            )
+            self.validate_navigation_favorite_replacement(
+                connection, owner, document["navigation_favorites"]
+            )
         if document["telemetry_snapshots"]:
             future_limit = self._clock_now() + timedelta(seconds=60)
             for item in document["telemetry_snapshots"]:
@@ -2188,6 +2477,27 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
         except ObservedEventError as exc:
             raise DomainError(str(exc)) from None
         return owner, document
+
+    @staticmethod
+    def _assert_manual_journey_ids_available(
+        connection: sqlite3.Connection,
+        owner: str,
+        journeys: list[Mapping[str, Any]],
+    ) -> None:
+        """Reject owner-scoped restores that would collide with another user's ID."""
+        ids = [item["id"] for item in journeys]
+        for start in range(0, len(ids), 500):
+            chunk = ids[start:start + 500]
+            placeholders = ",".join("?" for _ in chunk)
+            conflict = connection.execute(
+                f"""SELECT id FROM manual_journeys
+                    WHERE owner_id != ? AND id IN ({placeholders}) LIMIT 1""",
+                (owner, *chunk),
+            ).fetchone()
+            if conflict is not None:
+                raise DomainError(
+                    "La importación contiene un identificador usado por otro usuario.", 409
+                )
 
     def _reset_demo_vehicle(self, connection: sqlite3.Connection, observed_at: str) -> None:
         default = _default_demo_vehicle(observed_at)
@@ -3365,6 +3675,57 @@ def _parse_datetime(value: Any, name: str) -> str:
     return _format_datetime(parsed)
 
 
+def _canonical_charge_creation_attempt(values: Mapping[str, Any]) -> dict[str, Any]:
+    """Normalize only user intent; tariff defaults and settings are not part of it."""
+    allowed = {"started_at", "kwh", "ended_at", "pricing_method"}
+    if (
+        not isinstance(values, Mapping)
+        or set(values) - allowed
+        or not {"started_at", "kwh"} <= set(values)
+    ):
+        raise DomainError("La carga contiene campos vacíos o no admitidos.")
+    started_at = _parse_datetime(values["started_at"], "started_at")
+    kwh = _number(values["kwh"], "kwh", minimum=0, maximum=500, exclusive_minimum=True)
+    ended_at = _parse_optional_datetime(values.get("ended_at"), "ended_at")
+    _validate_charge_window(started_at, ended_at)
+    canonical = {"started_at": started_at, "ended_at": ended_at, "kwh": kwh}
+    if values.get("pricing_method") is not None:
+        canonical["pricing_method"] = _validate_pricing_method(values["pricing_method"])
+    return canonical
+
+
+def _manual_charge_request_is_current(
+    reservation: Mapping[str, Any], now: datetime
+) -> bool:
+    """Reject expired, future-created, malformed, or incorrectly bounded ledger rows."""
+    try:
+        created_at = _datetime_from_normalized(
+            _parse_datetime(reservation["created_at"], "created_at")
+        )
+        expires_at = _datetime_from_normalized(
+            _parse_datetime(reservation["expires_at"], "expires_at")
+        )
+    except (DomainError, KeyError, TypeError):
+        return False
+    return (
+        created_at <= now < expires_at
+        and expires_at - created_at == timedelta(days=REQUEST_TTL_DAYS)
+    )
+
+
+def _manual_charge_request_link_is_valid(reservation: Mapping[str, Any]) -> bool:
+    """Treat only unlinked reservations or complete, well-shaped success links as valid."""
+    fingerprint = reservation["attempt_fingerprint"]
+    charge_id = reservation["charge_id"]
+    if fingerprint is None or charge_id is None:
+        return fingerprint is None and charge_id is None
+    return (
+        isinstance(fingerprint, str)
+        and re.fullmatch(r"[0-9a-f]{64}", fingerprint) is not None
+        and valid_request_id(charge_id)
+    )
+
+
 def _parse_date(value: Any, name: str) -> str:
     if not isinstance(value, str) or len(value) != 10:
         raise DomainError(f"{name} debe usar el formato YYYY-MM-DD.")
@@ -3403,11 +3764,13 @@ def _unique_object_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
-def _validate_import(data: Any) -> dict[str, Any]:
+def _validate_import(
+    data: Any, *, now: datetime | None = None
+) -> dict[str, Any]:
     try:
         if isinstance(data, bytes):
             encoded_size = len(data)
-            if encoded_size > MAX_V9_IMPORT_BYTES:
+            if encoded_size > MAX_V16_IMPORT_BYTES:
                 raise DomainError("La importación supera el tamaño permitido.")
             decoded = json.loads(
                 data.decode("utf-8"),
@@ -3416,7 +3779,7 @@ def _validate_import(data: Any) -> dict[str, Any]:
             )
         elif isinstance(data, str):
             encoded_size = len(data.encode("utf-8"))
-            if encoded_size > MAX_V9_IMPORT_BYTES:
+            if encoded_size > MAX_V16_IMPORT_BYTES:
                 raise DomainError("La importación supera el tamaño permitido.")
             decoded = json.loads(
                 data, parse_constant=_reject_json_constant, object_pairs_hook=_unique_object_pairs
@@ -3426,7 +3789,7 @@ def _validate_import(data: Any) -> dict[str, Any]:
                 data, allow_nan=False, separators=(",", ":"), ensure_ascii=False
             )
             encoded_size = len(encoded.encode("utf-8"))
-            if encoded_size > MAX_V9_IMPORT_BYTES:
+            if encoded_size > MAX_V16_IMPORT_BYTES:
                 raise DomainError("La importación supera el tamaño permitido.")
             decoded = json.loads(encoded, parse_constant=_reject_json_constant)
     except DomainError:
@@ -3467,6 +3830,10 @@ def _validate_import(data: Any) -> dict[str, Any]:
         raise DomainError("La importación supera el tamaño permitido para la versión 14.")
     if version == 15 and encoded_size > MAX_V15_IMPORT_BYTES:
         raise DomainError("La importación supera el tamaño permitido para la versión 15.")
+    if version == 16 and encoded_size > MAX_V16_IMPORT_BYTES:
+        raise DomainError("La importación supera el tamaño permitido para la versión 16.")
+    if version >= 17 and encoded_size > MAX_V17_IMPORT_BYTES:
+        raise DomainError("La importación supera el tamaño permitido para la versión actual.")
     mode = decoded.get("mode")
     if mode not in ("demo", "unconfigured"):
         raise DomainError("El modo del documento no es válido.")
@@ -3488,6 +3855,10 @@ def _validate_import(data: Any) -> dict[str, Any]:
         fields.add("charger_energy")
     if version >= 11:
         fields.add("charger_pricing_history")
+    if version >= 16:
+        fields.add("manual_journeys")
+    if version >= 17:
+        fields.update({"maintenance_plans", "navigation_favorites"})
     root = _exact_object(decoded, fields, "documento")
     _parse_datetime(root["exported_at"], "exported_at")
 
@@ -3745,6 +4116,7 @@ def _validate_import(data: Any) -> dict[str, Any]:
     charger_pricing_history: list[dict[str, Any]] = []
     charger_energy = {"epochs": [], "intervals": []}
     observed_events: list[dict[str, Any]] = []
+    manual_journeys: list[dict[str, Any]] = []
     if version >= 3:
         profile_rows = _collection(root["widget_profiles"], "widget_profiles")
         if len(profile_rows) > MAX_WIDGET_PROFILE_IMPORT_ROWS:
@@ -3801,6 +4173,14 @@ def _validate_import(data: Any) -> dict[str, Any]:
         except ChargerDataError as exc:
             raise DomainError(f"La importación de charger_pricing_history no es válida: {exc}") from None
 
+    if version >= 16:
+        manual_journeys = validate_manual_journey_archive(
+            root["manual_journeys"], now=now or datetime.now(timezone.utc), schema_version=version
+        )
+
+    maintenance_plans = validate_maintenance_plan_archive(root["maintenance_plans"], now=now or datetime.now(timezone.utc)) if version >= 17 else []
+    navigation_favorites = validate_navigation_favorite_archive(root["navigation_favorites"], now=now or datetime.now(timezone.utc)) if version >= 17 else []
+
     if version < 12 and any(
         item["quote"]["pricing"]["accuracy"] != "estimated_uniform"
         for item in [*charger_pricing, *charger_pricing_history]
@@ -3841,6 +4221,9 @@ def _validate_import(data: Any) -> dict[str, Any]:
         "charger_energy": charger_energy,
         "charger_pricing_history": charger_pricing_history,
         "observed_events": observed_events,
+        "manual_journeys": manual_journeys,
+        "maintenance_plans": maintenance_plans,
+        "navigation_favorites": navigation_favorites,
     }
 
 

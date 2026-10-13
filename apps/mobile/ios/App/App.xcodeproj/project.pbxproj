@@ -14,6 +14,13 @@
 			remoteGlobalIDString = F7B279804D6416D5C34A32E1;
 			remoteInfo = PulseWidget;
 		};
+		A17C0D110000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 504EC3031FED79650016851F;
+			remoteInfo = App;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXTargetDependency section */
@@ -21,6 +28,12 @@
 			isa = PBXTargetDependency;
 			target = F7B279804D6416D5C34A32E1 /* PulseWidget */;
 			targetProxy = 65EF4014324C18B519326AD6 /* PBXContainerItemProxy */;
+		};
+		A17C0D110000000000000002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = App;
+			target = 504EC3031FED79650016851F /* App */;
+			targetProxy = A17C0D110000000000000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -50,6 +63,7 @@
 		4EE96AF205562273668DDA62 /* PrivacyInfo.xcprivacy in Widget Resources */ = {isa = PBXBuildFile; fileRef = 71F4FE66CCF7F6FF71EC723C /* PrivacyInfo.xcprivacy */; };
 		4BA7C1E461AB59599A0103F2 /* PulseCore in Widget Frameworks */ = {isa = PBXBuildFile; productRef = 3BB197FE5F3FB19D6DF59D73 /* PulseCore for PulseWidget */; };
 		C526E30798EDBFB37036964E /* NativeWidgetBackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 409CD907F9EB666F6D7F3237 /* NativeWidgetBackgroundRefresh.swift */; };
+		A17C0D110000000000000003 /* PulseStartupUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17C0D110000000000000004 /* PulseStartupUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -95,6 +109,8 @@
 		9FD1E7900449F60F432798F5 /* NativeConfig.xcconfig.example */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = NativeConfig.xcconfig.example; path = ../NativeConfig.xcconfig.example; sourceTree = "<group>"; };
 		BB27DDE54151C1BB2636BD28 /* PulseWidget.appex */ = {isa = PBXFileReference; explicitFileType = wrapper.app-extension; includeInIndex = 0; path = PulseWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		409CD907F9EB666F6D7F3237 /* NativeWidgetBackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeWidgetBackgroundRefresh.swift; sourceTree = "<group>"; };
+		A17C0D110000000000000004 /* PulseStartupUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ../../../../tests/ios/PulseStartupUITests.swift; sourceTree = SOURCE_ROOT; };
+		A17C0D110000000000000005 /* PulseStartupUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PulseStartupUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -115,6 +131,12 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A17C0D110000000000000006 /* PulseStartupUITests Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -127,6 +149,7 @@
 				16F4902E7E0DF2E917BDC545 /* PulseWidget */,
 				1C07FD1353A89A1033F654A2 /* Pulse.xcconfig */,
 				9FD1E7900449F60F432798F5 /* NativeConfig.xcconfig.example */,
+				A17C0D110000000000000004 /* PulseStartupUITests.swift */,
 				504EC3051FED79650016851F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -136,6 +159,7 @@
 			children = (
 				504EC3041FED79650016851F /* App.app */,
 				BB27DDE54151C1BB2636BD28 /* PulseWidget.appex */,
+				A17C0D110000000000000005 /* PulseStartupUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -236,6 +260,23 @@
 			productReference = BB27DDE54151C1BB2636BD28 /* PulseWidget.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		A17C0D110000000000000008 /* PulseStartupUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A17C0D110000000000000009 /* Build configuration list for PBXNativeTarget "PulseStartupUITests" */;
+			buildPhases = (
+				A17C0D11000000000000000A /* PulseStartupUITests Sources */,
+				A17C0D110000000000000006 /* PulseStartupUITests Frameworks */,
+				A17C0D11000000000000000B /* PulseStartupUITests Resources */,
+			);
+			buildRules = ();
+			dependencies = (
+				A17C0D110000000000000002 /* PBXTargetDependency */,
+			);
+			name = PulseStartupUITests;
+			productName = PulseStartupUITests;
+			productReference = A17C0D110000000000000005 /* PulseStartupUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -251,6 +292,7 @@
 						ProvisioningStyle = Automatic;
 					};
 					F7B279804D6416D5C34A32E1 = { CreatedOnToolsVersion = 26.0; ProvisioningStyle = Automatic; };
+					A17C0D110000000000000008 = { CreatedOnToolsVersion = 26.0; TestTargetID = 504EC3031FED79650016851F; };
 				};
 			};
 			buildConfigurationList = 504EC2FF1FED79650016851F /* Build configuration list for PBXProject "App" */;
@@ -272,6 +314,7 @@
 			targets = (
 				504EC3031FED79650016851F /* App */,
 				F7B279804D6416D5C34A32E1 /* PulseWidget */,
+				A17C0D110000000000000008 /* PulseStartupUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -297,6 +340,12 @@
 			files = (
 				4EE96AF205562273668DDA62 /* PrivacyInfo.xcprivacy in Widget Resources */,
 			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A17C0D11000000000000000B /* PulseStartupUITests Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
@@ -325,6 +374,14 @@
 			files = (
 				58E57FA873E2C4E45050D058 /* PulseWidget.swift in Sources */,
 				BA411E4370E5F634F0692F6A /* PulseWidgetCache.swift in Widget Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A17C0D11000000000000000A /* PulseStartupUITests Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A17C0D110000000000000003 /* PulseStartupUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -563,6 +620,42 @@
 			};
 			name = Release;
 		};
+		A17C0D11000000000000000C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 2;
+				GENERATE_INFOPLIST_FILE = YES;
+				ENABLE_TESTING_SEARCH_PATHS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.4;
+				MARKETING_VERSION = 0.1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lucas.pulse.PulseStartupUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = iphonesimulator;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = App;
+			};
+			name = Debug;
+		};
+		A17C0D11000000000000000D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 2;
+				GENERATE_INFOPLIST_FILE = YES;
+				ENABLE_TESTING_SEARCH_PATHS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.4;
+				MARKETING_VERSION = 0.1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lucas.pulse.PulseStartupUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = iphonesimulator;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = App;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -589,6 +682,15 @@
 			buildConfigurations = (
 				B0420957D266C0E3598FF5D8 /* Debug */,
 				64720FEDEA85D6817052A298 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A17C0D110000000000000009 /* Build configuration list for PBXNativeTarget "PulseStartupUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A17C0D11000000000000000C /* Debug */,
+				A17C0D11000000000000000D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

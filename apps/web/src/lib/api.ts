@@ -1,6 +1,7 @@
+import type { MaintenancePlanPage, ChargingPlanInput, ChargingPlan, ChargingComparison, NavigationFavoritePage } from './types';
 import { getNativeBridge, nativeRequestFailureMessage } from './native';
 import { waitForRead } from './startup-read';
-import type { ChargePage, ChargerPricingHistoryPage, ChargerSessionPage, ChargerStatus, CommandHistoryEntry, CommandHistoryResponse, EnergyAnalytics, HttpMethod, NativeCapabilities, ObservedEventPage, PulseState, SessionState, TelemetryPage, WidgetGrantList, WidgetProfileList } from './types';
+import type { ChargePage, ChargerPricingHistoryPage, ChargerSessionPage, ChargerStatus, CommandHistoryEntry, CommandHistoryResponse, EnergyAnalytics, HttpMethod, ManualJourneyPage, ManualJourneyReport, NativeCapabilities, ObservedEventPage, PulseState, SessionState, TelemetryPage, WidgetGrantList, WidgetProfileList } from './types';
 
 export class ApiError extends Error {
 	status: number;
@@ -18,6 +19,25 @@ export async function getObservedEvents(limit = 20, offset = 0, signal?: AbortSi
 		headers: { Accept: 'application/json' }, signal
 	});
 	return responseJson<ObservedEventPage>(response);
+}
+
+export async function getManualJourneys(limit = 20, offset = 0, signal?: AbortSignal, filters?: { tag?: string; search?: string }): Promise<ManualJourneyPage> {
+	const query = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+	if (filters?.tag) query.set('tag', filters.tag);
+	if (filters?.search) query.set('search', filters.search);
+	const response = await requestApi(`/api/journeys?${query.toString()}`, {
+		method: 'GET', credentials: 'same-origin', cache: 'no-store',
+		headers: { Accept: 'application/json' }, signal
+	});
+	return responseJson<ManualJourneyPage>(response);
+}
+
+export async function getManualJourneyReport(days: 30 | 90 | 365, signal?: AbortSignal): Promise<ManualJourneyReport> {
+	const response = await requestApi(`/api/journeys/report?days=${days}`, {
+		method: 'GET', credentials: 'same-origin', cache: 'no-store',
+		headers: { Accept: 'application/json' }, signal
+	});
+	return responseJson<ManualJourneyReport>(response);
 }
 
 export async function getTelemetryHistory(limit = 20, offset = 0, signal?: AbortSignal): Promise<TelemetryPage> {
@@ -259,4 +279,34 @@ export async function mutateApi<T = { ok: boolean }>(
 	};
 	const response = await requestApi(path, init);
 	return responseJson<T>(response);
+}
+
+
+export async function getMaintenancePlans(odometer?: number, limit = 50, offset = 0, signal?: AbortSignal): Promise<MaintenancePlanPage> {
+    const query = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    if (odometer !== undefined) query.set('odometer_km', String(odometer));
+    const response = await requestApi(`/api/maintenance-plans?${query}`, {
+        method: 'GET', credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }, signal
+    });
+    return responseJson<MaintenancePlanPage>(response);
+}
+
+export async function getChargingComparison(days: 30 | 90 | 365, signal?: AbortSignal): Promise<ChargingComparison> {
+    const response = await requestApi(`/api/energy/comparison?days=${days}`, {
+        method: 'GET', credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }, signal
+    });
+    return responseJson<ChargingComparison>(response);
+}
+
+export async function simulateChargingPlan(payload: ChargingPlanInput): Promise<ChargingPlan> {
+    const session = await getSession();
+    if (!session.authenticated) throw new ApiError('Inicia sesión antes de calcular el plan.', 401);
+    return mutateApi<ChargingPlan>('/api/energy/plan', 'POST', session.csrf_token, payload);
+}
+
+export async function getNavigationFavorites(signal?: AbortSignal): Promise<NavigationFavoritePage> {
+    const response = await requestApi('/api/navigation/favorites', {
+        method: 'GET', credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }, signal
+    });
+    return responseJson<NavigationFavoritePage>(response);
 }

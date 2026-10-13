@@ -1,98 +1,38 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-12",
-  "objective_status": "active",
-  "objective_acceptance": "A0-A12, las siete puertas reales y la aceptación final siguen vigentes. Un registro estructuralmente válido o una fase de software completada no cierra por sí mismo el objetivo.",
-  "latest_delivered": {
-    "web": {
-      "increment": "startup-recovery-20261011",
-      "delivered_at": "2026-10-11",
-      "status": "delivered",
-      "scope": "Historical web increment for startup read recovery; details and receipts are summarized without deployment identifiers.",
-      "evidence": "docs/DELIVERY-EVIDENCE.json: web; resumen histórico y límites en docs/ACCEPTANCE.md."
-    },
-    "android": {
-      "increment": "brand-continuity-r14-20261011",
-      "delivered_at": "2026-10-11",
-      "status": "delivered",
-      "revision": "historical candidate",
-      "version_name": "0.1.0",
-      "version_code": 1,
-      "evidence": "docs/DELIVERY-EVIDENCE.json: android; resumen histórico y límites en docs/ACCEPTANCE.md."
-    },
-    "ios": {
-      "increment": "brand-continuity-ios-20261011",
-      "delivered_at": "2026-10-11",
-      "status": "compiled_and_simulator_startup_verified",
-      "app_and_widgetkit_compiled": true,
-      "simulator_startup_verified": true,
-      "signed_distribution": false,
-      "phone_acceptance": false,
-      "evidence": "Historical simulator build and startup record; no new iOS build is claimed for the current candidate."
-    },
-    "operations": {
-      "increment": "metadata-monitor-community-20261012",
-      "delivered_at": "2026-10-12",
-      "status": "local_metadata_monitor_qualified",
-      "scope": "Generic metadata-only monitor and community guidance. Focused checks cover absent, stale, failed and recovery states; they do not establish content integrity, restore success, external installation state or alert delivery.",
-      "evidence": "docs/SECURITY-QUALIFICATION.json:backup_monitor; deploy/community/README.md"
-    }
-  },
+  "updated_at": "2026-10-13",
+  "record_scope": "prepublication_candidate_snapshot",
+  "objective_status": "blocked",
+  "objective_acceptance": "A0-A12, las siete puertas reales y la aceptación final siguen vigentes; una fase de software o un registro estructuralmente válido no las cierra.",
   "candidates": {
     "android": {
       "status": "local_candidate_not_delivered",
-      "version_name": "0.1.1",
       "version_code": 2,
-      "evidence": "docs/VALIDATION.md#candidato-y-suite-python"
+      "version_name": "0.1.1"
     },
     "ios": {
       "status": "local_candidate_not_delivered",
       "marketing_version": "0.1.1",
-      "build_number": 2,
-      "evidence": "docs/VALIDATION.md#candidato-y-suite-python"
-    },
-    "web": {
-      "status": "local_candidate_not_delivered",
-      "scope": "Local candidate: accessibility and persistent-error UX, synthetic QA, six opt-in MQTT sensor fields, and passive raw-code diagnostics with source and observation time; SQLite17/JSON15. Meanings and physical behavior remain unqualified.",
-      "evidence": "docs/VALIDATION.md#candidato-y-suite-python"
+      "build_number": 2
     }
+  },
+  "current_local_increment": {
+    "id": "manual-tools-visual-evolution-20261013",
+    "status": "local_software_verified_native_physical_pending",
+    "source_published": false,
+    "runtime_deployed": false,
+    "native_packaged": false,
+    "native_signed": false,
+    "storage_schema": 21,
+    "export_schema": 17
   },
   "acceptance": {
     "status": "pending",
     "physical_acceptance": false,
     "full_objective_complete": false,
-    "preserved_criteria": [
-      "A0-A12",
-      "seven-original-real-gates"
-    ],
-    "note": "La aceptación del producto requiere evidencia software y real aplicable; no se infiere de builds, CI, fixtures, simulador o resultados del checker."
+    "preserved_criteria": "A0-A12 y las siete puertas reales.",
+    "note": "Este registro es el corte previo a una eventual publicación. Builds, CI, fixtures, simuladores y resultados del checker no acreditan por sí solos publicación, aceptación física ni cierre del objetivo."
   },
-  "historical_evidence": [
-    {
-      "record": "startup-recovery-20261011",
-      "date": "2026-10-11",
-      "increment": "startup-recovery-20261011",
-      "public_source_commit": null,
-      "image_short_id": null,
-      "web_delivered": true,
-      "physical_acceptance": false,
-      "evidence_reference": "docs/ACCEPTANCE.md#aceptacion-humana-historica"
-    },
-    {
-      "record": "brand-continuity-20261011",
-      "date": "2026-10-11",
-      "increment": "brand-continuity-20261011",
-      "public_source_commit": null,
-      "android_revision": "r14",
-      "android_version_name": "0.1.0",
-      "android_version_code": 1,
-      "ios_app_widgetkit_compiled": true,
-      "ios_simulator_startup_verified": true,
-      "ios_signed_distribution": false,
-      "ios_phone_acceptance": false,
-      "evidence_reference": "docs/ACCEPTANCE.md#aceptacion-humana-historica"
-    }
-  ],
   "seven_original_real_gates": [
     {
       "id": "gate-1-negative-login-and-another-user",
@@ -143,9 +83,6 @@
       "real_criteria": [
         "Mantener abierta la aceptación física y de accesibilidad aplicable.",
         "Conservar criterios A0-A12 y las siete puertas reales."
-      ],
-      "remaining_software_checks": [
-        "Recepción de copia descargada y restauración en navegador (permisos denegados), activación/renovación Push y enlace real, conexión intermitente, lectores de pantalla y aceptación en teléfonos pendientes."
       ]
     },
     {
@@ -159,10 +96,6 @@
       "real_criteria": [
         "Firma/distribución y pruebas de OAuth, actualización, privacidad, caducidad, widgets, PWA y push en ambos teléfonos.",
         "Un emulador no acredita un teléfono."
-      ],
-      "remaining_software_checks": [
-        "APK configurado y firma de piloto autorizada; actualización/OAuth/widget físicos.",
-        "Compilación final App/WidgetKit iOS, firma y distribución."
       ]
     },
     {
@@ -175,38 +108,30 @@
       "real_criteria": [
         "Lectura pasiva contrastada con el coche, incluyendo reposo y fechas.",
         "No habilitar lecturas ni usar material privado sin autorización aplicable."
-      ],
-      "local_increment": "The current diagnostic candidate stores raw values, source and observation time where available; SQLite17/JSON15 are recorded in the current qualification. Real vehicle meaning and availability remain pending.",
-      "qualification": "docs/PHASE9-QUALIFICATION.json",
-      "remaining_software_checks": [
-        "Cualificar configuración/login/renovación y disponibilidad de cada señal con B10 real autorizado.",
-        "Mapear otros estados solo con semántica y unidades demostradas."
       ]
     },
     {
       "id": "phase-4",
       "name": "Cargas y energía",
-      "status": "pending",
+      "status": "in_progress",
       "software_criteria": [
         "Asociar sesiones, curva temporal, pausas/cierres/reconciliación, PVPC y retención de tarifa sin duplicados."
       ],
       "real_criteria": [
         "Validar con cargador y medidas reales; separar coste estimado de gasto real, red y autoconsumo."
-      ],
-      "source_contract_review": "docs/SOURCE-QUALIFICATION.md"
+      ]
     },
     {
       "id": "phase-5",
       "name": "Trayectos e informes",
-      "status": "pending",
+      "status": "in_progress",
       "software_criteria": [
         "Ingestión/persistencia, inicio/fin/paradas, distancia/energía/cobertura, agregados y exportación."
       ],
       "real_criteria": [
         "Validar trayectos y cobertura con datos reales.",
         "Notas, unión reversible, informes ampliados y salud estimada son mejoras opcionales, no evidencia de datos disponibles."
-      ],
-      "source_contract_review": "docs/SOURCE-QUALIFICATION.md"
+      ]
     },
     {
       "id": "phase-6",
@@ -217,12 +142,6 @@
       ],
       "real_criteria": [
         "Validar servicios reales y completar rutas/autonomía solo con datos y modelos cualificados."
-      ],
-      "local_increment": "Six additional sensor fields are explicitly selectable through MQTT; the integration and all fields are disabled by default. No real broker or Home Assistant receipt is claimed.",
-      "qualification": "docs/MQTT-QUALIFICATION.json",
-      "remaining_software_checks": [
-        "Recepción y cualificación HA/MQTT, ABRP, mapas/navegación en servicios y teléfonos reales.",
-        "Rutas/autonomía condicionales a decisión y modelo/datos cualificados; no añadir proveedor por implicación."
       ]
     },
     {
@@ -246,12 +165,6 @@
       "real_criteria": [
         "Probar recuperación operativa, otra cuenta, rendimiento/consumo y uso habitual reales.",
         "Mantener seguridad y recuperación como criterios continuos."
-      ],
-      "local_increment": "A generic metadata-only monitor and community guide are included. The focused suite covers bounded status checks; it does not establish any external installation state, backup contents, restoration or alert delivery.",
-      "qualification": "docs/SECURITY-QUALIFICATION.json",
-      "remaining_software_checks": [
-        "Chosen backup-monitor notification consumer/channel and generic alert/recovery delivery, including checker failure/absent/stale state; natural scheduled cycles and operational recovery acceptance.",
-        "Final artifact/image/optional SDK/native/toolchain security and offsite/whole-host/proxy/auth recovery, real users/phones/performance/habitual acceptance."
       ]
     },
     {
@@ -266,61 +179,8 @@
         "Validar reglas pasivas/avisos y capacidad física de vigilancia/cámaras.",
         "Un comando aceptado o un diario de estados no acredita cámaras ni centinela.",
         "Si falta acceso, conservar el requisito pendiente; no cerrar el objetivo por cambiarlo."
-      ],
-      "local_increment": "A passive diagnostic candidate preserves raw codes, source and observation time where available, with SQLite16→17, JSON14→15 and legacy import formats 1–14. Meaning, target availability and media access are unqualified; no camera, command or alert capability is activated.",
-      "qualification": "docs/PHASE9-QUALIFICATION.json",
-      "remaining_software_checks": [
-        "Firmware/build and actual camera/sentry options on target; no availability inference from silence.",
-        "Authorised passive source, signal meaning/observation time/coverage in target B10; native-control effect/permissions/preconditions qualified individually if supported.",
-        "Remote media transport/authentication/session operations or chosen USB clip format must be demonstrated before implementing viewer/recording/retention. Keep remote requirement pending without its interface.",
-        "Real delivered alerts, access by user, stopped/restarted/disconnected coverage, consumption and physical acceptance; earlier phase gates remain pending."
       ]
     }
   ],
-  "local_references": [
-    {
-      "path": "docs/ROADMAP.md",
-      "kind": "local"
-    },
-    {
-      "path": "docs/ACCEPTANCE.md",
-      "kind": "local"
-    },
-    {
-      "path": "docs/DELIVERY-EVIDENCE.json",
-      "kind": "local"
-    },
-    {
-      "path": "docs/CANDIDATE-QUALIFICATION.json",
-      "kind": "local"
-    },
-    {
-      "path": "docs/PHASE3-QUALIFICATION.json",
-      "kind": "local"
-    },
-    {
-      "path": "docs/SOURCE-QUALIFICATION.md",
-      "kind": "local"
-    },
-    {
-      "path": "docs/MQTT-QUALIFICATION.json",
-      "kind": "local"
-    },
-    {
-      "path": "docs/SECURITY-QUALIFICATION.json",
-      "kind": "local"
-    },
-    {
-      "path": "docs/SENTINEL-CAMERAS.md",
-      "kind": "local"
-    },
-    {
-      "path": "docs/PHASE9-QUALIFICATION.json",
-      "kind": "local"
-    },
-    {
-      "path": "docs/VALIDATION.md",
-      "kind": "local"
-    }
-  ]
+  "local_references": []
 }

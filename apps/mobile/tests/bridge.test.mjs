@@ -3,6 +3,17 @@ import test from 'node:test';
 import { createNativeBridge } from '../src/bridge.ts';
 
 const tick = () => new Promise((resolve) => setImmediate(resolve));
+
+test('exportar informes delega sólo days y conserva cancel/completed sin URI', async () => {
+  const inputs = [];
+  const bridge = createNativeBridge({ async exportJourneyReport(input) {
+    inputs.push(input); return { status: input.days === 30 ? 'cancelled' : 'completed' };
+  } });
+  assert.deepEqual(await bridge.exportJourneyReport({ days: 30 }), { status: 'cancelled' });
+  assert.deepEqual(await bridge.exportJourneyReport({ days: 90 }), { status: 'completed' });
+  assert.deepEqual(inputs, [{ days: 30 }, { days: 90 }]);
+  assert.equal(createNativeBridge({}).exportJourneyReport, undefined);
+});
 function fixture(overrides = {}) {
   const listeners = [], starts = [], stops = [];
   const plugin = {

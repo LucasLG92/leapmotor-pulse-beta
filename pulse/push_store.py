@@ -62,9 +62,16 @@ class PushStoreMixin:
                     raise _error(_CONFLICT, 409)
                 # A pending attempt from the old revision becomes ambiguous on rebind.
                 connection.execute(
+                    """UPDATE backup_alert_deliveries SET status = 'uncertain', updated_at = ?
+                       WHERE subscription_id = ? AND revision = ? AND status = 'pending'""",
+                    (now_text, existing["id"], existing["revision"]),
+                )
+                connection.execute(
                     """UPDATE push_subscriptions
                        SET session_hash = ?, name = ?, ciphertext = ?, expires_at = ?,
                            updated_at = ?, revision = revision + 1,
+                           backup_alerts_enabled = 0,
+                           backup_alerts_consented_at = NULL,
                            last_result = CASE WHEN last_result = 'pending'
                                               THEN 'uncertain' ELSE last_result END
                        WHERE id = ? AND revision = ?""",
@@ -159,6 +166,22 @@ class PushStoreMixin:
         ):
             raise _error(_INVALID)
         with self._transaction() as connection:
+            row = connection.execute(
+                "SELECT revision FROM push_subscriptions WHERE owner_id = ? AND id = ?",
+                (owner, item),
+            ).fetchone()
+            if row is None:
+                if expected_revision is not None:
+                    return {"ok": False}
+                raise _error(_MISSING, 404)
+            if expected_revision is not None and row["revision"] != expected_revision:
+                return {"ok": False}
+            now_text = _format_datetime(self._clock_now())
+            connection.execute(
+                """UPDATE backup_alert_deliveries SET status = 'uncertain', updated_at = ?
+                   WHERE subscription_id = ? AND revision = ? AND status = 'pending'""",
+                (now_text, item, row["revision"]),
+            )
             if expected_revision is None:
                 cursor = connection.execute(
                     "DELETE FROM push_subscriptions WHERE owner_id = ? AND id = ?",
@@ -175,6 +198,60 @@ class PushStoreMixin:
                     return {"ok": False}
                 raise _error(_MISSING, 404)
         return {"ok": True}
+
+    def set_backup_alert_consent(
+        self,
+        owner_id: Any,
+        item_id: Any,
+        enabled: Any,
+        consented_at: Any,
+        *,
+        expected_revision: Any = None,
+    ) -> dict[str, Any]:
+        owner = _owner(owner_id)
+        item = _item_id(item_id)
+        if type(enabled) is not bool:
+            raise _error(_INVALID)
+        if expected_revision is not None and (
+            type(expected_revision) is not int or expected_revision < 1
+        ):
+            raise _error(_INVALID)
+        consent = _format_datetime(_datetime(consented_at)) if enabled else None
+        now_text = _format_datetime(self._clock_now())
+        with self._transaction() as connection:
+            row = connection.execute(
+                "SELECT * FROM push_subscriptions WHERE owner_id = ? AND id = ?",
+                (owner, item),
+            ).fetchone()
+            if row is None:
+                raise _error(_MISSING, 404)
+            if expected_revision is not None and row["revision"] != expected_revision:
+                raise _error(_CONFLICT, 409)
+            currently_enabled = bool(row["backup_alerts_enabled"])
+            if currently_enabled == enabled and (not enabled or row["backup_alerts_consented_at"]):
+                return dict(row)
+            connection.execute(
+                """UPDATE backup_alert_deliveries SET status = 'uncertain', updated_at = ?
+                   WHERE subscription_id = ? AND status = 'pending'""",
+                (now_text, item),
+            )
+            cursor = connection.execute(
+                """UPDATE push_subscriptions
+                   SET backup_alerts_enabled = ?, backup_alerts_consented_at = ?,
+                       revision = revision + 1,
+                       last_result = CASE WHEN last_result = 'pending'
+                                          THEN 'uncertain' ELSE last_result END,
+                       updated_at = ?
+                   WHERE owner_id = ? AND id = ? AND revision = ?""",
+                (int(enabled), consent, now_text, owner, item, row["revision"]),
+            )
+            if cursor.rowcount != 1:
+                raise _error(_CONFLICT, 409)
+            updated = connection.execute(
+                "SELECT * FROM push_subscriptions WHERE owner_id = ? AND id = ?",
+                (owner, item),
+            ).fetchone()
+            return dict(updated)
 
     def reserve_push_attempt(
         self,

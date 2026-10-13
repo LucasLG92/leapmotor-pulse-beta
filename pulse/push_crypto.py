@@ -29,7 +29,7 @@ class PushCrypto:
         return validate_subscription(json.loads(data))
 
     def request(self, ciphertext: str, kind: str) -> tuple[str, dict[str, str], bytes]:
-        if kind not in {"test", "charging_observation"}:
+        if kind not in {"test", "charging_observation", "backup_alert", "backup_recovery"}:
             raise ValueError("Tipo de aviso no admitido.")
         subscription = self.open(ciphertext)
         payload = json.dumps({"version": 1, "kind": kind}, separators=(",", ":")).encode()
