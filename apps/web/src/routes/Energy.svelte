@@ -1336,7 +1336,7 @@
 	.energy-total-group-heading { display: flex; align-items: center; gap: 10px; }
 	.energy-total-group-heading .source-dot { flex: 0 0 8px; margin-top: 0; background: #5c8bff; }
 	.energy-total-group-heading h3 { margin: 0; color: #f5f5f7; font-size: .875rem; font-weight: 650; letter-spacing: .01em; }
-	.energy-total-metrics { grid-template-columns: minmax(0, 1.2fr) minmax(105px, .8fr); align-items: end; gap: 12px 18px; margin: 0; padding-top: 17px; border-top: 1px solid rgb(245 245 247 / 17%); }
+	.energy-total-metrics { grid-template-columns: minmax(0, 1fr) minmax(105px, 1fr); align-items: end; gap: 12px 18px; margin: 0; padding-top: 17px; border-top: 1px solid rgb(245 245 247 / 17%); }
 	.energy-total-metrics > div { gap: 6px; }
 	.energy-total-metrics dt { color: rgb(245 245 247 / 68%); font-size: .8125rem; }
 	.energy-total-metrics dd { color: #f5f5f7; font-size: clamp(1.25rem, 3vw, 1.75rem); font-weight: 560; letter-spacing: -.035em; }

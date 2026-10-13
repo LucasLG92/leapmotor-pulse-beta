@@ -328,12 +328,21 @@
    </div>
    <div class="car-command-center">
     <div class="reading-status" class:uncertain={readingIsUncertain}><span class="status-dot" aria-hidden="true"></span>{pulseState.mode === 'demo' ? 'Lecturas simuladas' : readingStatus}</div>
+    {#if vehicleValues?.range_km == null && vehicleValues?.battery_pct == null}
+     <div class="readings-empty">
+      <span class="connection-symbol" aria-hidden="true"><Glyph name="car" size={23}/><span></span><Glyph name="plug" size={20}/></span>
+      <h3>{pulseState.mode === 'demo' ? 'La demo no tiene lecturas' : pulseState.mode === 'telemetry_read_only' ? 'Esperando una lectura' : 'Prepara la conexión'}</h3>
+      <p>{pulseState.mode === 'demo' ? 'No hay valores de batería o autonomía disponibles en esta demostración.' : pulseState.mode === 'telemetry_read_only' ? temporalExplanation : 'La batería y la autonomía aparecerán aquí cuando Pulse reciba lecturas del coche.'}</p>
+      <a class="connection-next" href={pulseState.mode === 'telemetry_read_only' || pulseState.mode === 'demo' ? '/protection' : '/settings#preparation'}>{pulseState.mode === 'telemetry_read_only' || pulseState.mode === 'demo' ? 'Revisar lecturas' : 'Preparar Pulse'}<Glyph name="arrow" size={18}/></a>
+     </div>
+    {:else}
     <dl class="vehicle-readings" aria-label="Autonomía y batería">
      <div class="range-reading"><dt>Autonomía estimada</dt><dd>{number(vehicleValues?.range_km)}<span>{vehicleValues?.range_km == null ? '' : ' km'}</span></dd></div>
      <div class="battery-reading"><dt><Glyph name="battery" size={16}/> Batería</dt><dd>{number(vehicleValues?.battery_pct)}<span>{vehicleValues?.battery_pct == null ? '' : ' %'}</span></dd>
       {#if batteryPercentage !== null}<meter aria-label="Nivel de batería recibido" min="0" max="100" value={batteryPercentage}>{number(batteryPercentage)} %</meter>{/if}
      </div>
     </dl>
+    {/if}
     <section class="vehicle-controls" aria-labelledby="vehicle-controls-title">
 					<div class="controls-intro sr-only"><h3 id="vehicle-controls-title">Acciones del vehículo</h3></div>
 					
@@ -648,6 +657,13 @@
 .state-history { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 18px 0; font-size: .75rem; color: var(--muted); }
 .state-history > span:last-child { display: flex; align-items: center; gap: 8px; margin-left: auto; color: var(--forest); }
 .overview-footer { margin-top: 18px; color: var(--muted); font-size: .625rem; }
+.readings-empty { margin: 0 0 24px; }
+.connection-symbol { display: flex; align-items: center; gap: 12px; width: fit-content; margin-bottom: 22px; color: var(--premium-solid-muted); }
+.connection-symbol > span { width: 36px; border-top: 1px dashed var(--premium-solid-line); }
+.readings-empty h3 { max-width: 14ch; margin: 0; font-size: clamp(1.5rem, 2.4vw, 2rem); line-height: 1.15; font-weight: 580; letter-spacing: -.035em; }
+.readings-empty p { max-width: 35ch; margin: 12px 0 16px; color: var(--premium-solid-muted); font-size: .8125rem; line-height: 1.6; }
+.connection-next { display: inline-flex; align-items: center; gap: 16px; min-height: 44px; padding: 9px 15px; border: 1px solid var(--premium-solid-line); border-radius: 12px; color: var(--premium-solid-text); font-size: .75rem; font-weight: 600; transition: background-color 140ms ease, border-color 140ms ease; }
+.connection-next:hover { background: #252e3c; border-color: #8194b5; }
 @media (min-width: 961px) and (max-width: 1100px) {
  .hero-layout { grid-template-columns: minmax(0, 1.2fr) minmax(300px, 1fr); }
  .car-command-center { padding: 24px; }
@@ -664,6 +680,8 @@
  .stage-brand { top: 18px; left: 20px; font-size: .4375rem; }
  .car-command-center { width: 100%; padding: 20px; border-radius: 24px; }
  .reading-status { margin-bottom: 14px; font-size: .5625rem; }
+ .connection-symbol { margin-bottom: 16px; }
+ .readings-empty { margin-bottom: 24px; }
  .vehicle-readings { grid-template-columns: 1.3fr 1fr; margin-bottom: 24px; gap: 20px; }
  .vehicle-readings dd { font-size: 2.65rem; margin-top: 5px; }
  .vehicle-readings dt { font-size: .625rem; }
