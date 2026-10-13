@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-10-13",
+  "scope": "web_release_and_reviewed_sources",
+  "repository": "LucasLG92/leapmotor-pulse-beta",
+  "source_published": true,
+  "source_commit": "3b8b1d39cb992f6f96296e673a1891856173f3f7",
+  "source_commit_url": "https://github.com/LucasLG92/leapmotor-pulse-beta/commit/3b8b1d39cb992f6f96296e673a1891856173f3f7",
+  "source_pull_request": "https://github.com/LucasLG92/leapmotor-pulse-beta/pull/15",
+  "code_ci": {
+    "head_sha": "f15d89a3fb49b99ca9f0290a5fb30277e30398cb",
+    "verify_run": 38423804170,
+    "dependency_security_run": 38423804188,
+    "status": "passed",
+    "main_runs": [
+      {
+        "id": 38424602631,
+        "name": "verify",
+        "status": "completed",
+        "conclusion": "success",
+        "head_sha": "3b8b1d39cb992f6f96296e673a1891856173f3f7",
+        "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38424602631"
+      }
+    ]
+  },
+  "runtime_web": {
+    "deployed": true,
+    "healthy": true,
+    "storage_schema": 21,
+    "export_schema": 17,
+    "migration_existing_table_counts_preserved": true,
+    "private_configuration_preserved": true,
+    "checkpoint_retained_on_server": true,
+    "post_start_database_rewind_performed": false,
+    "corrected_image_startup_qualified_with_isolated_database": true,
+    "https_public_assets_verified": 35,
+    "public_asset_hash_mismatches": 0,
+    "anonymous_private_api_status": 401,
+    "tls_verified": true
+  },
+  "checks": {
+    "backend": 1370,
+    "backend_subtests": 131,
+    "optional_sdk_skips": 34,
+    "web": 65,
+    "mobile_bridge": 8,
+    "jvm_route_policy": 12,
+    "release_operation_regressions": 8,
+    "svelte_errors": 0,
+    "svelte_warnings": 0
+  },
+  "acceptance": {
+    "desktop_css_viewport": [
+      1280,
+      720
+    ],
+    "themes": [
+      "Claro",
+      "Charcoal"
+    ],
+    "six_screens_verified": true,
+    "phone_reflow_and_voiceover": false,
+    "physical_iphone_received": false,
+    "real_vehicle_and_charger": false,
+    "new_native_binary_delivered": false,
+    "new_native_signed_distribution": false,
+    "full_objective_complete": false,
+    "cameras_sentinel": "phase9_final_pending"
+  },
+  "notes": [
+    "The initial code packaging permissions prevented startup; the final image corrected code directory permissions and passed isolated and real readiness checks. Operational data remained on the server.",
+    "This post-publication receipt supersedes only the delivery flags of the earlier candidate snapshots; it does not close physical acceptance gates."
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "updated_at": "2026-10-13",
-  "record_scope": "prepublication_candidate_snapshot",
+  "record_scope": "postpublication_web_release_receipt",
   "objective_status": "blocked",
   "objective_acceptance": "A0-A12, las siete puertas reales y la aceptación final siguen vigentes; una fase de software o un registro estructuralmente válido no las cierra.",
   "candidates": {
@@ -17,10 +17,10 @@
     }
   },
   "current_local_increment": {
-    "id": "manual-tools-visual-evolution-20261013",
-    "status": "local_software_verified_native_physical_pending",
-    "source_published": false,
-    "runtime_deployed": false,
+    "id": "cockpit-and-manual-tools-20261013",
+    "status": "web_deployed_native_physical_pending",
+    "source_published": true,
+    "runtime_deployed": true,
     "native_packaged": false,
     "native_signed": false,
     "storage_schema": 21,
@@ -31,7 +31,7 @@
     "physical_acceptance": false,
     "full_objective_complete": false,
     "preserved_criteria": "A0-A12 y las siete puertas reales.",
-    "note": "Este registro es el corte previo a una eventual publicación. Builds, CI, fixtures, simuladores y resultados del checker no acreditan por sí solos publicación, aceptación física ni cierre del objetivo."
+    "note": "Software web publicado y desplegado; aceptación física, accesibilidad móvil, native y A0-A12 pendientes."
   },
   "seven_original_real_gates": [
     {
@@ -182,5 +182,16 @@
       ]
     }
   ],
-  "local_references": []
+  "local_references": [],
+  "source_publication": {
+    "status": "published",
+    "source_only": true,
+    "commit_sha": "3b8b1d39cb992f6f96296e673a1891856173f3f7",
+    "branch": "main"
+  },
+  "latest_web_delivery": {
+    "status": "delivered",
+    "evidence": "docs/COCKPIT-RELEASE-20261013.json",
+    "phone_acceptance": false
+  }
 }

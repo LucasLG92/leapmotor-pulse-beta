@@ -2,7 +2,11 @@
 
 Aplicación independiente para explorar datos de movilidad y carga desde un servidor propio. Es una beta experimental y no oficial; la conexión a un vehículo, el control físico y la compatibilidad con cada dispositivo requieren comprobaciones separadas.
 
-## Estado del candidato local
+## Entrega web del 13 de octubre
+
+Las fuentes revisadas están publicadas y la nueva PWA está desplegada. Salud, migración y35 archivos públicos se verificaron porHTTPS; la API privada conserva401 anónimo. En una PWA instalada, usa «Actualizar ahora» cuando aparezca. Consulta el [recibo posterior a publicación](docs/COCKPIT-RELEASE-20261013.json). La recepción en teléfonos, accesibilidad móvil, vehículo y distribución nativa permanecen pendientes.
+
+## Corte de cualificación previo a publicación
 
 El incremento de interfaz y herramientas manuales del 13 de octubre es un corte **prepublicación** de software local, todavía no entregado ni desplegado. El objetivo global sigue bloqueado: permanecen nueve fases y siete puertas reales pendientes. Un recibo posterior debe registrar cualquier publicación; este corte no predice ese estado. La aceptación física y el cierre del producto no se infieren de una compilación o de datos sintéticos.
 
