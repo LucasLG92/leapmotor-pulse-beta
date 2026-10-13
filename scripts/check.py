@@ -42,6 +42,10 @@ def main() -> None:
     run([pnpm, "check"], web)
     run([pnpm, "test"], web)
     run([pnpm, "build"], web)
+    if os.environ.get("PULSE_CHECK_BROWSER") == "1":
+        # Inherit the production SQLite library selected by check-container.sh.
+        subprocess.run([pnpm, "test:e2e"], cwd=web, check=True,
+                       env={**os.environ, "PULSE_E2E_PYTHON": sys.executable})
     mobile = ROOT / "apps/mobile"
     run([pnpm, "check"], mobile)
     run([pnpm, "test"], mobile)
