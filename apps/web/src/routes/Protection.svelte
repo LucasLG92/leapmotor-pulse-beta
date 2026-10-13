@@ -42,7 +42,7 @@
 <section class="page-intro premium-heading protection-intro">
 	<div>
 		<h2>Estados</h2>
-		<p>Historial de lecturas recibidas, con fuente y hora.</p>
+		<p>Lecturas recibidas, con estado, fuente y hora.</p>
 	</div>
 	<span class="status-pill" class:status-demo={pulseState.mode === 'demo'}><span class="status-dot"></span>{pulseState.mode === 'demo' ? 'Simulación' : 'Lecturas del servidor'}</span>
 </section>
@@ -88,7 +88,7 @@
 		{:else}
 			<article class="protection-feature">
 				<button class="button button-primary" type="button" disabled={busy} onclick={enableDemo}>Explorar la demostración <Glyph name="arrow" size={16} /></button>
-				<p class="body-copy">Un cambio compara dos lecturas válidas; no confirma una acción física.</p>
+				<p class="body-copy">Solo usa datos ficticios; no vigila ni envía órdenes al coche.</p>
 			</article>
 		{/if}
 
@@ -149,11 +149,12 @@
 	.protection-events-section { grid-column: 1 / -1; margin-top: 8px; }
 	.protection-events-section .section-heading { margin-top: 0; }
 	.protection-events-copy { margin: 6px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
-	.event-list.evolution-list { display: grid; gap: 0; overflow: visible; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-	.event-row.evolution-item { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto auto; align-items: center; gap: 11px; min-height: 68px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+	.event-list.evolution-list { position: relative; display: grid; gap: 0; overflow: visible; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+	.event-list.evolution-list::before { position: absolute; top: 23px; bottom: 23px; left: 15px; width: 1px; background: var(--line); content: ''; }
+	.event-row.evolution-item { position: relative; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto auto; align-items: center; gap: 11px; min-height: 68px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 	.event-row:first-child { border-top: 1px solid var(--line); }
 	.event-row:last-child { border-bottom: 0; }
-	.event-mark { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 9px; background: var(--surface-soft); color: var(--forest); }
+	.event-mark { position: relative; z-index: 1; display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--forest); }
 	.event-row > div { display: grid; min-width: 0; gap: 4px; }
 	.event-row strong { font-size: .875rem; font-weight: 630; }
 	.event-row > div span { color: var(--muted); font-size: .75rem; text-transform: capitalize; }
@@ -195,6 +196,9 @@
 	.technical-disclosure-action { display: inline-flex; align-items: center; gap: 9px; white-space: nowrap; }
 	.protection-technical-content { display: grid; gap: 15px; padding: 0 0 18px; }
 	.protection-technical-content :global(.security-signals) { margin-top: 0; }
+	:global(.state-history .observed-source) { margin-top: -3px; color: var(--muted-strong); font-size: .8125rem; }
+	.protection-technical-disclosure[open] { padding-bottom: 0; }
+	.protection-technical-disclosure > summary > span:first-child { min-width: 0; }
 	@media (max-width: 850px) {
 		.protection-stage { grid-template-columns: minmax(0, 1fr); }
 		.protection-support { padding: 21px 0 0; border-top: 1px solid var(--line); border-left: 0; }

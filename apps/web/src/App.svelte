@@ -1110,10 +1110,10 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 	</main>
 {:else if pulseState}
 	<a class="skip-link" href="#pulse-content">Saltar al contenido</a>
-	<div class="app-shell">
+	<div class="app-shell" data-route={route}>
 		<aside class="desktop-rail" aria-label="Navegación principal">
 			<a class="brand-lockup" href="/" onclick={(event) => navigate(event, '/')} aria-label={`${appName}, ir al resumen`}>
-				<span class="brand-monogram" aria-hidden="true">p.</span><span><strong>PULSE</strong><small>Tu B10. A tu manera.</small></span>
+				<span class="brand-monogram" aria-hidden="true"><svg viewBox="0 0 36 36" fill="none"><path d="M5 25V10h12a7 7 0 0 1 0 14h-4V15h4a2 2 0 0 1 0 4" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M26 26h5" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/></svg></span><span><strong>PULSE</strong><small>Movilidad personal</small></span>
 			</a>
 			<nav class="primary-nav" aria-label="Secciones de Pulse">
 				{#each navigation as item (item.route)}
@@ -1137,6 +1137,10 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 			<header class="topbar">
 				<div class="topbar-context">
 					<a class="mobile-wordmark" href="/" onclick={(event) => navigate(event, '/')} aria-label="Pulse, ir a Coche">PULSE<span aria-hidden="true">.</span></a><h1 id="page-title" tabindex="-1" bind:this={pageTitle}>{titles[route]}</h1>
+			{#if isDemo}
+				<details class="demo-context"><summary><span class="demo-indicator" aria-hidden="true"></span>Demostración · vehículo simulado <Glyph name="chevron" size={13} /></summary><p>Los datos y controles del vehículo son ejemplos. Tus registros manuales se identifican por separado.</p></details>
+			{/if}
+
 				</div>
 				<div class="topbar-actions">
 					<a class="header-icon-link" href="/protection" aria-label="Ver historial de estados" onclick={(event) => navigate(event, '/protection')}><Glyph name="protection" size={20} /></a>
@@ -1145,10 +1149,6 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 
 				</div>
 			</header>
-
-			{#if isDemo}
-				<details class="demo-context"><summary><span class="demo-indicator" aria-hidden="true"></span>Demostración · vehículo simulado <Glyph name="chevron" size={13} /></summary><p>Los datos y controles del vehículo son ejemplos. Tus registros manuales se identifican por separado.</p></details>
-			{/if}
 
 			{@render updateNotice()}
 

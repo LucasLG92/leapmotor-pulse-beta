@@ -198,10 +198,7 @@
 </script>
 
 <header class="premium-heading activity-intro">
-	<div>
-		<h2>Diario</h2>
-		<p>Trayectos, mantenimiento y acciones guardadas en Pulse.</p>
-	</div>
+	<h2>Diario</h2>
 </header>
 
 <nav class="section-switcher diary-switcher" aria-label="Secciones del diario">
@@ -213,7 +210,7 @@
 <section id="diary-trips-view" class="diary-view" aria-label="Trayectos" hidden={activeDiarySection !== 'journeys'}>
 <ManualJourneysPanel {busy} {online} {revision} {drafts} {mutate} {reserveJourneyCreation} {confirmAction} {onSessionExpired} />
 <section class="journey-source-panel workspace-panel" aria-labelledby="journeys-heading">
-			<div class="section-heading"><div><h2 id="journeys-heading" class="activity-section-title"><Glyph name="activity" size={16} />{pulseState.mode === 'demo' ? 'Trayectos de demostración' : 'Trayectos automáticos'}</h2><p class="activity-section-copy">{pulseState.mode === 'demo' ? 'Registros ficticios, separados de tu diario manual.' : 'La recepción del vehículo requiere una integración cualificada.'}</p></div><span class="badge">{count(journeys.length)} disponibles</span></div>
+			<div class="section-heading"><div><h2 id="journeys-heading" class="activity-section-title">{pulseState.mode === 'demo' ? 'Ejemplos recibidos' : 'Trayectos recibidos'}</h2><p class="activity-section-copy">{pulseState.mode === 'demo' ? 'Demostración · no son recorridos del vehículo.' : 'La recepción automática del vehículo está pendiente.'}</p></div><span class="badge">{count(journeys.length)}</span></div>
 			{#if journeys.length === 0}
 				<div class="empty-state"><span class="empty-mark"><Glyph name="activity" /></span><h3>No hay trayectos recibidos</h3><p>{pulseState.mode === 'demo' ? 'El servidor no entrega recorridos en este momento.' : 'Pulse aún no tiene una integración que reciba recorridos del vehículo.'}</p>{#if pulseState.mode !== 'demo'}<a class="button button-secondary" href="/settings#preparation">Revisar preparación</a>{/if}</div>
 			{:else}
@@ -369,5 +366,21 @@
 	@media (max-width: 560px) {
 		.activity-intro { align-items: flex-start; }
 		.journey-source-panel.workspace-panel, .diary-actions-view.workspace-panel { padding: 14px; border-radius: 17px; }
+	}
+	.activity-intro { margin-bottom: 10px; }
+	.diary-switcher { margin-bottom: 12px; }
+	.diary-view { gap: 23px; }
+	.journey-source-panel.workspace-panel { gap: 12px; padding: 18px 0 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; }
+	.journey-source-panel .section-heading { align-items: baseline; }
+	.activity-section-title { font-size: .9375rem; font-weight: 640; }
+	.activity-section-copy { margin-top: 3px; font-size: .75rem; }
+	.journey-source-panel .section-heading > div > .activity-section-copy { max-width: 48ch; }
+	.journey-source-panel > .empty-state { padding-block: 17px; }
+	.diary-actions-view.workspace-panel { border-radius: 24px; }
+	.maintenance-legacy.workspace-panel { padding-inline: 0; border-radius: 0; }
+	@media (max-width: 560px) {
+		.journey-source-panel.workspace-panel { padding: 16px 0 0; border-radius: 0; }
+		.journey-source-panel .section-heading { align-items: flex-start; }
+		.diary-actions-view.workspace-panel { padding: 17px 15px; border-radius: 20px; }
 	}
 </style>

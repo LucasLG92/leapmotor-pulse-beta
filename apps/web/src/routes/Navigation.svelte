@@ -427,8 +427,8 @@
 
 <section class="page-intro premium-heading navigation-intro">
 	<div class="navigation-intro-copy">
-		<h2>Encuentra tu destino</h2>
-		<p>Busca una dirección o introduce coordenadas públicas.</p>
+		<h2>Mapa</h2>
+		<p>Destinos y coordenadas públicas.</p>
 	</div>
 </section>
 
@@ -441,15 +441,29 @@
 
 {#if statusBusy}
 	<div class="status-loading" role="status">Consultando la disponibilidad de navegación…</div>
-{:else if status && !status.enabled}
-	<div class="notice notice-accent" role="status">Los servicios públicos de lugares, cargadores y mapa están desactivados en Pulse. Puedes introducir coordenadas públicas para preparar enlaces a mapas externos.</div>
 {/if}
 
 <div class="navigation-layout" class:map-visible={mapOpen}>
 	<div class="navigation-main-column">
-				<section class="search-card card card-pad" aria-labelledby="places-heading">
+		{#if status && !status.enabled}
+			<section class="navigation-service-state" aria-labelledby="navigation-service-heading" role="status">
+				<div class="service-state-art" aria-hidden="true">
+					<svg viewBox="0 0 152 120" fill="none" focusable="false">
+						<path d="M17 31 55 18l40 13 40-13v72l-40 13-40-13-38 13V31Z" />
+						<path d="M55 18v72m40-59v72" />
+					</svg>
+				</div>
+				<div class="service-state-copy">
+					<p class="service-state-label">Lugares y mapas</p>
+					<h3 id="navigation-service-heading">Búsqueda no disponible</h3>
+					<p>Pulse tiene desactivados los servicios públicos de lugares, cargadores y mapas. Aún puedes preparar un destino con coordenadas públicas.</p>
+					<a class="button button-secondary" href="/settings#preparation">Revisar conexiones</a>
+				</div>
+			</section>
+		{:else}
+			<section class="search-card card card-pad" aria-labelledby="places-heading">
 			<div class="section-heading search-heading">
-				<h3 id="places-heading" class="sr-only">Buscar un destino</h3>
+				<h3 id="places-heading">Buscar un destino</h3>
 				<span class="source-chip">OpenStreetMap</span>
 			</div>
 			<form class="place-search-form" onsubmit={searchPlaces}>
@@ -474,7 +488,8 @@
 				<div class="empty-search"><span class="empty-search-mark" aria-hidden="true"><Glyph name="search" size={17} /></span><div><h4>No se encontraron lugares</h4><p>Prueba con una ciudad o una referencia más concreta.</p></div></div>
 			{/if}
 		</section>
-				{#if selectedPlace}
+		{/if}
+		{#if selectedPlace}
 			<section class="destination-card card card-pad" aria-labelledby="destination-heading">
 				<div class="section-heading destination-heading">
 					<div><h3 id="destination-heading">{selectedPlace.name}</h3></div>
@@ -482,39 +497,41 @@
 				</div>
 				<dl class="destination-coordinates"><div><dt>Latitud</dt><dd>{selectedPlace.latitude.toFixed(6)}</dd></div><div><dt>Longitud</dt><dd>{selectedPlace.longitude.toFixed(6)}</dd></div></dl>
 				<div class="destination-actions">
-					<button class="button button-primary button-block" type="button" disabled={!canUseProviders} aria-expanded={mapOpen} aria-controls="navigation-map" onclick={toggleMap}>{mapOpen ? 'Ocultar mapa' : 'Mostrar mapa'}</button>
+					{#if status?.enabled !== false}<button class="button button-primary button-block" type="button" disabled={!canUseProviders} aria-expanded={mapOpen} aria-controls="navigation-map" onclick={toggleMap}>{mapOpen ? 'Ocultar mapa' : 'Mostrar mapa'}</button>{/if}
 					<div class="external-map-links">
 						<a class="button button-secondary" href={googleLink} target="_blank" rel="noopener noreferrer">Abrir en Google Maps</a>
 						<a class="button button-secondary" href={appleLink} target="_blank" rel="noopener noreferrer">Abrir en Apple Maps</a>
 					</div>
 				</div>
 				<p class="destination-sharing">Al abrir un mapa externo, compartirás las coordenadas de este destino con ese servicio.</p>
-				<div class="charger-center">
-					<div><h4>Cargadores públicos</h4><p>Consulta puntos en un radio de 5 km del centro actual.</p><small>Centro: {centerLabel}</small></div>
-					<button class="button button-secondary charger-search-button" type="button" disabled={!canUseProviders || !currentCenter || chargersBusy} onclick={searchChargers}>{chargersBusy ? 'Consultando…' : 'Buscar cargadores a 5 km'}</button>
-				</div>
-				{#if centerChangedNotice}<p class="center-notice" role="status">{centerChangedNotice}</p>{/if}
-				{#if chargersError}<p class="inline-error" role="alert">{chargersError}</p>{/if}
-				{#if chargersFetchedAt}
-					<p class="result-provenance">OpenStreetMap Overpass · {chargersCached ? 'caché del servicio' : 'consulta reciente'} · {formatFetchedAt(chargersFetchedAt)}.</p>
+				{#if status?.enabled !== false}
+					<div class="charger-center">
+						<div><h4>Cargadores públicos</h4><p>Consulta puntos en un radio de 5 km del centro actual.</p><small>Centro: {centerLabel}</small></div>
+						<button class="button button-secondary charger-search-button" type="button" disabled={!canUseProviders || !currentCenter || chargersBusy} onclick={searchChargers}>{chargersBusy ? 'Consultando…' : 'Buscar cargadores a 5 km'}</button>
+					</div>
+					{#if centerChangedNotice}<p class="center-notice" role="status">{centerChangedNotice}</p>{/if}
+					{#if chargersError}<p class="inline-error" role="alert">{chargersError}</p>{/if}
+					{#if chargersFetchedAt}
+						<p class="result-provenance">OpenStreetMap Overpass · {chargersCached ? 'caché del servicio' : 'consulta reciente'} · {formatFetchedAt(chargersFetchedAt)}.</p>
+					{/if}
+					{#if chargersTruncated}<p class="center-notice">La consulta alcanzó su límite de resultados. La lista puede estar incompleta.</p>{/if}
+					{#if stations.length}
+						<ul class="station-list" aria-label="Cargadores públicos encontrados">
+							{#each stations as station (station.id)}
+								<li><article class="station-card" class:station-selected={selectedStation?.id === station.id}>
+									<div class="station-heading"><h5>{station.name}</h5><span>{stationCenter ? formatDistance(stationCenter, station) : '—'}</span></div>
+									{#if safeOptionalText(station.operator)}<p class="station-operator">{safeOptionalText(station.operator)}</p>{/if}
+									<dl class="station-facts"><div><dt>Potencia</dt><dd>{powerLabel(station.power_kw)}</dd></div><div><dt>Conectores</dt><dd>{connectorLabels(station.connectors)}</dd></div></dl>
+									{#if safeOptionalText(station.address)}<p class="station-address">{safeOptionalText(station.address)}</p>{/if}
+									<button class="text-button station-select" type="button" aria-pressed={selectedStation?.id === station.id} onclick={() => selectedStation = station}>{selectedStation?.id === station.id ? 'Punto seleccionado' : 'Seleccionar punto'}</button>
+								</article></li>
+							{/each}
+						</ul>
+					{:else if chargersFetchedAt && !chargersBusy}
+						<div class="empty-search"><h4>No hay cargadores en la lista</h4><p>La consulta no devolvió puntos en el radio indicado.</p></div>
+					{/if}
+					<p class="fine-print station-limit">La distancia es en línea recta desde el centro consultado; no indica distancia por carretera ni disponibilidad u ocupación en tiempo real.</p>
 				{/if}
-				{#if chargersTruncated}<p class="center-notice">La consulta alcanzó su límite de resultados. La lista puede estar incompleta.</p>{/if}
-				{#if stations.length}
-					<ul class="station-list" aria-label="Cargadores públicos encontrados">
-						{#each stations as station (station.id)}
-							<li><article class="station-card" class:station-selected={selectedStation?.id === station.id}>
-								<div class="station-heading"><h5>{station.name}</h5><span>{stationCenter ? formatDistance(stationCenter, station) : '—'}</span></div>
-								{#if safeOptionalText(station.operator)}<p class="station-operator">{safeOptionalText(station.operator)}</p>{/if}
-								<dl class="station-facts"><div><dt>Potencia</dt><dd>{powerLabel(station.power_kw)}</dd></div><div><dt>Conectores</dt><dd>{connectorLabels(station.connectors)}</dd></div></dl>
-								{#if safeOptionalText(station.address)}<p class="station-address">{safeOptionalText(station.address)}</p>{/if}
-								<button class="text-button station-select" type="button" aria-pressed={selectedStation?.id === station.id} onclick={() => selectedStation = station}>{selectedStation?.id === station.id ? 'Punto seleccionado' : 'Seleccionar punto'}</button>
-							</article></li>
-						{/each}
-					</ul>
-				{:else if chargersFetchedAt && !chargersBusy}
-					<div class="empty-search"><h4>No hay cargadores en la lista</h4><p>La consulta no devolvió puntos en el radio indicado.</p></div>
-				{/if}
-				<p class="fine-print station-limit">La distancia es en línea recta desde el centro consultado; no indica distancia por carretera ni disponibilidad u ocupación en tiempo real.</p>
 				{#if selectedStation && selectedStationLinks}
 					<div class="selected-station-note">
 						<p role="status"><strong>Cargador seleccionado:</strong> {selectedStation.name}. El destino elegido en Pulse no cambia.</p>
@@ -526,16 +543,15 @@
 					</div>
 				{/if}
 			</section>
-		{:else}
+		{:else if status?.enabled !== false}
 			<section class="destination-empty card" aria-labelledby="destination-empty-heading">
-				<div class="destination-empty-mark" aria-hidden="true"><Glyph name="navigation" size={23} /></div>
-				<h3 id="destination-empty-heading">Elige un destino</h3>
-				<p>Selecciona un resultado o usa coordenadas públicas para mostrar opciones de mapa y consultar cargadores cercanos.</p>
+				<h3 id="destination-empty-heading">Tu destino aparecerá aquí</h3>
+				<p>Elige un resultado o introduce coordenadas públicas para preparar enlaces y consultar cargadores.</p>
 			</section>
 		{/if}
-				<section class="manual-card card card-pad" aria-labelledby="manual-heading">
+		<section class="manual-card card card-pad" aria-labelledby="manual-heading">
 			<div class="section-heading manual-heading">
-				<div><h3 id="manual-heading" class="navigation-section-title"><Glyph name="navigation" size={16} />Usar coordenadas</h3><p>Alternativa sin proveedor de búsqueda. Introduce las coordenadas de un lugar público.</p></div>
+				<div><h3 id="manual-heading" class="navigation-section-title">Usar coordenadas</h3><p>{status?.enabled === false ? 'Introduce las coordenadas públicas de un lugar.' : 'Alternativa manual para encontrar un lugar público.'}</p></div>
 			</div>
 			<form class="manual-form" onsubmit={chooseManualPlace}>
 				<div class="field">
@@ -605,8 +621,6 @@
 	.manual-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 10px; }
 	.manual-submit { grid-column: 1 / -1; justify-self: start; }
 	.destination-empty { display: grid; justify-items: start; gap: 11px; min-height: 240px; align-content: center; padding: 22px; }
-	.destination-empty-mark { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 13px; background: var(--forest-soft); color: var(--forest); }
-	.destination-empty-mark :global(svg) { display: block; }
 	.destination-empty h3 { margin: 0; font-size: 1rem; }
 	.destination-empty p { max-width: 50ch; margin: 0; color: var(--muted); font-size: .875rem; line-height: 1.6; }
 	.destination-heading { align-items: flex-start; margin: 0 0 12px; }
@@ -675,7 +689,7 @@
 	@media(max-width:560px){.destination-empty{min-height:200px}.station-facts{grid-template-columns:repeat(2,minmax(0,1fr))}.navigation-layout{gap:24px}}
 
 	.navigation-intro { align-items: flex-end; }
-	.navigation-intro h2 { font-size: clamp(2rem, 4vw, 3rem); }
+	.navigation-intro h2 { font-size: clamp(1.6rem, 3vw, 2.2rem); }
 	.navigation-layout, .navigation-layout.map-visible { grid-template-columns: minmax(0, 1.3fr) minmax(18rem, .7fr); align-items: start; gap: clamp(24px, 4vw, 42px); }
 	.navigation-main-column, .navigation-side-column { gap: 26px; min-width: 0; }
 	.navigation-main-column > .search-card, .navigation-main-column > .manual-card, .navigation-main-column > .destination-card, .navigation-main-column > .destination-empty {
@@ -698,5 +712,69 @@
 		.navigation-layout, .navigation-layout.map-visible { gap: 24px; }
 		.navigation-main-column > .search-card, .navigation-main-column > .manual-card, .navigation-main-column > .destination-card, .navigation-main-column > .destination-empty { padding-bottom: 19px; }
 		.charger-search-button { width: 100%; }
+	}
+
+	/* La búsqueda dirige la vista; el servicio desactivado ofrece un estado honesto y la alternativa manual. */
+	.navigation-intro { margin-bottom: 18px; }
+	.navigation-intro-copy { gap: 2px; }
+	.navigation-intro p { margin-top: 3px; font-size: .875rem; }
+	.navigation-layout { gap: clamp(24px, 3.4vw, 44px); }
+	.navigation-main-column, .navigation-side-column { gap: 24px; }
+	.navigation-main-column > .search-card {
+		order: 0; min-width: 0; padding: clamp(20px, 2.8vw, 30px); border: 1px solid var(--line); border-radius: 28px; background: var(--surface); box-shadow: var(--shadow);
+	}
+	.search-heading { align-items: center; justify-content: space-between; margin-bottom: 19px; }
+	.search-heading h3 { font-size: clamp(1.2rem, 2vw, 1.55rem); font-weight: 700; letter-spacing: -.04em; }
+	.source-chip { min-height: 32px; background: var(--surface-soft); color: var(--muted-strong); }
+	.place-search-form { gap: 12px; }
+	.search-field { gap: 8px; }
+	.search-field label { font-size: .9375rem; }
+	.search-field input { min-height: 56px; border-radius: 14px; }
+	.search-field .field-hint { margin-top: 0; font-size: .8125rem; }
+	.search-button { min-height: 56px; padding-inline: 20px; border-radius: 14px; }
+	.navigation-service-state {
+		display: grid; grid-template-columns: minmax(120px, 168px) minmax(0, 1fr); align-items: center; gap: clamp(20px, 3vw, 34px); min-width: 0; padding: clamp(22px, 3vw, 34px); border: 1px solid var(--line); border-radius: 28px; background: var(--surface); box-shadow: var(--shadow);
+	}
+	.service-state-art { display: grid; width: 100%; min-height: 132px; place-items: center; border-radius: 24px; background: var(--surface-soft); color: var(--forest); }
+	.service-state-art svg { display: block; width: min(100%, 150px); height: auto; }
+	.service-state-art path { stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+	.service-state-copy { display: grid; justify-items: start; gap: 7px; min-width: 0; }
+	.service-state-label { margin: 0; color: var(--forest); font-size: .75rem; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
+	.service-state-copy h3 { margin: 0; font-size: clamp(1.25rem, 2.2vw, 1.75rem); letter-spacing: -.035em; line-height: 1.15; }
+	.service-state-copy > p:not(.service-state-label) { max-width: 54ch; margin: 0 0 6px; color: var(--muted); font-size: .9375rem; line-height: 1.55; }
+	.service-state-copy .button { min-height: 48px; border-radius: 14px; }
+	.navigation-main-column > .destination-card {
+		order: 1; min-width: 0; padding: clamp(20px, 2.8vw, 30px); border: 1px solid var(--line); border-radius: 28px; background: var(--surface); box-shadow: var(--shadow);
+	}
+	.navigation-main-column > .destination-empty { order: 1; min-height: 0; align-content: start; padding: 14px 2px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; }
+	.destination-empty h3 { font-size: 1rem; }
+	.destination-empty p { font-size: .875rem; }
+	.navigation-main-column > .manual-card { order: 2; min-width: 0; padding: 0 0 20px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; }
+	.manual-heading { margin-bottom: 12px; }
+	.manual-heading .navigation-section-title { font-size: 1rem; }
+	.manual-heading p { margin-top: 3px; font-size: .8125rem; }
+	.manual-form { gap: 12px; }
+	.manual-form .field { gap: 6px; }
+	.manual-form .field input { min-height: 50px; border-radius: 12px; }
+	.manual-submit { min-height: 48px; border-radius: 13px; }
+	.coordinates-hint { margin-top: 8px; font-size: .75rem; }
+	.destination-coordinates div, .station-facts div { padding-inline: 0; }
+	.station-card { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; }
+	.station-card.station-selected { border-color: var(--forest); background: var(--forest-soft); }
+	.navigation-side-column > .map-card { padding: 16px; border: 1px solid var(--line); border-radius: 26px; background: var(--surface); }
+	:global(.navigation-side-column > .favorites-panel) { margin-top: 0; padding-top: 22px; }
+	.navigation-limit-note { padding: 13px 15px; border-radius: 20px; }
+	@media (max-width: 620px) {
+		.navigation-main-column > .search-card { padding: 21px 18px; }
+		.place-search-form { grid-template-columns: minmax(0, 1fr); }
+		.search-button { width: 100%; }
+		.navigation-service-state { grid-template-columns: minmax(0, 1fr); gap: 18px; padding: 20px; }
+		.service-state-art { width: 100%; min-height: 112px; }
+		.service-state-art svg { width: min(100%, 128px); max-height: 104px; }
+		.service-state-copy .button { width: 100%; }
+		.navigation-main-column > .destination-card { padding: 20px 18px; }
+		.navigation-main-column > .destination-empty, .navigation-main-column > .manual-card { padding-bottom: 18px; }
+		.manual-form { grid-template-columns: minmax(0, 1fr); }
+		.manual-submit { width: 100%; }
 	}
 </style>

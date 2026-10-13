@@ -39,7 +39,7 @@ export default defineConfig(({ mode }) => {
 					]
 				},
 				injectManifest: {
-					globPatterns: ['**/*.{html,js,css,svg,png,webp,webmanifest}'],
+					globPatterns: ['**/*.{html,js,css,svg,png,webp,webmanifest,woff2}'],
 					globIgnores: [
 						'**/*.map',
 						'sw.js',

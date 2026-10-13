@@ -47,10 +47,10 @@
 
 <style>
  .vehicle-artwork { min-width: 0; margin: 0; }
- .vehicle-frame { display: grid; min-width: 0; height: clamp(240px, 29vw, 420px); place-items: center; overflow: hidden; }
- img { display: block; width: 100%; height: 100%; object-fit: contain; scale: 1.12; animation: car-arrive 360ms var(--ease-out) both; }
+ .vehicle-frame { display: flex; align-items: center; justify-content: center; min-width: 0; height: var(--vehicle-stage-height, clamp(180px, 25vw, 340px)); overflow: hidden; }
+ img { display: block; width: 100%; height: 100%; min-width: 0; min-height: 0; max-height: 100%; object-fit: contain; animation: car-arrive 360ms var(--ease-out) both; }
  figcaption { margin-top: 0; text-align: center; color: var(--muted); font-size: .625rem; line-height: 1.4; }
  @keyframes car-arrive { from { opacity: .5; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
- @media (max-width: 600px) { .vehicle-frame { height: clamp(170px, 49vw, 270px); } }
+ @media (max-width: 600px) { .vehicle-frame { height: var(--vehicle-stage-height, clamp(140px, 45vw, 230px)); } }
  @media (prefers-reduced-motion: reduce) { img { animation: none; } }
 </style>

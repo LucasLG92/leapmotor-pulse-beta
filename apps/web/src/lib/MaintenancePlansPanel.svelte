@@ -245,7 +245,7 @@
 
 <section class="maintenance-panel workspace-panel" aria-labelledby="maintenance-plans-heading">
 	<header class="maintenance-header premium-heading">
-		<span class="maintenance-mark" aria-hidden="true"><Glyph name="settings" size={18} /></span><div class="maintenance-heading-copy"><p class="eyebrow">Mantenimiento introducido por ti</p><h2 id="maintenance-plans-heading">Planes de mantenimiento</h2><p>Organiza revisiones por fecha y lecturas que indiques. Pulse no lee el odómetro del vehículo.</p></div>
+		<span class="maintenance-mark" aria-hidden="true"><Glyph name="settings" size={18} /></span><div class="maintenance-heading-copy"><h2 id="maintenance-plans-heading">Planes de mantenimiento</h2><details class="maintenance-explanation"><summary>Cómo se calculan</summary><p>Organiza revisiones por fecha y lecturas que indiques. Pulse no lee el odómetro del vehículo.</p></details></div>
 		<button class="button button-primary" type="button" disabled={busy || saving || !online || (page?.total ?? 0) >= MAX_PLANS} onclick={() => openPlan()}>
 			<span aria-hidden="true">＋</span> Añadir plan
 		</button>
@@ -327,7 +327,6 @@
 	.maintenance-mark :global(svg) { display: block; }
 	.maintenance-heading-copy { min-width: 0; flex: 1 1 auto; }
 	.maintenance-header h2 { margin: 3px 0 4px; font-size: clamp(1.35rem, 2vw, 1.75rem); letter-spacing: -.025em; }
-	.maintenance-heading-copy > p:not(.eyebrow) { max-width: 66ch; margin: 0; color: var(--muted); }
 	.eyebrow { margin: 0; color: var(--forest); font-size: .75rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
 	.maintenance-tools { display: flex; align-items: stretch; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 14px 0; border-block: 1px solid var(--line); border-inline: 0; border-radius: 0; background: transparent; }
 	.odometer-form { display: grid; gap: 5px; min-width: min(100%, 290px); }
@@ -418,7 +417,6 @@
 	.maintenance-header { align-items: center; margin: 0; padding: 0 0 12px; border-bottom: 1px solid var(--line); }
 	.maintenance-mark { width: 36px; height: 36px; flex-basis: 36px; border-radius: 10px; }
 	.maintenance-header h2 { font-size: 1.1rem; }
-	.maintenance-heading-copy > p:not(.eyebrow) { max-width: 58ch; font-size: .8125rem; }
 	.maintenance-tools { padding-block: 10px; }
 	.maintenance-form { gap: 14px; padding: 14px 0 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; }
 	.interval-field { border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 12px 0 0; }
@@ -434,5 +432,45 @@
 		.maintenance-heading-copy { grid-column: auto; }
 		.maintenance-header > button { grid-column: auto; }
 		.plan-actions { display: grid; grid-template-columns: minmax(0, 1fr); }
+	}
+	.maintenance-panel.workspace-panel { gap: 17px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+	.maintenance-header { align-items: center; gap: 16px; padding: 0; border: 0; }
+	.maintenance-mark { display: none; }
+	.maintenance-heading-copy { display: grid; gap: 2px; min-width: 0; }
+	.maintenance-header h2 { margin: 0; font-size: clamp(1.25rem, 2vw, 1.5rem); font-weight: 650; letter-spacing: -.035em; }
+	.maintenance-explanation > summary { display: inline-flex; min-height: 36px; align-items: center; color: var(--muted); font-size: .75rem; font-weight: 550; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+	.maintenance-explanation > p { max-width: 62ch; margin: 3px 0 0; color: var(--muted); font-size: .8125rem; line-height: 1.5; }
+	.maintenance-header > .button { flex: 0 0 auto; }
+	.maintenance-tools { align-items: stretch; gap: 18px; padding: 0 0 15px; border-bottom: 1px solid var(--line); }
+	.odometer-form { flex: 1 1 340px; }
+	.odometer-form > p { max-width: 66ch; margin-top: 5px; font-size: .75rem; }
+	.odometer-form input, .maintenance-form input, .maintenance-form textarea { border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface-raised); color: var(--ink); }
+	.quota { align-content: center; min-width: 128px; padding-left: 16px; border-left: 1px solid var(--line); }
+	.quota-details summary { text-decoration: underline; text-underline-offset: 3px; }
+	.maintenance-form { gap: 17px; padding: 20px 0 3px; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; }
+	.form-title { align-items: flex-start; }
+	.form-title h3 { font-size: 1.15rem; letter-spacing: -.025em; }
+	.icon-button { border-radius: 12px; }
+	.form-grid { gap: 15px; }
+	.field input, .field textarea { padding-inline: 12px; }
+	.interval-field { gap: 8px; }
+	.interval-field legend { color: var(--muted-strong); font-size: .8125rem; font-weight: 650; }
+	.interval-field .input-with-unit input { flex: 1; width: 1%; }
+	.form-actions { justify-content: flex-end; gap: 8px; padding-top: 14px; border-top: 1px solid var(--line); }
+	.plan-body { padding-block: 19px; }
+	.plan-top h3 { font-size: 1.05rem; }
+	.plan-detail-grid { gap: 7px 18px; }
+	.plan-detail-grid > div { padding-block: 9px; }
+	.plan-actions { gap: 6px; }
+	.history-details summary { text-decoration: none; }
+	.empty-state { padding-block: 19px; }
+	@media (max-width: 620px) {
+		.maintenance-panel.workspace-panel { padding: 0; border-radius: 0; }
+		.maintenance-header { display: flex; align-items: flex-start; flex-direction: column; }
+		.maintenance-header > .button { width: 100%; }
+		.maintenance-tools { gap: 13px; }
+		.quota { min-width: 0; padding: 12px 0 0; border-top: 1px solid var(--line); border-left: 0; }
+		.maintenance-form { padding-top: 17px; }
+		.form-actions { display: grid; grid-template-columns: 1fr; }
 	}
 </style>
