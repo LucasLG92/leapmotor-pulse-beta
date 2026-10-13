@@ -3,6 +3,19 @@ import XCTest
 @testable import PulseCore
 
 final class NativeJourneyReportPolicyTests: XCTestCase {
+    func testBridgeDaysAcceptsExactNumbersIndependentOfNSNumberRepresentation() {
+        for days in [30, 90, 365] {
+            XCTAssertEqual(NativeJourneyReportPolicy.requestedDays(arguments: ["days": NSNumber(value: days)]), days)
+            XCTAssertEqual(NativeJourneyReportPolicy.requestedDays(arguments: ["days": NSNumber(value: Double(days))]), days)
+        }
+        let invalid: [Any] = ["30", true, false, 30.5, Double.nan, Double.infinity, 1e100, 0]
+        for value in invalid {
+            XCTAssertNil(NativeJourneyReportPolicy.requestedDays(arguments: ["days": value]))
+        }
+        XCTAssertNil(NativeJourneyReportPolicy.requestedDays(arguments: [:]))
+        XCTAssertNil(NativeJourneyReportPolicy.requestedDays(arguments: ["days": 30, "path": "synthetic"]))
+    }
+
     func testAcceptsZeroNullAndTinyValuesAndRebuildsOnlyContractFields() throws {
         var value = report()
         var totals = value["totals"] as! [String: Any]

@@ -9,6 +9,14 @@ public enum NativeJourneyReportPolicyError: Error, Equatable {
 public enum NativeJourneyReportPolicy {
     public static let maximumBodyBytes = 64 * 1_024
 
+    public static func requestedDays(arguments: [String: Any]) -> Int? {
+        guard Set(arguments.keys) == ["days"], let number = arguments["days"] as? NSNumber,
+              CFGetTypeID(number) != CFBooleanGetTypeID(), number.doubleValue.isFinite,
+              [30.0, 90.0, 365.0].contains(number.doubleValue)
+        else { return nil }
+        return Int(number.doubleValue)
+    }
+
     private static let totalsKeys: Set<String> = [
         "count", "distance_km", "energy_kwh", "known_distance_count", "known_energy_count",
         "paired_count", "paired_distance_km", "paired_energy_kwh", "consumption_kwh_100km"
