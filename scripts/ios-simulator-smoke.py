@@ -23,9 +23,23 @@ DEVICE_TYPE = "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max"
 BUNDLE = "com.lucas.pulse"
 UI_SCHEME = "PulseStartupCI"
 UI_TEST = "PulseStartupUITests/PulseStartupUITests/testGenericLoginRenders"
-UI_READY_MARKER = "PULSE_CI_UI_READY_V1"
-UI_PNG_PREFIX = "PULSE_CI_UI_PNG_V1:"
+UI_READY_MARKER = "PULSE_CI_UI_READY_V2"
+LEGACY_UI_READY_MARKER = "PULSE_CI_UI_READY_V1"
+UI_PNG_PREFIX = "PULSE_CI_UI_PNG_V2:"
+UI_PIXEL_CHECKS_PREFIX = "PULSE_CI_UI_VISUAL_PIXEL_CHECKS_V2:"
 MAX_PNG_BYTES = 10 * 1024 * 1024
+VISUAL_SAMPLE_SIZE = 32 * 32
+MIN_CONTRASTING_PIXELS = 12
+MIN_LUMA_DELTA = 12
+VISUAL_PIXEL_REASONS = frozenset({
+    "none", "not-observed", "deadline", "foreground-changed",
+    "accessibility-changed", "frames-changed", "invalid-image",
+    *(f"{target}-{reason}" for target in ("heading", "notice") for reason in (
+        "invalid-frame", "incoherent-scale", "frame-out-of-bounds",
+        "crop-out-of-bounds", "crop-unavailable", "render-unavailable",
+        "transparent-pixels", "low-distributed-contrast",
+    )),
+})
 UI_ERROR_WORDS = frozenset({
     "action", "application", "architecture", "available", "build", "built",
     "bundle", "bundles", "cannot", "code", "codesigned", "configured",
@@ -68,8 +82,12 @@ def ui_failure_diagnostic(result: subprocess.CompletedProcess) -> dict:
                 words.add(word)
             if word in UI_ERROR_OPTIONS:
                 options.add(word)
-    return {"return_code": result.returncode, "xcodebuild_error_detected": bool(errors),
-            "known_error_words": sorted(words), "known_error_options": sorted(options)}
+    diagnostic = {"return_code": result.returncode, "xcodebuild_error_detected": bool(errors),
+                  "known_error_words": sorted(words), "known_error_options": sorted(options)}
+    pixel_checks = _visual_metrics_from_output(output, require_pass=False)
+    if pixel_checks is not None:
+        diagnostic["visual_pixel_checks"] = pixel_checks
+    return diagnostic
 
 
 def progress(stage: str) -> None:
@@ -111,16 +129,76 @@ def screenshot(device_id: str, filename: str, stage: str) -> None:
         raise SmokeFailure(stage, "invalid-png")
 
 
-def retain_ui_screenshot(output: str) -> None:
-    """Only retain the screenshot taken inside the successful semantic UI test.
+def validate_visual_pixel_checks(value: object, *, require_pass: bool) -> dict | None:
+    """Accept only the bounded numeric receipt emitted by the current XCTest."""
+    expected = {
+        "passed", "reason", "sample_size", "minimum_contrasting_pixels",
+        "minimum_luma_delta", "heading_contrasting_pixels",
+        "heading_p95_minus_p5_luma", "notice_contrasting_pixels",
+        "notice_p95_minus_p5_luma", "frames_stable",
+        "foreground_revalidated", "accessibility_revalidated",
+    }
+    if not isinstance(value, dict) or set(value) != expected:
+        return None
+    integer_fields = (
+        "sample_size", "minimum_contrasting_pixels", "minimum_luma_delta",
+        "heading_contrasting_pixels", "heading_p95_minus_p5_luma",
+        "notice_contrasting_pixels", "notice_p95_minus_p5_luma",
+    )
+    if any(type(value[field]) is not int for field in integer_fields):
+        return None
+    if (value["sample_size"] != VISUAL_SAMPLE_SIZE
+            or value["minimum_contrasting_pixels"] != MIN_CONTRASTING_PIXELS
+            or value["minimum_luma_delta"] != MIN_LUMA_DELTA
+            or not 0 <= value["heading_contrasting_pixels"] <= VISUAL_SAMPLE_SIZE
+            or not 0 <= value["notice_contrasting_pixels"] <= VISUAL_SAMPLE_SIZE
+            or not 0 <= value["heading_p95_minus_p5_luma"] <= 255
+            or not 0 <= value["notice_p95_minus_p5_luma"] <= 255):
+        return None
+    if (type(value["passed"]) is not bool or not isinstance(value["reason"], str)
+            or value["reason"] not in VISUAL_PIXEL_REASONS):
+        return None
+    boolean_fields = ("frames_stable", "foreground_revalidated", "accessibility_revalidated")
+    if any(type(value[field]) is not bool for field in boolean_fields):
+        return None
+    if value["passed"]:
+        if (value["reason"] != "none"
+                or value["heading_contrasting_pixels"] < MIN_CONTRASTING_PIXELS
+                or value["notice_contrasting_pixels"] < MIN_CONTRASTING_PIXELS
+                or value["heading_p95_minus_p5_luma"] < MIN_LUMA_DELTA
+                or value["notice_p95_minus_p5_luma"] < MIN_LUMA_DELTA
+                or not all(value[field] for field in boolean_fields)):
+            return None
+    elif require_pass or value["reason"] == "none":
+        return None
+    return {field: value[field] for field in expected}
 
-    Never print the captured XCTest output, its image transport, or raw errors.
-    A post-test simctl screenshot could show a terminated/replaced application.
-    """
+
+def _visual_metrics_from_output(output: str, *, require_pass: bool) -> dict | None:
+    lines = [line.strip() for line in output.splitlines()]
+    records = [line[len(UI_PIXEL_CHECKS_PREFIX):]
+               for line in lines if line.startswith(UI_PIXEL_CHECKS_PREFIX)]
+    if len(records) != 1:
+        return None
+    try:
+        raw = json.loads(records[0], object_pairs_hook=_unique_json_object,
+                         parse_constant=_reject_json_constant)
+    except (ValueError, TypeError):
+        return None
+    return validate_visual_pixel_checks(raw, require_pass=require_pass)
+
+
+def retain_ui_screenshot(output: str) -> dict:
+    """Retain only the exact XCTest screenshot that passed the V2 pixel guard."""
     lines = [line.strip() for line in output.splitlines()]
     images = [line[len(UI_PNG_PREFIX):] for line in lines if line.startswith(UI_PNG_PREFIX)]
-    if lines.count(UI_READY_MARKER) != 1 or len(images) != 1:
+    if (lines.count(UI_READY_MARKER) != 1
+            or LEGACY_UI_READY_MARKER in lines
+            or len(images) != 1):
         raise SmokeFailure("ui-readiness", "readiness-not-reported")
+    pixel_checks = _visual_metrics_from_output(output, require_pass=True)
+    if pixel_checks is None:
+        raise SmokeFailure("ui-readiness", "visual-pixel-checks")
     if len(images[0]) > ((MAX_PNG_BYTES + 2) // 3) * 4:
         raise SmokeFailure("ui-readiness", "invalid-png")
     try:
@@ -130,6 +208,20 @@ def retain_ui_screenshot(output: str) -> None:
     if len(data) > MAX_PNG_BYTES or data[:8] != b"\x89PNG\r\n\x1a\n":
         raise SmokeFailure("ui-readiness", "invalid-png")
     (OUTPUT / "startup.png").write_bytes(data)
+    return pixel_checks
+
+
+def _unique_json_object(pairs: list[tuple[str, object]]) -> dict:
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON key")
+        result[key] = value
+    return result
+
+
+def _reject_json_constant(value: str):
+    raise ValueError("non-finite JSON number")
 
 
 def main() -> None:
@@ -171,10 +263,11 @@ def main() -> None:
         raise SmokeFailure("device-type-check", "unavailable")
     OUTPUT.mkdir(parents=True, exist_ok=False)
     name = "Pulse-CI-" + uuid.uuid4().hex
-    receipt = {"receipt_version": 2,
+    receipt = {"receipt_version": 3,
                "runtime": RUNTIME, "device_type": DEVICE_TYPE, "bundle_id": BUNDLE,
                "operator_configuration": False, "installed": False, "launched": False,
                "process_alive_after_seconds": 0, "screenshot_created": False,
+               "diagnostic_screenshot_created": False,
                "launch_observer": "XCTest",
                "process_liveness_observation": "replaced_by_semantic_XCTest",
                "initial_screenshot_created": False,
@@ -186,6 +279,7 @@ def main() -> None:
                "ui_readiness_command_timeout_seconds": 240,
                "test_repetition": "single_test_scheme_without_repetition_options",
                "ui_readiness_failure_diagnostic": None,
+               "visual_pixel_checks": None,
                "diagnostic_capture_failure": None,
                "visual_review_pending": True, "widget_runtime_verified": False,
                "physical_device_verified": False, "owned_simulator_removed": False,
@@ -232,7 +326,13 @@ def main() -> None:
             "-parallel-testing-enabled", "NO",
             "CODE_SIGNING_ALLOWED=NO", "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=",
         ], stage=stage, timeout=240)
-        retain_ui_screenshot(ui_output)
+        receipt["visual_pixel_checks"] = _visual_metrics_from_output(ui_output, require_pass=False)
+        try:
+            receipt["visual_pixel_checks"] = retain_ui_screenshot(ui_output)
+        except SmokeFailure as exc:
+            if receipt["visual_pixel_checks"] is not None:
+                exc.diagnostic = {"visual_pixel_checks": receipt["visual_pixel_checks"]}
+            raise
         receipt["launched"] = True
         receipt["ui_readiness_method_completed"] = True
         receipt["rendered_startup_verified"] = True
@@ -241,6 +341,8 @@ def main() -> None:
         operation_failure = {"stage": exc.stage, "type": exc.failure_type}
         if exc.stage == "ui-readiness" and exc.diagnostic is not None:
             receipt["ui_readiness_failure_diagnostic"] = exc.diagnostic
+            if "visual_pixel_checks" in exc.diagnostic:
+                receipt["visual_pixel_checks"] = exc.diagnostic["visual_pixel_checks"]
             print("iOS UI failure diagnostic: " + json.dumps(exc.diagnostic, sort_keys=True), flush=True)
     except Exception:
         operation_failure = {"stage": stage, "type": "operation"}
@@ -251,8 +353,9 @@ def main() -> None:
             try:
                 if own_device(device_id, name).get("state") != "Booted":
                     raise SmokeFailure("failure-screenshot", "not-booted")
-                screenshot(device_id, "startup.png", "failure-screenshot")
+                screenshot(device_id, "startup-diagnostic.png", "failure-screenshot")
                 receipt["screenshot_created"] = True
+                receipt["diagnostic_screenshot_created"] = True
             except SmokeFailure as exc:
                 receipt["diagnostic_capture_failure"] = {"stage": exc.stage, "type": exc.failure_type}
             except Exception:

@@ -17,6 +17,29 @@ smoke = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(smoke)
 
 
+def visual_pixel_checks(*, passed=True, reason="none", heading_pixels=24,
+                        heading_spread=80, notice_pixels=20, notice_spread=40):
+    return {
+        "passed": passed,
+        "reason": reason,
+        "sample_size": smoke.VISUAL_SAMPLE_SIZE,
+        "minimum_contrasting_pixels": smoke.MIN_CONTRASTING_PIXELS,
+        "minimum_luma_delta": smoke.MIN_LUMA_DELTA,
+        "heading_contrasting_pixels": heading_pixels,
+        "heading_p95_minus_p5_luma": heading_spread,
+        "notice_contrasting_pixels": notice_pixels,
+        "notice_p95_minus_p5_luma": notice_spread,
+        "frames_stable": True,
+        "foreground_revalidated": True,
+        "accessibility_revalidated": True,
+    }
+
+
+def visual_pixel_record(value=None):
+    value = value or visual_pixel_checks()
+    return smoke.UI_PIXEL_CHECKS_PREFIX + json.dumps(value, sort_keys=True)
+
+
 class IOSSimulatorSmokeTests(unittest.TestCase):
     def test_ui_failure_diagnostic_has_only_fixed_words_and_no_free_text(self):
         secret = "CANARY_PRIVATE_TOKEN_20261013"
@@ -80,6 +103,47 @@ class IOSSimulatorSmokeTests(unittest.TestCase):
         self.assertTrue(receipt["owned_simulator_removed"])
         self.assertIsNone(receipt["cleanup_failure"])
 
+    def test_failed_guard_metrics_reach_receipt_without_marking_startup_verified(self):
+        metrics = visual_pixel_checks(
+            passed=False, reason="notice-low-distributed-contrast",
+            notice_pixels=0, notice_spread=0,
+        )
+        diagnostic = {
+            "return_code": 70,
+            "xcodebuild_error_detected": False,
+            "known_error_words": [],
+            "known_error_options": [],
+            "visual_pixel_checks": metrics,
+        }
+
+        def failed_ui(arguments, *, stage, timeout=60):
+            if stage == "ui-readiness":
+                raise smoke.SmokeFailure(stage, "operation", diagnostic)
+            return self.successful_run(arguments, stage=stage, timeout=timeout)
+
+        with self.assertRaises(smoke.SmokeFailure):
+            self.run_main(failed_ui)
+        receipt = self.receipt()
+        self.assertEqual(receipt["visual_pixel_checks"], metrics)
+        self.assertEqual(receipt["ui_readiness_failure_diagnostic"], diagnostic)
+        self.assertFalse(receipt["rendered_startup_verified"])
+        self.assertFalse((self.output / "startup.png").exists())
+        self.assertTrue(receipt["diagnostic_screenshot_created"])
+
+    def test_failed_ui_diagnostic_retains_only_bounded_pixel_metrics(self):
+        metrics = visual_pixel_checks(
+            passed=False, reason="notice-low-distributed-contrast",
+            notice_pixels=0, notice_spread=0,
+        )
+        secret = "CANARY_PRIVATE_TOKEN_20261013"
+        result = subprocess.CompletedProcess(
+            [], 70, visual_pixel_record(metrics) + "\n" + secret,
+            "xcodebuild: error: test failed at /private/" + secret,
+        )
+        diagnostic = smoke.ui_failure_diagnostic(result)
+        self.assertEqual(diagnostic["visual_pixel_checks"], metrics)
+        self.assertNotIn(secret, json.dumps(diagnostic))
+
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
         self.root = Path(self.tempdir.name)
@@ -132,7 +196,11 @@ class IOSSimulatorSmokeTests(unittest.TestCase):
         if stage in {"screenshot", "initial-screenshot", "failure-screenshot"}:
             Path(arguments[-1]).write_bytes(b"\x89PNG\r\n\x1a\nimage")
         if stage == "ui-readiness":
-            return smoke.UI_PNG_PREFIX + base64.b64encode(b"\x89PNG\r\n\x1a\nui-image").decode() + "\n" + smoke.UI_READY_MARKER
+            return "\n".join((
+                visual_pixel_record(),
+                smoke.UI_PNG_PREFIX + base64.b64encode(b"\x89PNG\r\n\x1a\nui-image").decode(),
+                smoke.UI_READY_MARKER,
+            ))
         return ""
 
     def receipt(self):
@@ -143,7 +211,7 @@ class IOSSimulatorSmokeTests(unittest.TestCase):
         receipt = self.receipt()
         self.assertTrue(receipt["installed"])
         self.assertTrue(receipt["launched"])
-        self.assertEqual(receipt["receipt_version"], 2)
+        self.assertEqual(receipt["receipt_version"], 3)
         self.assertEqual(receipt["process_alive_after_seconds"], 0)
         self.assertEqual(receipt["process_liveness_observation"], "replaced_by_semantic_XCTest")
         self.assertEqual(receipt["launch_observer"], "XCTest")
@@ -153,6 +221,8 @@ class IOSSimulatorSmokeTests(unittest.TestCase):
         self.assertTrue(receipt["screenshot_created"])
         self.assertTrue(receipt["initial_screenshot_created"])
         self.assertTrue(receipt["rendered_startup_verified"])
+        self.assertEqual(receipt["visual_pixel_checks"], visual_pixel_checks())
+        self.assertFalse(receipt["diagnostic_screenshot_created"])
         self.assertEqual((self.output / "startup.png").read_bytes(), b"\x89PNG\r\n\x1a\nui-image")
         self.assertEqual((self.output / "startup-initial.png").read_bytes(), b"\x89PNG\r\n\x1a\nimage")
         self.assertTrue(receipt["owned_simulator_removed"])
@@ -313,6 +383,9 @@ class IOSSimulatorSmokeTests(unittest.TestCase):
         self.assertTrue(receipt["initial_screenshot_created"])
         self.assertTrue(receipt["owned_simulator_removed"])
         self.assertEqual((self.output / "startup-initial.png").read_bytes(), b"\x89PNG\r\n\x1a\nimage")
+        self.assertTrue(receipt["diagnostic_screenshot_created"])
+        self.assertFalse((self.output / "startup.png").exists())
+        self.assertTrue((self.output / "startup-diagnostic.png").is_file())
 
     def test_ui_timeout_and_diagnostic_capture_failure_do_not_mask_each_other(self):
         def failures(arguments, *, stage, timeout=60):
@@ -328,25 +401,53 @@ class IOSSimulatorSmokeTests(unittest.TestCase):
         self.assertEqual(receipt["diagnostic_capture_failure"], {"stage": "failure-screenshot", "type": "operation"})
         self.assertTrue(receipt["owned_simulator_removed"])
         self.assertFalse(receipt["rendered_startup_verified"])
+        self.assertFalse(receipt["diagnostic_screenshot_created"])
 
     def test_ui_transport_rejects_missing_duplicate_malformed_and_non_png_records(self):
         image = smoke.UI_PNG_PREFIX + base64.b64encode(b"\x89PNG\r\n\x1a\nimage").decode()
+        metrics = visual_pixel_record()
         for text in (smoke.UI_READY_MARKER, image,
-                     image + "\n" + smoke.UI_READY_MARKER + "\n" + smoke.UI_READY_MARKER,
-                     image + "\n" + image + "\n" + smoke.UI_READY_MARKER,
-                     smoke.UI_PNG_PREFIX + "!!!\n" + smoke.UI_READY_MARKER,
-                     smoke.UI_PNG_PREFIX + base64.b64encode(b"not-png").decode() + "\n" + smoke.UI_READY_MARKER):
+                     metrics + "\n" + image + "\n" + smoke.UI_READY_MARKER + "\n" + smoke.UI_READY_MARKER,
+                     metrics + "\n" + image + "\n" + image + "\n" + smoke.UI_READY_MARKER,
+                     metrics + "\n" + smoke.UI_PNG_PREFIX + "!!!\n" + smoke.UI_READY_MARKER,
+                     metrics + "\n" + smoke.UI_PNG_PREFIX + base64.b64encode(b"not-png").decode() + "\n" + smoke.UI_READY_MARKER,
+                     metrics + "\n" + image + "\n" + smoke.UI_READY_MARKER + "\n" + smoke.LEGACY_UI_READY_MARKER):
             with self.subTest(record=text[:30]), mock.patch.object(smoke, "OUTPUT", self.output):
                 self.output.mkdir(exist_ok=True)
                 with self.assertRaises(smoke.SmokeFailure):
                     smoke.retain_ui_screenshot(text)
                 self.assertFalse((self.output / "startup.png").exists())
 
+    def test_v1_ready_marker_is_not_accepted_even_with_valid_v2_metrics_and_png(self):
+        image = smoke.UI_PNG_PREFIX + base64.b64encode(b"\x89PNG\r\n\x1a\nimage").decode()
+        output = "\n".join((visual_pixel_record(), image, smoke.LEGACY_UI_READY_MARKER))
+        with mock.patch.object(smoke, "OUTPUT", self.output):
+            self.output.mkdir()
+            with self.assertRaises(smoke.SmokeFailure) as caught:
+                smoke.retain_ui_screenshot(output)
+        self.assertEqual(caught.exception.failure_type, "readiness-not-reported")
+        self.assertFalse((self.output / "startup.png").exists())
+
+    def test_pixel_metrics_reject_untrusted_or_insufficient_success_receipts(self):
+        cases = (
+            visual_pixel_checks(heading_pixels=11),
+            visual_pixel_checks(notice_spread=11),
+            {**visual_pixel_checks(), "frames_stable": False},
+            {**visual_pixel_checks(), "reason": "private-label"},
+        )
+        for value in cases:
+            with self.subTest(value=value):
+                self.assertIsNone(smoke.validate_visual_pixel_checks(value, require_pass=True))
+
     def test_ui_transport_bounds_encoded_and_decoded_image_size(self):
         with mock.patch.object(smoke, "MAX_PNG_BYTES", 8), mock.patch.object(smoke, "OUTPUT", self.output):
             for data in (b"\x89PNG\r\n\x1a\nX", b"\x89PNG\r\n\x1a\n" + b"x" * 100):
                 with self.subTest(size=len(data)), self.assertRaises(smoke.SmokeFailure):
-                    smoke.retain_ui_screenshot(smoke.UI_PNG_PREFIX + base64.b64encode(data).decode() + "\n" + smoke.UI_READY_MARKER)
+                    smoke.retain_ui_screenshot("\n".join((
+                        visual_pixel_record(),
+                        smoke.UI_PNG_PREFIX + base64.b64encode(data).decode(),
+                        smoke.UI_READY_MARKER,
+                    )))
 
     def test_ui_build_input_must_match_the_preflight_app(self):
         with mock.patch.object(smoke.sys, "platform", "darwin"), mock.patch.object(smoke, "ROOT", self.root), \
