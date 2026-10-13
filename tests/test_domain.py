@@ -306,6 +306,8 @@ def test_schema_v2_migrates_additively_and_preserves_existing_data(tmp_path, mon
         connection.execute("DROP TABLE IF EXISTS charger_energy_epochs")
         connection.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
         connection.execute("DROP TABLE IF EXISTS manual_charge_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journey_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journeys")
         connection.execute("PRAGMA user_version = 2")
         connection.execute(
             "INSERT INTO demo_command_journal VALUES (?, 'unlock', 'simulated', ?, ?)",
@@ -366,6 +368,8 @@ def test_schema_v3_migrates_charge_pricing_and_preserves_indexes(tmp_path, monke
         connection.execute("DROP TABLE IF EXISTS charger_energy_epochs")
         connection.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
         connection.execute("DROP TABLE IF EXISTS manual_charge_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journey_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journeys")
         connection.execute("PRAGMA user_version = 3")
         connection.execute(
             """INSERT INTO manual_charges
@@ -437,6 +441,8 @@ def test_schema_v5_migrates_to_v6_without_changing_existing_records(tmp_path):
         connection.execute("DROP TABLE charger_observations")
         connection.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
         connection.execute("DROP TABLE IF EXISTS manual_charge_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journey_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journeys")
         connection.execute("PRAGMA user_version = 5")
 
     migrated = Store(path)
@@ -485,8 +491,8 @@ def test_json_archive_v6_and_import_preserves_private_push_rows(tmp_path):
         expiry.isoformat(),
     )
     archive = store.export_data()
-    assert SCHEMA_VERSION == 19
-    assert archive["schema_version"] == EXPORT_VERSION == 15
+    assert SCHEMA_VERSION == 20
+    assert archive["schema_version"] == EXPORT_VERSION == 16
     assert archive["charger_energy"] == {"epochs": [], "intervals": []}
     assert "push_subscriptions" not in archive
     assert row["ciphertext"] not in json.dumps(archive, ensure_ascii=False)
@@ -513,10 +519,12 @@ def test_schema_v11_migration_preserves_existing_charge_costs(tmp_path):
         connection.execute("DROP TABLE charger_energy_epochs")
         connection.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
         connection.execute("DROP TABLE IF EXISTS manual_charge_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journey_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journeys")
         connection.execute("PRAGMA user_version = 11")
 
     migrated = Store(path)
-    assert SCHEMA_VERSION == 19
+    assert SCHEMA_VERSION == 20
     restored = migrated.get_charge(charge["id"])
     assert restored["cost_eur"] == 1.61
     assert restored["tariff_eur_kwh"] == 0.23
@@ -532,6 +540,7 @@ def test_json_v9_import_preserves_charge_cost_and_exports_current(tmp_path):
     charge = source.add_charge({"started_at": "2026-10-08T08:00:00Z", "kwh": 7})
     legacy = source.export_data()
     legacy["schema_version"] = 9
+    legacy.pop("manual_journeys")
     legacy["settings"].pop("vehicle_color")
     legacy.pop("charger_pricing_history")
     legacy.pop("charger_energy")
@@ -542,7 +551,7 @@ def test_json_v9_import_preserves_charge_cost_and_exports_current(tmp_path):
     assert restored["cost_eur"] == 1.61
     assert restored["tariff_eur_kwh"] == 0.23
     current = destination.export_data()
-    assert current["schema_version"] == 15
+    assert current["schema_version"] == 16
     assert current["charger_energy"] == {"epochs": [], "intervals": []}
 
 def test_schema_v3_archive_import_remains_compatible(tmp_path):
@@ -550,6 +559,7 @@ def test_schema_v3_archive_import_remains_compatible(tmp_path):
     source.set_demo(True)
     v3 = copy.deepcopy(source.export_data())
     v3["schema_version"] = 3
+    v3.pop("manual_journeys")
     v3.pop("charger")
     v3.pop("charger_pricing")
     v3.pop("observed_events")
@@ -565,7 +575,7 @@ def test_schema_v3_archive_import_remains_compatible(tmp_path):
     destination = Store(tmp_path / "restore-v3.sqlite3")
     assert destination.import_data(v3) == {"ok": True, "mode": "demo"}
     restored = destination.export_data()
-    assert restored["schema_version"] == 15
+    assert restored["schema_version"] == 16
     assert restored["settings"]["pricing_method"] == "manual"
     assert len(restored["charges"]) == len(v3["charges"])
     assert all(charge["pricing_method"] is None for charge in restored["charges"] if charge["source"] == "demo")
@@ -727,6 +737,7 @@ def test_import_accepts_version_one_export_and_reexports_version_four(tmp_path):
     source.add_charge({"started_at": "2026-10-07T08:00:00Z", "kwh": 6})
     document = source.export_data()
     document["schema_version"] = 1
+    document.pop("manual_journeys")
     document.pop("charger")
     document.pop("charger_pricing")
     document.pop("observed_events")
@@ -747,7 +758,7 @@ def test_import_accepts_version_one_export_and_reexports_version_four(tmp_path):
     destination = Store(tmp_path / "second.sqlite3")
     assert destination.import_data(document) == {"ok": True, "mode": "demo"}
     restored = destination.export_data()
-    assert restored["schema_version"] == 15
+    assert restored["schema_version"] == 16
     assert restored["mode"] == "demo"
     assert len(restored["charges"]) == len(document["charges"])
     assert all(item["tariff_eur_kwh"] is None for item in restored["charges"])
@@ -764,6 +775,7 @@ def test_v2_import_rejects_physical_or_inconsistent_demo_data_atomically(tmp_pat
     before = store.state("Pulse", "0.1")
     exported = store.export_data()
     exported["schema_version"] = 2
+    exported.pop("manual_journeys")
     exported.pop("charger")
     exported.pop("charger_pricing")
     exported.pop("observed_events")
@@ -816,6 +828,7 @@ def test_v3_demo_restore_requires_the_persisted_demo_vehicle_snapshot(tmp_path):
     before = store.export_data()
     incomplete = copy.deepcopy(before)
     incomplete["schema_version"] = 3
+    incomplete.pop("manual_journeys")
     incomplete.pop("charger")
     incomplete.pop("charger_pricing")
     incomplete.pop("observed_events")

@@ -233,12 +233,11 @@
     "notification_delivered": false
   },
   "current_storage": {
-    "sqlite_schema": 18,
-    "export_format": 15,
-    "phase3_receipt_is_historical": true,
-    "phase9_receipt_is_historical": true,
-    "qualification": "docs/BACKUP-ALERTS-QUALIFICATION.json",
-    "deployment_schema_verified": false
+    "sqlite": 20,
+    "json_export": 16,
+    "migration": "19→20 manual_journeys and private request ledger",
+    "json_ledger_exported": false,
+    "real_database_migrated": false
   },
   "phase9": {
     "status": "software_verified_not_delivered",
@@ -286,5 +285,171 @@
     "limits": [
       "This records native asset/UI source alignment only; it does not establish a signed or distributed Android package, a current Phase 8 IPA, physical acceptance, or runtime deployment."
     ]
+  },
+  "current_local_ui_increment": {
+    "name": "Diario privado de trayectos manuales e informes",
+    "status": "local_software_verified_native_android_unsigned_apple_pending",
+    "source_published": false,
+    "runtime_delivered": false,
+    "signed_or_distributed": false,
+    "qualification": "docs/MANUAL-JOURNEY-QUALIFICATION.json",
+    "validation": {
+      "backend": {
+        "passed": 1285,
+        "subtests": 131,
+        "skipped": 34,
+        "skip_reason": "optional leapmotor_cloud absent"
+      },
+      "web": 57,
+      "mobile": 7,
+      "svelte_errors": 0,
+      "svelte_warnings": 0,
+      "contracts_types_builds": "passed",
+      "focal_manual_backend": 39
+    },
+    "browser": {
+      "scope": "own_loopback_real_component_SQLite_HTTP_synthetic_failures_and_records",
+      "bundle": "assets/index-Cu8bUkpr.js",
+      "records": 4,
+      "post_commit503_then_same_intent_replay": "one row",
+      "edit_commit503_then_same_intent_replay": "same revision2",
+      "nullable_metrics": "no fabricated values or unpaired denominator",
+      "small_quantities": "6e-7 survives create/edit/retry",
+      "stops_minutes": [
+        60,
+        10,
+        50
+      ],
+      "guards": "uncertainty survives clearing fields; cancelled navigation/edit/discard",
+      "reservation_failure_recovery": "passed",
+      "read_failure_recovery": "passed",
+      "restart_persistence": "passed",
+      "annual_empty_months": 13,
+      "viewport_width": 390,
+      "horizontal_overflow": false,
+      "form_targets_min_height": 48,
+      "dark_form_visual_review": "passed",
+      "console_errors_warnings": 0,
+      "real_network_loss": false,
+      "export_download_reception": "pending_previous_browser_permission_denial_not_bypassed",
+      "ui_delete": "not_executed",
+      "screenshots": "observed_inline_no_supported_file_save"
+    },
+    "android": {
+      "path": "outputs/pulse-android-unsigned-phase5-20261013.apk",
+      "sha256": "3fa15babad48b3f20214dad9d3d76f1eb8dfa43b91dfc3aea00d993c57361a14",
+      "bytes": 6544876,
+      "unit_tests": 77,
+      "unit_skipped": 0,
+      "lint_errors": 0,
+      "lint_warnings": 17,
+      "dist_assets": 44,
+      "empty_bridges": 2,
+      "runtime_connection_fields_empty": 7,
+      "signed": false,
+      "installed": false,
+      "physical_acceptance": false
+    },
+    "ios": {
+      "status": "pending_new_source_apple_build",
+      "previous_phase4_run_does_not_qualify_this_increment": true,
+      "signed": false,
+      "physical_acceptance": false
+    }
+  },
+  "manual_journeys": {
+    "schema_version": 1,
+    "date": "2026-10-13",
+    "increment": "phase5-manual-journeys",
+    "status": "local_software_verified_native_android_unsigned_apple_pending",
+    "goal_status": "active",
+    "phases": 9,
+    "real_gates_pending": 7,
+    "storage_schema": 20,
+    "export_version": 16,
+    "source": "manual",
+    "coverage": "unknown",
+    "automatic_ingestion": false,
+    "real_vehicle_or_charger": false,
+    "runtime_deployed": false,
+    "source_publication": {
+      "status": "pending_at_source_freeze",
+      "scope": "generic_sources_only_reviewed_branches_no_main_or_production"
+    },
+    "validation": {
+      "backend": {
+        "passed": 1285,
+        "subtests": 131,
+        "skipped": 34,
+        "skip_reason": "optional leapmotor_cloud absent"
+      },
+      "web": 57,
+      "mobile": 7,
+      "svelte_errors": 0,
+      "svelte_warnings": 0,
+      "contracts_types_builds": "passed",
+      "focal_manual_backend": 39
+    },
+    "android": {
+      "path": "outputs/pulse-android-unsigned-phase5-20261013.apk",
+      "sha256": "3fa15babad48b3f20214dad9d3d76f1eb8dfa43b91dfc3aea00d993c57361a14",
+      "bytes": 6544876,
+      "unit_tests": 77,
+      "unit_skipped": 0,
+      "lint_errors": 0,
+      "lint_warnings": 17,
+      "dist_assets": 44,
+      "empty_bridges": 2,
+      "runtime_connection_fields_empty": 7,
+      "signed": false,
+      "installed": false,
+      "physical_acceptance": false
+    },
+    "ios": {
+      "status": "pending_new_source_apple_build",
+      "previous_phase4_run_does_not_qualify_this_increment": true,
+      "signed": false,
+      "physical_acceptance": false
+    },
+    "browser": {
+      "scope": "own_loopback_real_component_SQLite_HTTP_synthetic_failures_and_records",
+      "bundle": "assets/index-Cu8bUkpr.js",
+      "records": 4,
+      "post_commit503_then_same_intent_replay": "one row",
+      "edit_commit503_then_same_intent_replay": "same revision2",
+      "nullable_metrics": "no fabricated values or unpaired denominator",
+      "small_quantities": "6e-7 survives create/edit/retry",
+      "stops_minutes": [
+        60,
+        10,
+        50
+      ],
+      "guards": "uncertainty survives clearing fields; cancelled navigation/edit/discard",
+      "reservation_failure_recovery": "passed",
+      "read_failure_recovery": "passed",
+      "restart_persistence": "passed",
+      "annual_empty_months": 13,
+      "viewport_width": 390,
+      "horizontal_overflow": false,
+      "form_targets_min_height": 48,
+      "dark_form_visual_review": "passed",
+      "console_errors_warnings": 0,
+      "real_network_loss": false,
+      "export_download_reception": "pending_previous_browser_permission_denial_not_bypassed",
+      "ui_delete": "not_executed",
+      "screenshots": "observed_inline_no_supported_file_save"
+    },
+    "review": {
+      "status": "final_closure_review_pending",
+      "previous_material_findings": "streaming report/export, huge numeric validation and tiny quantity editor corrected"
+    },
+    "limits": [
+      "Manual entries do not qualify automatic B10 trips, coverage, fresh vehicle timestamps or measured energy.",
+      "No phone, signing, OAuth, WidgetKit runtime, charger, real network failure or production acceptance.",
+      "No 100000-row RSS stress acceptance; streaming structure and bounded-export tests only.",
+      "All A0-A12, nine phases and seven real gates remain pending as applicable; sentry/cameras final."
+    ],
+    "rollback": "Source snapshot in evidence/phase5-manual-journeys-20261013/before; future runtime rollback requires coherent SQLite19 backup. No operational database migrated.",
+    "evidence": "evidence/phase5-manual-journeys-20261013"
   }
 }

@@ -245,6 +245,8 @@ def test_v17_migration_preserves_push_rows_and_keeps_alert_consent_disabled(tmp_
         db.execute("ALTER TABLE push_subscriptions DROP COLUMN backup_alerts_consented_at")
         db.execute("ALTER TABLE push_subscriptions DROP COLUMN backup_alerts_enabled")
         db.execute("DROP TABLE IF EXISTS manual_charge_requests")
+        db.execute("DROP TABLE IF EXISTS manual_journey_requests")
+        db.execute("DROP TABLE IF EXISTS manual_journeys")
         db.execute("PRAGMA user_version = 17")
 
     migrated = Store(path, clock=clock)
@@ -253,9 +255,9 @@ def test_v17_migration_preserves_push_rows_and_keeps_alert_consent_disabled(tmp_
     assert upgraded["created_at"] == row["created_at"] and upgraded["ciphertext"] == row["ciphertext"]
     assert upgraded["backup_alerts_enabled"] == 0 and upgraded["backup_alerts_consented_at"] is None
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 19
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 20
         assert db.execute("PRAGMA table_info(push_subscriptions)").fetchall()[-2][1:] == (
             "backup_alerts_enabled", "INTEGER", 1, "0", 0)
         assert db.execute("SELECT COUNT(*) FROM backup_alert_events").fetchone()[0] == 0
-    assert archive["schema_version"] == 15
+    assert archive["schema_version"] == 16
     assert "push_subscriptions" not in archive

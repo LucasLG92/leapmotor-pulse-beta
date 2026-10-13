@@ -48,11 +48,11 @@ def test_reservation_replay_is_atomic_and_returns_the_current_charge(tmp_path):
     replay = _add(reopened, reservation)
     assert replay == edited
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 19
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 20
         assert connection.execute("SELECT COUNT(*) FROM manual_charge_requests").fetchone()[0] == 1
-    assert SCHEMA_VERSION == 19
+    assert SCHEMA_VERSION == 20
     archive = reopened.export_data()
-    assert archive["schema_version"] == EXPORT_VERSION == 15
+    assert archive["schema_version"] == EXPORT_VERSION == 16
     assert "manual_charge_requests" not in str(archive)
 
 
@@ -303,12 +303,14 @@ def test_schema_18_migrates_to_19_without_changing_existing_charges(tmp_path):
     charge = store.add_charge(ATTEMPT)
     with sqlite3.connect(path) as connection:
         connection.execute("DROP TABLE manual_charge_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journey_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journeys")
         connection.execute("PRAGMA user_version = 18")
 
     migrated = Store(path)
     assert migrated.get_charge(charge["id"]) == charge
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 19
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 20
         assert connection.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='manual_charge_requests'"
         ).fetchone() is not None

@@ -87,6 +87,10 @@ La revisión del origen confirma que los buckets de evcc no comparten ID de sesi
 
 ### 5. Trayectos, historial e informes
 
+- [x] Implementar alternativa manual privada: fechas/paradas, distancia y energía opcionales, reintentos sin duplicar, revisión al editar, paginación, informe30/90/365d y meses. SQLite20/JSON16, copia/restauración por propietario.
+- [x] Comprobar UI compartida con SQLite y HTTP reales propios, fallos sintéticos, borradores y datos ausentes; compilar y auditar APK genérico sin firma. El nuevo build Apple y la recepción del JSON descargado tienen su evidencia separada.
+
+
 - [ ] Implementar recepción y persistencia de trayectos reales.
 - [ ] Detectar inicio/fin/paradas con señales verificadas; conservar distancia y duración, origen/destino y recorrido si existe ubicación.
 - [ ] Calcular consumo y eficiencia solo con muestras suficientes; explicar cobertura y ausencia de datos.
@@ -147,3 +151,5 @@ Las rutinas y los horarios son ampliaciones propuestas, sujetas a capacidades re
 ## Referencias funcionales y opcionales
 
 [Leapmotor Mate](https://github.com/ProtossBlaster/leapmotor-mate) y [LPB10](https://github.com/txurtxil/LPB10) orientan las posibilidades y los flujos; no acreditan capacidades del B10 objetivo ni autorizan copiar su implementación. Android Auto/CarPlay, otros modelos, varios vehículos e idiomas adicionales quedan fuera del cierre actual salvo decisión expresa.
+
+El diario manual es un incremento de software, no una recepción del vehículo. [Contrato](MANUAL-JOURNEYS.md) y [cualificación con límites](MANUAL-JOURNEY-QUALIFICATION.json).

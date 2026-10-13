@@ -374,7 +374,7 @@ def test_store_records_paginates_and_roundtrips_observed_changes(tmp_path):
         source.observed_events(limit=101)
 
     exported = source.export_data()
-    assert exported["schema_version"] == EXPORT_VERSION == 15
+    assert exported["schema_version"] == EXPORT_VERSION == 16
     assert exported["observed_events"] == source.observed_events(limit=100)["items"]
     destination = make_store(tmp_path, "destination.sqlite3", clock)
     destination.import_data(json.dumps(exported, allow_nan=False))
@@ -425,21 +425,24 @@ def test_legacy_exports_and_v9_database_migration_start_with_empty_history(tmp_p
         connection.execute("DROP TABLE charger_energy_epochs")
         connection.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
         connection.execute("DROP TABLE IF EXISTS manual_charge_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journey_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journeys")
         connection.execute("PRAGMA user_version = 9")
     migrated = Store(path, clock=clock)
-    assert SCHEMA_VERSION == 19
+    assert SCHEMA_VERSION == 20
     assert migrated.telemetry_latest()["id"] != stored["id"]
     assert migrated.observed_events() == {
         "items": [], "total": 0, "limit": 20, "offset": 0,
     }
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 19
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 20
         assert connection.execute(
             "SELECT COUNT(*) FROM telemetry_snapshots"
         ).fetchone()[0] == 2
 
     legacy = migrated.export_data()
     legacy["schema_version"] = 8
+    legacy.pop("manual_journeys")
     for item in legacy["telemetry_snapshots"]:
         for field in (
             "interior_temperature_c", "battery_min_temperature_c", "front_left_pressure_kpa",

@@ -35,6 +35,10 @@ export type EnergyMonth = components['schemas']['EnergyMonth'];
 export type ObservationCoverage = components['schemas']['ObservationCoverage'];
 export type EnergyEstimates = components['schemas']['EnergyEstimates'];
 export type Journey = components['schemas']['Journey'];
+export type ManualJourney = components['schemas']['ManualJourney'];
+export type ManualJourneyPage = components['schemas']['ManualJourneyPage'];
+export type ManualJourneyReport = components['schemas']['ManualJourneyReport'];
+export type ManualJourneyCreationRequest = components['schemas']['ManualJourneyCreationRequest'];
 export type MaintenanceItem = components['schemas']['Maintenance'];
 export type ProtectionEvent = components['schemas']['Event'];
 export type ObservedEvent = components['schemas']['ObservedEvent'];
@@ -77,6 +81,9 @@ export type MutationPayload =
 	| components['schemas']['CommandPayload']
 	| ChargePayload
 	| ChargeEditPayload
+	| components['schemas']['ManualJourneyPayload']
+	| components['schemas']['ManualJourneyEditPayload']
+	| components['schemas']['ManualJourneyDeletePayload']
 	| components['schemas']['MaintenancePayload']
 	| components['schemas']['MaintenanceEditPayload']
 	| components['schemas']['ImportPayload']
@@ -101,6 +108,7 @@ export interface PageProps {
 	mutate: (path: string, method: HttpMethod, data?: MutationPayload, success?: string) => Promise<boolean>;
 	quoteCharge: (payload: ChargeQuotePayload) => Promise<ChargeQuote>;
 	reserveChargeCreation: () => Promise<ChargeCreationRequest>;
+	reserveJourneyCreation: () => Promise<ManualJourneyCreationRequest>;
 	onSessionExpired: () => void;
 	navigation: {
 		status: (signal?: AbortSignal) => Promise<NavigationStatus>;

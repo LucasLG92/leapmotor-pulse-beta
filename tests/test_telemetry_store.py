@@ -55,6 +55,8 @@ def create_representative_schema16_fixture(tmp_path):
             (json.dumps(sources, allow_nan=False, separators=(",", ":")), telemetry["id"]),
         )
         connection.execute("DROP TABLE IF EXISTS manual_charge_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journey_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journeys")
         connection.execute("PRAGMA user_version = 16")
 
     return path, {
@@ -358,6 +360,7 @@ def test_v3_round_trip_and_legacy_restore_clear_v3_data_without_mixing(tmp_path)
 
     legacy = copy.deepcopy(exported)
     legacy["schema_version"] = 2
+    legacy.pop("manual_journeys")
     legacy["settings"].pop("vehicle_color")
     legacy.pop("charger_pricing_history")
     legacy.pop("charger_energy")
@@ -395,7 +398,7 @@ def test_v15_archive_restores_new_fields_and_v14_v13_add_nulls(tmp_path):
     source = make_store(tmp_path, filename="source.sqlite3")
     source_item = source.record_snapshot(snapshot())
     archive = source.export_data()
-    assert archive["schema_version"] == 15
+    assert archive["schema_version"] == 16
     assert len(archive["telemetry_snapshots"][0]["vehicle"]) == 14
     assert len(archive["telemetry_snapshots"][0]["field_sources"]) == 14
 
@@ -405,6 +408,7 @@ def test_v15_archive_restores_new_fields_and_v14_v13_add_nulls(tmp_path):
 
     legacy_v14 = copy.deepcopy(archive)
     legacy_v14["schema_version"] = 14
+    legacy_v14.pop("manual_journeys")
     for field in SECURITY_CODE_FIELDS:
         legacy_v14["telemetry_snapshots"][0]["vehicle"].pop(field)
         legacy_v14["telemetry_snapshots"][0]["field_sources"].pop(field)
@@ -418,6 +422,7 @@ def test_v15_archive_restores_new_fields_and_v14_v13_add_nulls(tmp_path):
 
     legacy_v13 = copy.deepcopy(archive)
     legacy_v13["schema_version"] = 13
+    legacy_v13.pop("manual_journeys")
     legacy_item = legacy_v13["telemetry_snapshots"][0]
     for field in (
         "interior_temperature_c", "battery_min_temperature_c", "front_left_pressure_kpa",
@@ -482,6 +487,8 @@ def test_schema_15_migration_adds_nullable_metrics_and_preserves_snapshots(tmp_p
     with sqlite3.connect(path) as connection:
         downgrade_telemetry_to_v15(connection)
         connection.execute("DROP TABLE IF EXISTS manual_charge_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journey_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journeys")
         connection.execute("PRAGMA user_version = 15")
 
     migrated = Store(path)
@@ -496,7 +503,7 @@ def test_schema_15_migration_adds_nullable_metrics_and_preserves_snapshots(tmp_p
     ))
     assert all(migrated.telemetry_latest()["vehicle"][field] is None for field in SECURITY_CODE_FIELDS)
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 19
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 20
     assert all(migrated.telemetry_latest()["field_sources"][field] is None for field in (
         "interior_temperature_c", "battery_min_temperature_c", "front_left_pressure_kpa",
         "front_right_pressure_kpa", "rear_left_pressure_kpa", "rear_right_pressure_kpa",
@@ -520,6 +527,8 @@ def test_schema_15_migration_rejects_corrupt_snapshot_without_partial_upgrade(
         else:
             connection.execute("ALTER TABLE telemetry_snapshots DROP COLUMN field_sources_json")
         connection.execute("DROP TABLE IF EXISTS manual_charge_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journey_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journeys")
         connection.execute("PRAGMA user_version = 15")
 
     with pytest.raises(DomainError):
@@ -559,7 +568,7 @@ def test_representative_schema16_fixture_migrates_additively_without_inference(t
     )
     assert migrated.list_widget_profiles("owner-migration")["items"] == [legacy["profile"]]
     with sqlite3.connect(migration_path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 19
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 20
         columns = {
             row[1] for row in connection.execute("PRAGMA table_info(telemetry_snapshots)")
         }

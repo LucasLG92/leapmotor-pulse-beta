@@ -34,11 +34,19 @@ public enum NativeAPIPolicy {
             if ["/api/charges", "/api/telemetry/history"].contains(path) {
                 return boundedPageQuery(parameters)
             }
+            if path == "/api/journeys" {
+                return boundedPageQuery(parameters)
+            }
             if ["/api/charger/sessions", "/api/protection/observations"].contains(path) {
                 guard boundedPageQuery(parameters) else { return false }
                 return parameters["offset"].flatMap(Int.init).map { $0 <= 1000 } ?? true
             }
             if path == "/api/analytics/energy" {
+                guard !parameters.isEmpty else { return true }
+                guard parameters.count == 1, let days = parameters["days"], isDecimal(days) else { return false }
+                return ["30", "90", "365"].contains(days)
+            }
+            if path == "/api/journeys/report" {
                 guard !parameters.isEmpty else { return true }
                 guard parameters.count == 1, let days = parameters["days"], isDecimal(days) else { return false }
                 return ["30", "90", "365"].contains(days)
@@ -55,7 +63,7 @@ public enum NativeAPIPolicy {
         }
 
         if method == "POST" {
-            if ["/api/charges/quote", "/api/charges/requests", "/api/charges", "/api/demo", "/api/commands",
+            if ["/api/charges/quote", "/api/charges/requests", "/api/charges", "/api/journeys/requests", "/api/journeys", "/api/demo", "/api/commands",
                 "/api/protection/event", "/api/maintenance", "/api/import", "/api/widget-profiles",
                 "/api/auth/logout", "/api/navigation/places", "/api/navigation/chargers", "/api/navigation/tiles"].contains(path) {
                 return parameters.isEmpty
@@ -66,6 +74,7 @@ public enum NativeAPIPolicy {
         if method == "PUT" {
             if ["/api/settings", "/api/protection", "/api/integrations/abrp"].contains(path) { return parameters.isEmpty }
             if isSingleIDRoute(path, prefix: "/api/charges/")
+                || isSingleIDRoute(path, prefix: "/api/journeys/")
                 || isSingleIDRoute(path, prefix: "/api/widget-profiles/") {
                 return parameters.isEmpty
             }
@@ -74,6 +83,7 @@ public enum NativeAPIPolicy {
 
         if method == "DELETE" {
             if isSingleIDRoute(path, prefix: "/api/charges/")
+                || isSingleIDRoute(path, prefix: "/api/journeys/")
                 || isSingleIDRoute(path, prefix: "/api/maintenance/")
                 || isSingleIDRoute(path, prefix: "/api/widget-profiles/") {
                 return parameters.isEmpty

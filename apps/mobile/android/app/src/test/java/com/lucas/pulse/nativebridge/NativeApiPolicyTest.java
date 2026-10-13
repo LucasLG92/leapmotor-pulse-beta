@@ -3,6 +3,8 @@ package com.lucas.pulse.nativebridge;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Locale;
+
 import org.junit.Test;
 
 public final class NativeApiPolicyTest {
@@ -96,6 +98,47 @@ public final class NativeApiPolicyTest {
         }
         assertFalse(NativeApiPolicy.allows("/api/protection/observations", "POST"));
         assertFalse(NativeApiPolicy.allows("/api/protection/observations", "DELETE"));
+    }
+
+    @Test public void manualJourneysHaveExactReadAndMutationRoutes() {
+        assertTrue(NativeApiPolicy.allows("/api/journeys", "GET"));
+        assertTrue(NativeApiPolicy.allows("/api/journeys?limit=100&offset=0", "GET"));
+        assertTrue(NativeApiPolicy.allows("/api/journeys?limit=1&offset=1000000", "GET"));
+        assertTrue(NativeApiPolicy.allows("/api/journeys/report", "GET"));
+        for (String days : new String[]{"30", "90", "365"}) {
+            assertTrue(NativeApiPolicy.allows("/api/journeys/report?days=" + days, "GET"));
+        }
+        assertTrue(NativeApiPolicy.allows("/api/journeys/requests", "POST"));
+        assertTrue(NativeApiPolicy.allows("/api/journeys", "POST"));
+        assertTrue(NativeApiPolicy.allows("/api/journeys/" + ID, "PUT"));
+        assertTrue(NativeApiPolicy.allows("/api/journeys/" + ID, "DELETE"));
+
+        for (String path : new String[]{"/api/journeys?limit=0", "/api/journeys?limit=101",
+                "/api/journeys?offset=-1", "/api/journeys?offset=1000001",
+                "/api/journeys?limit=1.0", "/api/journeys?limit=1&limit=2",
+                "/api/journeys?limit=1&other=1", "/api/journeys?offset=+1",
+                "/api/journeys/report?days=7", "/api/journeys/report?days=30&days=90",
+                "/api/journeys/report?days=30&extra=1", "/api/journeys/report?DAYS=30",
+                "/API/journeys", "/api/journeys/" + ID + "?x=1",
+                "/api/journeys/" + ID.toUpperCase(Locale.ROOT), "/api/journeys/../" + ID,
+                "/api/journeys/0123456789abcdef0123456789abcdeg",
+                "/api/journeys/%2e%2e/" + ID, "/api/journeys/" + ID + "/extra"}) {
+            assertFalse(path, NativeApiPolicy.allows(path, path.contains("/report")
+                    || path.equals("/api/journeys") || path.startsWith("/api/journeys?") ? "GET" : "PUT"));
+        }
+        for (String method : new String[]{"GET", "PUT", "DELETE", "PATCH"}) {
+            assertFalse(NativeApiPolicy.allows("/api/journeys/requests", method));
+        }
+        for (String method : new String[]{"PUT", "DELETE", "PATCH"}) {
+            assertFalse(NativeApiPolicy.allows("/api/journeys", method));
+        }
+        assertFalse(NativeApiPolicy.allows("/api/journeys/requests?x=1", "POST"));
+        assertFalse(NativeApiPolicy.allows("/api/journeys?x=1", "POST"));
+        assertFalse(NativeApiPolicy.allows("/api/journeys/" + ID + "?x=1", "DELETE"));
+        assertFalse(NativeApiPolicy.allows("/api/journeys/" + ID, "GET"));
+        assertFalse(NativeApiPolicy.allows("/api/journeys/" + ID, "POST"));
+        assertFalse(NativeApiPolicy.allows("/api/journeys", "get"));
+        assertFalse(NativeApiPolicy.allows("/api/journeys", "post"));
     }
 
     @Test public void rejectsRoutesAndInputsOutsideExplicitAllowlist() {

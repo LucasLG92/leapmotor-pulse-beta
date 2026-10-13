@@ -102,7 +102,7 @@ def test_temporal_identity_export_and_private_response_fields(tmp_path):
     quote = temporal(item)
     store.save_charger_temporal_pricing(scope(), item, quote, None)
     document = store.export_data()
-    assert document["schema_version"] == 15
+    assert document["schema_version"] == 16
     assert document["charger_pricing"][0]["quote"] == quote
     public = ChargeQuote.model_validate(quote).model_dump()
     distribution = public["pricing"]["energy_distribution"]
@@ -113,10 +113,11 @@ def test_temporal_identity_export_and_private_response_fields(tmp_path):
     assert restored.priced_charger_sessions(scope())["items"][0]["pvpc"] == quote
     assert restored.charger_pricing_history(scope(), item["id"])["total"] == 1
     with sqlite3.connect(restored.path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 19
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 20
     for version in (11, 10, 9, 8):
         old = deepcopy(document)
         old["schema_version"] = version
+        old.pop("manual_journeys")
         old["settings"].pop("vehicle_color")
         if version < 11:
             old.pop("charger_pricing_history")
@@ -314,6 +315,8 @@ def test_semantic_migration_preserves_db13_uniform_data(tmp_path):
         downgrade_telemetry_to_v15(db)
         db.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
         db.execute("DROP TABLE IF EXISTS manual_charge_requests")
+        db.execute("DROP TABLE IF EXISTS manual_journey_requests")
+        db.execute("DROP TABLE IF EXISTS manual_journeys")
         db.execute("PRAGMA user_version = 13")
         tables_before = db.execute(
             "SELECT name,sql FROM sqlite_master "
@@ -326,7 +329,7 @@ def test_semantic_migration_preserves_db13_uniform_data(tmp_path):
     assert migrated.export_data() == before
     assert migrated.get_settings()["vehicle_color"] is None
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 19
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 20
         tables_after = db.execute(
             "SELECT name,sql FROM sqlite_master "
             "WHERE name NOT IN ('settings', 'telemetry_snapshots') ORDER BY name"
@@ -343,14 +346,21 @@ def test_semantic_migration_preserves_db13_uniform_data(tmp_path):
         "backup_alert_observations",
         "backup_alert_runtime",
         "manual_charge_requests",
+        "manual_journeys",
+        "manual_journey_requests",
         "idx_backup_alert_deliveries_recent",
         "idx_backup_alert_events_recent",
         "idx_manual_charge_requests_expiry",
         "idx_manual_charge_requests_owner_expiry",
+        "idx_manual_journeys_owner_started",
+        "idx_manual_journey_requests_expiry",
+        "idx_manual_journey_requests_owner_expiry",
         "sqlite_autoindex_backup_alert_deliveries_1",
         "sqlite_autoindex_backup_alert_events_1",
         "sqlite_autoindex_backup_alert_observations_1",
         "sqlite_autoindex_manual_charge_requests_1",
+        "sqlite_autoindex_manual_journeys_1",
+        "sqlite_autoindex_manual_journey_requests_1",
     }
     assert [
         row for row in tables_after

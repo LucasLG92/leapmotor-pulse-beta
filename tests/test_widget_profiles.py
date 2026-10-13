@@ -175,6 +175,7 @@ def test_legacy_import_with_explicit_owner_only_clears_that_users_profiles(tmp_p
     source = make_store(tmp_path, "legacy-source.sqlite3")
     legacy = source.export_data()
     legacy["schema_version"] = 1
+    legacy.pop("manual_journeys")
     legacy.pop("charger")
     legacy.pop("charger_pricing")
     legacy.pop("observed_events")
@@ -221,7 +222,7 @@ def test_export_v7_round_trips_new_fields_but_v6_rejects_them_atomically(tmp_pat
         "user-a", {"name": "Energía", "fields": ["energy_kwh", "energy_cost_eur"]}
     )
     archive = source.export_data(owner_id="user-a")
-    assert archive["schema_version"] == 15
+    assert archive["schema_version"] == 16
 
     destination = make_store(tmp_path, "v7-destination.sqlite3")
     destination.import_data(archive, owner_id="user-a")
@@ -229,6 +230,7 @@ def test_export_v7_round_trips_new_fields_but_v6_rejects_them_atomically(tmp_pat
 
     legacy = copy.deepcopy(archive)
     legacy["schema_version"] = 6
+    legacy.pop("manual_journeys")
     legacy["settings"].pop("vehicle_color")
     legacy.pop("charger_pricing")
     legacy.pop("observed_events")
@@ -245,6 +247,7 @@ def test_export_v7_round_trips_new_fields_but_v6_rejects_them_atomically(tmp_pat
     old_profile = old_source.create_widget_profile("user-a", PROFILE_INPUT)
     old_archive = old_source.export_data(owner_id="user-a")
     old_archive["schema_version"] = 6
+    old_archive.pop("manual_journeys")
     old_archive["settings"].pop("vehicle_color")
     old_archive.pop("charger_pricing")
     old_archive.pop("observed_events")
@@ -282,6 +285,8 @@ def test_v7_to_current_migration_preserves_widget_profiles_and_grants(tmp_path):
         connection.execute("DROP TABLE charger_pricing")
         connection.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
         connection.execute("DROP TABLE IF EXISTS manual_charge_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journey_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journeys")
         tables_before = connection.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
         ).fetchall()
@@ -289,7 +294,7 @@ def test_v7_to_current_migration_preserves_widget_profiles_and_grants(tmp_path):
 
     migrated = Store(path, clock=lambda: datetime(2026, 10, 8, 15, 0, tzinfo=timezone.utc))
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 19
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 20
         tables_after = connection.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
         ).fetchall()
@@ -300,6 +305,7 @@ def test_v7_to_current_migration_preserves_widget_profiles_and_grants(tmp_path):
             ("backup_alert_runtime",), ("backup_alert_observations",),
             ("backup_alert_events",), ("backup_alert_deliveries",),
             ("manual_charge_requests",),
+            ("manual_journeys",), ("manual_journey_requests",),
         }
     assert migrated.list_widget_profiles("user-a")["items"] == [profile]
     assert migrated.widget_grant_context(

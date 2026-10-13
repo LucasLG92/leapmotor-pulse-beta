@@ -114,7 +114,7 @@ def test_server_reservation_replay_skips_pvpc_and_quote_rejects_metadata(tmp_pat
         assert changed.status_code == 409
         assert len(quote_calls) == 1
         archive = client.get("/api/export").json()
-        assert archive["schema_version"] == 15
+        assert archive["schema_version"] == 16
         assert "manual_charge_requests" not in archive
 
 

@@ -1,5 +1,5 @@
 /** Live form flags only. No values, credentials, persistence or submission. */
-export type DraftKey = 'charge' | 'maintenance' | 'preferences' | 'widget-profile' | 'native-link' | 'push-device';
+export type DraftKey = 'charge' | 'journey' | 'maintenance' | 'preferences' | 'widget-profile' | 'native-link' | 'push-device';
 
 export class DraftGuard {
 	private readonly entries = new Map<DraftKey, { lease: symbol; isDirty: () => boolean; unconfirmedSave?: () => boolean }>();
