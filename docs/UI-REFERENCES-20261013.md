@@ -22,3 +22,13 @@ No se cambian servicios, API, cálculos, persistencia, contratos nativos ni capa
 La nueva iteración sustituye la identidad anterior por porcelana, negro profundo y azul eléctrico. La composición del coche es abierta y la navegación tiene cinco destinos directos. Se reorganizan herramientas por intención, con menos encabezados y sin perder borradores entre secciones locales.
 
 Referencias primarias adicionales: [My Porsche, actualización del30ene2024](https://newsroom.porsche.com/en_US/2024/products/porscheextensive-update-my-porsche-app-35134.html), por la jerarquía de información y accesos frecuentes; [Lucid, guía de su aplicación](https://lucidmotors.com/knowledge/ownership/lucid-app/the-basics/the-lucid-app), por el protagonismo del vehículo y la organización de controles. Se consultó su documentación; no se probó ninguna de las dos apps ni se copió código o recursos. La primera es una referencia histórica de diseño.
+
+
+## Iteración de armonía, 13 de octubre de 2026
+
+- [Lucid Mobile App Essentials](https://lucidmotors.com/knowledge/ownership/lucid-app/the-basics/the-lucid-app). Página y captura oficial de inicio inspeccionadas: coche central, controles próximos, avisos por debajo. Se toma la jerarquía, no el modelo3D ni capacidades.
+- [Polestar mobile apps](https://www.polestar.com/us/owning-a-polestar/polestar-mobile-apps/). Página oficial e imagen de interfaz indexada: cifra de batería clara, áreas de tarea reconocibles y tipografía sobria. Referencia de composición, no de API.
+- [Ask Porsche — Meet the Taycan](https://ask.porsche.com/gb/en-GB/meet-the-taycan/). Captura oficial de My Porsche: modelo protagonista y carga/temperatura subordinadas. No se incorporan imágenes de Porsche.
+- La URL de X facilitada no se pudo recuperar de forma fiable en esta comprobación; no se le atribuyen detalles no vistos.
+
+Manrope v20 Latin procede de `https://fonts.gstatic.com/s/manrope/v20/xn7gYHE41ni1AdIRggexSg.woff2`, 24.836bytes, SHA256 `a30ddcd349703aff7464c34bef3fffdff405ee50c113440d7c8693c02d210972`. Licencia oficial: `https://raw.githubusercontent.com/google/fonts/main/ofl/manrope/OFL.txt`; copia distribuida en `apps/web/public/assets/licenses/Manrope-OFL.txt`. La fuente se distribuye bajo OFL1.1 y el código propio conserva su licencia.

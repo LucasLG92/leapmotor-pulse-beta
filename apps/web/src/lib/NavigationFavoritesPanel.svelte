@@ -149,7 +149,7 @@
 </script>
 
 <section class="favorites-panel" aria-labelledby="favorites-heading">
-	<header class="favorites-header"><div><h2 id="favorites-heading">Favoritos</h2></div><button class="button button-primary" type="button" disabled={busy || saving || !online} onclick={openForm}><Glyph name="plus" size={16} /> Añadir lugar</button></header>
+	<header class="favorites-header"><div><h2 id="favorites-heading">Lugares guardados</h2></div><button class="button button-primary" type="button" disabled={busy || saving || !online} onclick={openForm}><Glyph name="plus" size={16} /> Añadir lugar</button></header>
 	{#if actionError}<div class="favorite-error" role="alert"><span>{actionError}</span><button class="button button-secondary" type="button" onclick={() => void load()} disabled={!online || loading}>Actualizar lista</button></div>{/if}
 	{#if readError}<div class="favorite-error" role="alert"><span>{readError}</span><button class="button button-secondary" type="button" onclick={() => void load()} disabled={!online || loading}>Reintentar</button></div>{/if}
 	{#if loading}<p class="state-message" role="status">Consultando favoritos…</p>{/if}
@@ -185,7 +185,7 @@
 	.favorites-header h2 { margin: 0; font-size: 1.2rem; letter-spacing: -.03em; }
 	.favorite-empty-mark :global(svg) { display: block; }
 	.eyebrow { margin: 0; color: var(--forest); font-size: .75rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
-	.button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 48px; padding: 9px 14px; border: 1px solid transparent; border-radius: 11px; font: inherit; font-weight: 680; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease; }
+	.button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 48px; padding: 9px 14px; border: 1px solid transparent; border-radius: 14px; font: inherit; font-weight: 680; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease; }
 	.button-primary { background: var(--forest); color: var(--on-primary); }
 	.button-primary:hover:not(:disabled) { background: var(--forest-hover); transform: translateY(-1px); }
 	.button-secondary { border-color: var(--line-strong); background: var(--surface); color: var(--ink); }
@@ -195,7 +195,7 @@
 	.danger-text { color: var(--danger); }
 	.favorite-error { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--danger) 32%, var(--line)); border-radius: 12px; background: var(--danger-soft); color: var(--danger); line-height: 1.45; overflow-wrap: anywhere; }
 	.state-message { margin: 0; padding: 13px; border-radius: 12px; background: var(--surface-soft); color: var(--muted); }
-	.favorite-form { display: grid; gap: 13px; min-width: 0; padding: clamp(14px, 2.4vw, 22px); border: 1px solid var(--line-strong); border-radius: 17px; background: var(--surface); box-shadow: var(--shadow); }
+	.favorite-form { display: grid; gap: 13px; min-width: 0; padding: clamp(16px, 2.4vw, 22px); border: 1px solid var(--line); border-radius: 26px; background: var(--surface); box-shadow: var(--shadow); }
 	.form-heading h3 { margin: 2px 0 0; font-size: 1.15rem; }
 	.icon-button { min-width: 48px; min-height: 48px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface-soft); font-size: 1.5rem; cursor: pointer; }
 	.form-intro { margin: 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
@@ -203,7 +203,7 @@
 	.field { display: grid; align-content: start; gap: 6px; min-width: 0; }
 	.field.full { grid-column: 1 / -1; }
 	.field label { color: var(--muted-strong); font-size: .875rem; font-weight: 660; }
-	.field input { width: 100%; min-width: 0; min-height: 48px; padding: 9px 11px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; }
+	.field input { width: 100%; min-width: 0; min-height: 48px; padding: 9px 11px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface); color: var(--ink); font: inherit; }
 	.field input[aria-invalid="true"] { border-color: var(--danger); }
 	.field small { color: var(--danger); font-size: .8125rem; }
 	.form-errors { padding: 11px 13px; border: 1px solid color-mix(in srgb, var(--danger) 32%, var(--line)); border-radius: 11px; background: var(--danger-soft); color: var(--danger); }
@@ -224,7 +224,7 @@
 	.favorite-actions .button { min-height: 48px; font-size: .8125rem; }
 	.favorite-actions .button-quiet { min-height: 48px; }
 	.link-unavailable { max-width: 180px; color: var(--muted); font-size: .75rem; }
-	.empty-state { display: grid; justify-items: start; gap: 6px; padding: clamp(20px, 4vw, 34px); border: 1px dashed var(--line-strong); border-radius: 17px; background: var(--surface); }
+	.empty-state { display: grid; justify-items: start; gap: 6px; padding: clamp(20px, 4vw, 34px); border: 1px dashed var(--line-strong); border-radius: 24px; background: var(--surface); }
 	.empty-state > span { color: var(--forest); font-size: 1.6rem; }
 	.favorite-empty-mark { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 12px; background: var(--forest-soft); }
 	.empty-state h3, .empty-state p { margin: 0; }

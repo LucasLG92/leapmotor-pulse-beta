@@ -297,24 +297,52 @@
 <div class="overview-page">
  <article class="vehicle-home" aria-labelledby="vehicle-profile-title">
   <header class="vehicle-heading">
-   <div><p class="eyebrow">{profileModel}</p><h2 id="vehicle-profile-title">{profileName}</h2></div>
+   <div><p class="eyebrow">TU GARAJE PERSONAL</p><h2 id="vehicle-profile-title">{profileName}<span class="model-signature">{profileModel}</span></h2></div>
    <a class="personalize-link" href="/settings" aria-label="Personalizar perfil del vehículo"><Glyph name="settings" size={20}/></a>
   </header>
   <div class="hero-layout">
-   <div class="car-presentation">
+   <div class="car-presentation"><span class="stage-lettering" aria-hidden="true">B10</span><span class="stage-brand" aria-hidden="true">LEAPMOTOR</span>
     <VehicleArtwork color={pulseState.settings.vehicle_color ?? null}/>
+   <details class="color-picker"><summary>Personalizar color <span>{currentColorLabel}</span><Glyph name="chevron" size={16} /></summary>
+				<div class="vehicle-colors" role="group" aria-label="Color del perfil del vehículo">
+					{#each vehicleColors as option (option.id)}
+						<button
+							class="color-swatch"
+							class:selected={pulseState.settings.vehicle_color === option.id}
+							type="button"
+							style={`--swatch: ${option.swatch}`}
+							aria-label={`Seleccionar ${option.label}`}
+							aria-pressed={pulseState.settings.vehicle_color === option.id}
+							disabled={busy || !online}
+							onclick={() => chooseColor(option.id)}
+						><span></span></button>
+					{/each}
+					<span class="color-name">{currentColorLabel}</span>
+				</div>
+
+				</details>
+
     
 
 				
    </div>
    <div class="car-command-center">
     <div class="reading-status" class:uncertain={readingIsUncertain}><span class="status-dot" aria-hidden="true"></span>{pulseState.mode === 'demo' ? 'Lecturas simuladas' : readingStatus}</div>
+    {#if vehicleValues?.range_km == null && vehicleValues?.battery_pct == null}
+     <div class="readings-empty">
+      <span class="connection-symbol" aria-hidden="true"><Glyph name="car" size={23}/><span></span><Glyph name="plug" size={20}/></span>
+      <h3>{pulseState.mode === 'demo' ? 'La demo no tiene lecturas' : pulseState.mode === 'telemetry_read_only' ? 'Esperando una lectura' : 'Prepara la conexión'}</h3>
+      <p>{pulseState.mode === 'demo' ? 'No hay valores de batería o autonomía disponibles en esta demostración.' : pulseState.mode === 'telemetry_read_only' ? temporalExplanation : 'La batería y la autonomía aparecerán aquí cuando Pulse reciba lecturas del coche.'}</p>
+      <a class="connection-next" href={pulseState.mode === 'telemetry_read_only' || pulseState.mode === 'demo' ? '/protection' : '/settings#preparation'}>{pulseState.mode === 'telemetry_read_only' || pulseState.mode === 'demo' ? 'Revisar lecturas' : 'Preparar Pulse'}<Glyph name="arrow" size={18}/></a>
+     </div>
+    {:else}
     <dl class="vehicle-readings" aria-label="Autonomía y batería">
      <div class="range-reading"><dt>Autonomía estimada</dt><dd>{number(vehicleValues?.range_km)}<span>{vehicleValues?.range_km == null ? '' : ' km'}</span></dd></div>
      <div class="battery-reading"><dt><Glyph name="battery" size={16}/> Batería</dt><dd>{number(vehicleValues?.battery_pct)}<span>{vehicleValues?.battery_pct == null ? '' : ' %'}</span></dd>
       {#if batteryPercentage !== null}<meter aria-label="Nivel de batería recibido" min="0" max="100" value={batteryPercentage}>{number(batteryPercentage)} %</meter>{/if}
      </div>
     </dl>
+    {/if}
     <section class="vehicle-controls" aria-labelledby="vehicle-controls-title">
 					<div class="controls-intro sr-only"><h3 id="vehicle-controls-title">Acciones del vehículo</h3></div>
 					
@@ -376,24 +404,6 @@
 				<div><dt><Glyph name="car" size={16} />Odómetro</dt><dd>{number(vehicleValues?.odometer_km)}{vehicleValues?.odometer_km == null ? '' : ' km'}</dd></div>
 					</dl></div>
   <details class="reading-details"><summary><Glyph name="clock" size={15}/><span>{pulseState.mode === 'demo' ? 'Origen de las lecturas' : displayMode} · {observedAt ? absoluteDateTime(observedAt) : 'Sin lectura disponible'}</span><Glyph name="chevron" size={15}/></summary>
-   <details class="color-picker"><summary>Personalizar color <span>{currentColorLabel}</span><Glyph name="chevron" size={16} /></summary>
-				<div class="vehicle-colors" role="group" aria-label="Color del perfil del vehículo">
-					{#each vehicleColors as option (option.id)}
-						<button
-							class="color-swatch"
-							class:selected={pulseState.settings.vehicle_color === option.id}
-							type="button"
-							style={`--swatch: ${option.swatch}`}
-							aria-label={`Seleccionar ${option.label}`}
-							aria-pressed={pulseState.settings.vehicle_color === option.id}
-							disabled={busy || !online}
-							onclick={() => chooseColor(option.id)}
-						><span></span></button>
-					{/each}
-					<span class="color-name">{currentColorLabel}</span>
-				</div>
-
-				</details>
 <p>{sourceLabel}</p>
    {#if pulseState.mode === 'telemetry_read_only'}<p>{temporalExplanation} Vigencia física sin comprobar.</p>{:else if pulseState.mode !== 'demo'}<p>{connectionReason}</p>{/if}
    {#if latestTelemetry && pulseState.mode === 'telemetry_read_only'}
@@ -530,29 +540,37 @@
 
 <style>
 .overview-page { min-width: 0; }
-.vehicle-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-.vehicle-heading h2 { margin: 6px 0 0; font-size: clamp(2.2rem, 4vw, 3.7rem); line-height: 1.05; font-weight: 650; letter-spacing: -.06em; }
-.personalize-link { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--muted); }
-.hero-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(290px, 1fr); align-items: center; gap: 24px; margin: 12px 0 22px; }
-.car-presentation, .car-command-center { min-width: 0; }
-.reading-status { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: .6875rem; margin-bottom: 14px; }
-.reading-status.uncertain { color: var(--accent); }
-.reading-status.uncertain .status-dot { background: var(--accent); }
-.vehicle-readings { display: grid; grid-template-columns: 1.4fr 1fr; margin: 0 0 28px; gap: 20px; }
-.vehicle-readings dt { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: .75rem; }
-.vehicle-readings dd { margin: 3px 0 0; font-size: clamp(2rem, 4vw, 3.5rem); font-weight: 500; line-height: 1.15; letter-spacing: -.06em; }
-.vehicle-readings dd span { font-size: 1rem; color: var(--muted); letter-spacing: -.01em; }
-.battery-reading meter { display: block; width: 72px; height: 5px; margin-top: 8px; appearance: none; background: var(--line); border: 0; border-radius: 3px; overflow: hidden; }
+.vehicle-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 28px; }
+.vehicle-heading .eyebrow { color: var(--forest); font-size: .625rem; letter-spacing: .16em; }
+.vehicle-heading h2 { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin: 8px 0 0; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.12; font-weight: 650; letter-spacing: -.055em; }
+.model-signature { padding: 6px 10px; border: 1px solid var(--line); border-radius: 7px; font-size: .625rem; font-weight: 650; letter-spacing: .12em; color: var(--muted); }
+.personalize-link { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--muted); background: var(--surface); }
+.hero-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(320px, 1fr); align-items: stretch; gap: 18px; margin-bottom: 22px; }
+.car-presentation { position: relative; isolation: isolate; display: flex; flex-direction: column; justify-content: center; min-width: 0; min-height: 410px; padding: 25px 18px 14px; overflow: hidden; border: 1px solid var(--line); border-radius: 30px; background: radial-gradient(ellipse at 50% 24%, var(--surface) 10%, var(--surface-soft) 78%); }
+.stage-lettering { position: absolute; z-index: -1; inset: -10px 0 auto; text-align: center; font-size: clamp(8rem, 17vw, 16rem); font-weight: 800; line-height: 1.05; letter-spacing: -.08em; color: color-mix(in srgb, var(--ink) 6%, transparent); user-select: none; }
+.stage-brand { position: absolute; top: 24px; left: 26px; color: var(--muted); font-size: .5rem; letter-spacing: .28em; font-weight: 650; }
+.car-presentation :global(.vehicle-frame) { height: 310px; }
+.car-command-center { min-width: 0; display: flex; flex-direction: column; justify-content: center; padding: 30px; border-radius: var(--radius-panel); background: var(--premium-solid); color: var(--premium-solid-text); --ink: var(--premium-solid-text); --muted: var(--premium-solid-muted); --forest: #a4bfff; --forest-soft: #2a3855; --surface: #242c39; --surface-soft: #242c39; --line: var(--premium-solid-line); }
+.reading-status { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: .625rem; margin-bottom: 24px; }
+.reading-status.uncertain { color: #efbd78; }
+.reading-status.uncertain .status-dot { background: #efbd78; }
+.vehicle-readings { display: grid; grid-template-columns: 1.4fr 1fr; margin: 0 0 30px; gap: 14px; }
+.vehicle-readings dt { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: .6875rem; }
+.vehicle-readings dd { margin: 8px 0 0; font-size: clamp(2.5rem, 4vw, 4rem); font-weight: 500; line-height: 1.05; letter-spacing: -.06em; }
+.vehicle-readings dd span { font-size: .875rem; color: var(--muted); letter-spacing: -.01em; margin-left: 4px; }
+.battery-reading { border-left: 1px solid var(--line); padding-left: 20px; }
+.battery-reading meter { display: block; width: 100%; max-width: 90px; height: 4px; margin-top: 12px; appearance: none; background: var(--line); border: 0; border-radius: 3px; overflow: hidden; }
 .battery-reading meter::-webkit-meter-bar { background: var(--line); border: 0; }
 .battery-reading meter::-webkit-meter-optimum-value { background: var(--forest); }
 .battery-reading meter::-moz-meter-bar { background: var(--forest); }
-.control-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.control-action { display: flex; min-width: 0; flex-direction: column; align-items: center; gap: 9px; padding: 0; border: 0; background: none; color: var(--ink); cursor: pointer; text-align: center; font-size: .75rem; line-height: 1.35; }
-.control-circle { display: grid; width: 52px; height: 52px; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); transition: background-color 160ms, transform 160ms; }
+.control-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.control-action { display: flex; min-width: 0; flex-direction: column; align-items: center; gap: 10px; padding: 0; border: 0; background: none; color: var(--ink); cursor: pointer; text-align: center; font-size: .6875rem; line-height: 1.4; }
+.control-circle { display: grid; width: 52px; height: 52px; place-items: center; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); transition: background-color 160ms, border-color 160ms; }
 .control-action:not(:disabled):hover .control-circle { background: var(--forest-soft); color: var(--forest); border-color: var(--forest); }
+.control-action:active:not(:disabled) .control-circle { background: #3c4d6c; }
 .control-action:disabled { color: var(--muted); cursor: not-allowed; }
-.control-action:disabled .control-circle { background: var(--surface-soft); }
-.control-footnote { margin: 14px 0 0; color: var(--muted); font-size: .6875rem; line-height: 1.5; }
+.control-action:disabled .control-circle { background: var(--surface-soft); opacity: .6; }
+.control-footnote { margin: 18px 0 0; color: var(--muted); font-size: .6875rem; line-height: 1.6; }
 .control-footnote a { color: var(--forest); text-decoration: underline; }
 .alternate-actions { margin-top: 14px; color: var(--muted); font-size: .6875rem; }
 .alternate-actions summary { min-height: 36px; display: flex; align-items: center; cursor: pointer; }
@@ -560,7 +578,7 @@
 .alternate-action { display: flex; align-items: center; gap: 8px; border: 0; background: none; color: var(--ink); font-size: .75rem; cursor: pointer; }
 .alternate-action:disabled { opacity: .55; }
 .alternate-action .control-circle { width: 40px; height: 40px; }
-.color-picker { max-width: 330px; margin: 0 auto; font-size: .6875rem; }
+.color-picker { position: relative; z-index: 1; max-width: 330px; margin: 4px auto 0; font-size: .625rem; }
 .color-picker summary { display: flex; justify-content: center; align-items: center; min-height: 36px; gap: 8px; color: var(--muted); cursor: pointer; list-style: none; }
 .color-picker summary::-webkit-details-marker { display: none; }
 .color-picker summary > span { color: var(--ink); }
@@ -569,9 +587,9 @@
 .color-swatch > span { width: 23px; height: 23px; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--swatch); }
 .color-swatch.selected { border-color: var(--forest); }
 .color-name { width: 100%; text-align: center; color: var(--muted); }
-.vehicle-state { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 20px 0; border-block: 1px solid var(--line); }
+.vehicle-state { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 20px 26px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); }
 .vehicle-state dt { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: .6875rem; }
-.vehicle-state dd { margin: 6px 0 0; font-size: .875rem; font-weight: 600; }
+.vehicle-state dd { margin: 8px 0 0; font-size: .9375rem; font-weight: 600; letter-spacing: -.025em; }
 .reading-details { color: var(--muted); font-size: .6875rem; }
 .reading-details > summary { display: flex; align-items: center; gap: 8px; min-height: 48px; cursor: pointer; list-style: none; }
 .reading-details > summary > span { flex: 1; }
@@ -582,12 +600,12 @@
 .sensor-readings dd, .field-source-list dd { margin: 3px 0 0; color: var(--ink); }
 .received-times p { display: flex; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--line); padding-block: 10px; }
 .everyday-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
-.everyday-links a { display: flex; gap: 16px; align-items: center; padding: 22px; border-radius: 20px; background: var(--ink); color: var(--canvas); }
+.everyday-links a { display: flex; gap: 16px; align-items: center; padding: 24px; border-radius: 24px; background: var(--forest); color: var(--on-primary); }
 .everyday-links a:last-child { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
 .everyday-links a > span:nth-child(2) { flex: 1; min-width: 0; }
 .everyday-links small { display: block; font-size: .5625rem; font-weight: 650; letter-spacing: .12em; opacity: .7; }
 .everyday-links strong { display: block; margin-top: 5px; font-size: 1.0625rem; font-weight: 550; letter-spacing: -.02em; }
-.everyday-icon { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; border: 1px solid currentColor; border-radius: 50%; }
+.everyday-icon { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; border-radius: 14px; background: color-mix(in srgb, currentColor 10%, transparent); }
 .journal-preview { margin-top: 38px; }
 .journal-preview .section-heading { align-items: center; margin-bottom: 8px; }
 .journal-preview .section-heading h2 { font-size: 1.5rem; font-weight: 550; }
@@ -639,25 +657,45 @@
 .state-history { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 18px 0; font-size: .75rem; color: var(--muted); }
 .state-history > span:last-child { display: flex; align-items: center; gap: 8px; margin-left: auto; color: var(--forest); }
 .overview-footer { margin-top: 18px; color: var(--muted); font-size: .625rem; }
-@media (max-width: 1100px) and (min-width: 961px), (max-width: 700px) {
- .hero-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 0; }
- .car-command-center { width: 100%; max-width: 480px; margin: 0 auto; }
- .car-presentation { margin-inline: -20px; }
- .vehicle-heading h2 { font-size: 2.2rem; }
- .vehicle-readings { grid-template-columns: 1fr 1fr; margin-bottom: 24px; gap: 28px; }
- .vehicle-readings dd { font-size: 2.65rem; }
- .battery-reading { border-left: 1px solid var(--line); padding-left: 28px; }
- .reading-status { margin-bottom: 9px; }
- .control-actions { gap: 14px; }
- .control-circle { width: 50px; height: 50px; }
- .control-footnote { text-align: center; }
- .alternate-actions summary { justify-content: center; }
- .vehicle-state { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.readings-empty { margin: 0 0 24px; }
+.connection-symbol { display: flex; align-items: center; gap: 12px; width: fit-content; margin-bottom: 22px; color: var(--premium-solid-muted); }
+.connection-symbol > span { width: 36px; border-top: 1px dashed var(--premium-solid-line); }
+.readings-empty h3 { max-width: 14ch; margin: 0; font-size: clamp(1.5rem, 2.4vw, 2rem); line-height: 1.15; font-weight: 580; letter-spacing: -.035em; }
+.readings-empty p { max-width: 35ch; margin: 12px 0 16px; color: var(--premium-solid-muted); font-size: .8125rem; line-height: 1.6; }
+.connection-next { display: inline-flex; align-items: center; gap: 16px; min-height: 44px; padding: 9px 15px; border: 1px solid var(--premium-solid-line); border-radius: 12px; color: var(--premium-solid-text); font-size: .75rem; font-weight: 600; transition: background-color 140ms ease, border-color 140ms ease; }
+.connection-next:hover { background: #252e3c; border-color: #8194b5; }
+@media (min-width: 961px) and (max-width: 1100px) {
+ .hero-layout { grid-template-columns: minmax(0, 1.2fr) minmax(300px, 1fr); }
+ .car-command-center { padding: 24px; }
+}
+@media (max-width: 700px) {
+ .vehicle-heading { margin-bottom: 20px; }
+ .vehicle-heading .eyebrow { font-size: .5rem; }
+ .vehicle-heading h2 { font-size: 1.9rem; gap: 10px; margin-top: 6px; }
+ .model-signature { font-size: .5rem; padding: 4px 7px; }
+ .hero-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; margin-bottom: 16px; }
+ .car-presentation { min-height: 220px; padding: 20px 10px 8px; border-radius: 24px; }
+ .car-presentation :global(.vehicle-frame) { height: 160px; }
+ .stage-lettering { top: -2px; font-size: 8.2rem; }
+ .stage-brand { top: 18px; left: 20px; font-size: .4375rem; }
+ .car-command-center { width: 100%; padding: 20px; border-radius: 24px; }
+ .reading-status { margin-bottom: 14px; font-size: .5625rem; }
+ .connection-symbol { margin-bottom: 16px; }
+ .readings-empty { margin-bottom: 24px; }
+ .vehicle-readings { grid-template-columns: 1.3fr 1fr; margin-bottom: 24px; gap: 20px; }
+ .vehicle-readings dd { font-size: 2.65rem; margin-top: 5px; }
+ .vehicle-readings dt { font-size: .625rem; }
+ .battery-reading { padding-left: 24px; }
+ .control-actions { gap: 10px; }
+ .control-circle { width: 48px; height: 48px; border-radius: 16px; }
+ .control-footnote { text-align: center; margin-top: 14px; }
+ .alternate-actions { margin-top: 4px; }
+ .alternate-actions summary { justify-content: center; min-height: 36px; }
+ .vehicle-state { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; padding: 20px; }
  .everyday-links, .journal-columns, .connection-grid { grid-template-columns: minmax(0, 1fr); }
- .everyday-links { gap: 10px; }
- .everyday-links a { padding: 18px; }
+ .everyday-links { gap: 12px; }
+ .everyday-links a { padding: 20px; }
  .journal-columns { gap: 0; }
  .connection-drawer { padding-inline: 16px; }
 }
-
 </style>

@@ -983,7 +983,7 @@
 <section class="page-intro premium-heading settings-intro">
 	<div>
 		<h2>Tu perfil</h2>
-		<p>Ajusta el B10, las conexiones y tus datos de Pulse.</p>
+		<p>Vehículo, conexiones y preferencias de Pulse.</p>
 	</div>
 	<span class="status-pill"><span class="status-dot"></span>{user || 'Cuenta personal'}</span>
 </section>
@@ -998,29 +998,29 @@
 
 	<section id="settings-panel-vehicle" class="workspace-panel settings-section-panel" aria-labelledby="settings-panel-vehicle-heading" hidden={activeSettingsSection !== 'vehicle'}>
 		<h2 id="settings-panel-vehicle-heading" class="sr-only">Vehículo</h2>
-				<section class="settings-card" aria-labelledby="profile-heading">
-			<h2 id="profile-heading" class="sr-only">Vehículo, aspecto y cálculo de tarifa</h2>
-			<form class="settings-form" onsubmit={saveSettings}>
-				<div class="vehicle-personalization">
-					<VehicleArtwork color={vehicleColor} />
-					<fieldset class="vehicle-color-field" aria-describedby="vehicle-color-hint">
-						<legend>Color del B10</legend>
-						<p id="vehicle-color-hint" class="field-hint">Gama española. Elige el aspecto del coche en Pulse; no cambia ningún ajuste del vehículo.</p>
-						<div class="vehicle-color-options">
-							{#each vehicleColors as option (option.id)}
-								<label class="vehicle-color-option" class:selected={vehicleColor === option.id}>
-									<input class="sr-only" type="radio" name="vehicle-color" value={option.id} bind:group={vehicleColor} />
-									<span class="paint-swatch" style:background={option.swatch} aria-hidden="true"></span><span>{option.label}</span>
-									{#if vehicleColor === option.id}<Glyph name="check" size={16} />{/if}
-								</label>
-							{/each}
-							<label class="vehicle-color-option" class:selected={vehicleColor === null}><input class="sr-only" type="radio" name="vehicle-color" value={null} bind:group={vehicleColor} /><span>Sin elegir</span>{#if vehicleColor === null}<Glyph name="check" size={16} />{/if}</label>
-						</div>
-					</fieldset>
-				</div>
-				<div class="form-grid">
+		<form class="settings-form vehicle-settings-form" onsubmit={saveSettings}>
+			<div class="vehicle-profile-header">
+				<div class="vehicle-profile-art"><VehicleArtwork color={vehicleColor} /></div>
+				<div class="vehicle-identity-fields">
 					<div class="field"><label for="vehicle-name">Nombre del vehículo</label><input id="vehicle-name" maxlength="80" bind:value={vehicleName} oninput={() => clearSettingsError('vehicleName')} required aria-invalid={settingsErrorField === 'vehicleName' ? 'true' : undefined} aria-describedby={settingsErrorField === 'vehicleName' ? 'settings-vehicle-name-error' : undefined} />{#if settingsError && settingsErrorField === 'vehicleName'}<p id="settings-vehicle-name-error" class="form-error" role="alert">{settingsError}</p>{/if}</div>
 					<div class="field"><label for="vehicle-model">Modelo o acabado</label><input id="vehicle-model" list="vehicle-models" maxlength="80" bind:value={model} oninput={() => clearSettingsError('model')} required aria-invalid={settingsErrorField === 'model' ? 'true' : undefined} aria-describedby={settingsErrorField === 'model' ? 'settings-model-error' : undefined} /><datalist id="vehicle-models"><option value="Leapmotor B10 Pro Max"></option><option value="Leapmotor B10 Pro"></option></datalist><p class="field-hint">Elige o escribe tu modelo y acabado. Pulse no lo deduce.</p>{#if settingsError && settingsErrorField === 'model'}<p id="settings-model-error" class="form-error" role="alert">{settingsError}</p>{/if}</div>
+				</div>
+			</div>
+			<fieldset class="vehicle-color-field" aria-describedby="vehicle-color-hint">
+				<legend>Color del B10</legend>
+				<p id="vehicle-color-hint" class="field-hint">Aspecto orientativo en Pulse; no cambia el vehículo.</p>
+				<div class="vehicle-color-options">
+					{#each vehicleColors as option (option.id)}
+						<label class="vehicle-color-option" class:selected={vehicleColor === option.id}>
+							<input class="sr-only" type="radio" name="vehicle-color" value={option.id} bind:group={vehicleColor} />
+							<span class="paint-swatch" style:background={option.swatch} aria-hidden="true"></span><span>{option.label}</span>
+							{#if vehicleColor === option.id}<Glyph name="check" size={16} />{/if}
+						</label>
+					{/each}
+					<label class="vehicle-color-option" class:selected={vehicleColor === null}><input class="sr-only" type="radio" name="vehicle-color" value={null} bind:group={vehicleColor} /><span>Sin elegir</span>{#if vehicleColor === null}<Glyph name="check" size={16} />{/if}</label>
+				</div>
+			</fieldset>
+			<div class="form-grid vehicle-configuration-grid">
 					<div class="field"><label for="home-label">Punto de carga habitual</label><input id="home-label" maxlength="80" bind:value={homeLabel} oninput={() => clearSettingsError('homeLabel')} required aria-invalid={settingsErrorField === 'homeLabel' ? 'true' : undefined} aria-describedby={settingsErrorField === 'homeLabel' ? 'settings-home-label-error' : undefined} />{#if settingsError && settingsErrorField === 'homeLabel'}<p id="settings-home-label-error" class="form-error" role="alert">{settingsError}</p>{/if}</div>
 					<div class="field"><label for="pricing-method">Método de cálculo</label><select id="pricing-method" value={pricingMethod} onchange={(event) => { const value = event.currentTarget.value; if (value === 'manual' || value === 'pvpc') pricingMethod = value; clearSettingsError('tariff'); }}><option value="manual">Precio fijo manual</option><option value="pvpc">PVPC automático · Península</option></select><p class="field-hint">El método se aplica a las nuevas cargas; las anteriores conservan su cálculo.</p></div>
 					{#if pricingMethod === 'manual'}
@@ -1032,8 +1032,7 @@
 
 				{#if settingsError && settingsErrorField === null}<p id="settings-general-error" class="form-error" role="alert">{settingsError}</p>{/if}
 				<div class="form-actions"><button class="button button-primary" type="submit" disabled={busy}>{busy ? 'Guardando…' : 'Guardar ajustes'}</button>{#if pricingMethod === 'manual'}<span class="settings-current-rate">Tarifa fija actual: {euros(pulseState.settings.tariff_eur_kwh)} / kWh</span>{:else}<span class="settings-current-rate">Método seleccionado: PVPC automático · Península</span>{/if}</div>
-			</form>
-		</section>
+		</form>
 	</section>
 
 	<section id="settings-panel-connections" class="workspace-panel settings-section-panel" aria-labelledby="settings-panel-connections-heading" hidden={activeSettingsSection !== 'connections'}>
@@ -1074,7 +1073,7 @@
 				<section class="settings-card" aria-labelledby="appearance-heading">
 			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="sun" size={18} /></span><div><h2 id="appearance-heading">Apariencia</h2></div></div>
 			<fieldset class="theme-field theme-choices" aria-describedby="theme-hint">
-				<legend>Elige cómo se siente Pulse</legend>
+				<legend class="sr-only">Tema de la interfaz</legend>
 				<div class="theme-options">
 					{#each [{ id: 'light', label: 'Claro' }, { id: 'dark', label: 'Oscuro' }, { id: 'system', label: 'Sistema' }] as option (option.id)}
 						<button class="theme-option" class:selected={theme === option.id} type="button" aria-pressed={theme === option.id} onclick={() => setTheme(option.id as ThemePreference)}>
@@ -1083,7 +1082,7 @@
 						</button>
 					{/each}
 				</div>
-				<p id="theme-hint" class="field-hint">Sistema acompaña la apariencia de tu dispositivo. Esta preferencia se guarda en este navegador.</p>
+				<p id="theme-hint" class="field-hint">Sistema acompaña la apariencia de tu dispositivo. La preferencia se guarda en este navegador.</p>
 			</fieldset>
 		</section>
 
@@ -1290,24 +1289,26 @@
 	.theme-field { margin-top: 17px; }
 	.theme-choices { min-width: 0; padding: 0; border: 0; }
 	.theme-choices legend { margin-bottom: 12px; color: var(--muted-strong); font-size: .875rem; }
-	.theme-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
-	.theme-option { display: grid; min-width: 0; min-height: 48px; gap: 9px; padding: 7px; border: 1px solid var(--line-strong); border-radius: 13px; background: var(--surface); color: var(--muted-strong); cursor: pointer; transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease, box-shadow var(--motion-fast) ease; }
+	.theme-options { display: grid; grid-template-columns: minmax(0, 1fr); margin-bottom: 12px; border-top: 1px solid var(--line); }
+	.theme-option { display: grid; grid-template-columns: 54px minmax(0, 1fr); align-items: center; gap: 13px; min-width: 0; min-height: 60px; padding: 9px 6px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease; }
 	.theme-option:hover { background: var(--surface-soft); }
-	.theme-option.selected { border-color: var(--forest); color: var(--forest); background: var(--forest-soft); box-shadow: 0 0 0 1px var(--forest); }
-	.theme-option-label { display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: .75rem; font-weight: 650; }
+	.theme-option.selected { color: var(--forest); box-shadow: inset 3px 0 var(--forest); }
+	.theme-option-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .9375rem; font-weight: 650; }
 	.theme-check { display: grid; flex: 0 0 16px; width: 16px; height: 16px; place-items: center; }
-	.theme-sample { display: flex; height: 56px; overflow: hidden; border: 1px solid #d7dce4; border-radius: 7px; background: #f3f4f6; }
-	.sample-rail { flex: 0 0 22%; border-right: 1px solid #dde2e9; background: #ffffff; }
-	.sample-content { display: grid; flex: 1; align-content: center; gap: 5px; padding: 9px; }
-	.sample-content i { height: 4px; border-radius: 4px; background: #e9efff; }
-	.sample-content i:first-child { width: 55%; height: 7px; background: var(--forest); }
+	.theme-sample { display: flex; width: 50px; height: 34px; overflow: hidden; border: 1px solid #e3e4e9; border-radius: 7px; background: #f5f5f7; }
+	.sample-rail { flex: 0 0 22%; border-right: 1px solid #e3e4e9; background: #ffffff; }
+	.sample-content { display: grid; flex: 1; align-content: center; gap: 3px; padding: 5px; }
+	.sample-content i { height: 3px; border-radius: 4px; background: #edeef2; }
+	.sample-content i:first-child { width: 55%; height: 5px; background: #235cf3; }
 	.sample-content i:last-child { width: 70%; }
-	.sample-dark { border-color: #2d394a; background: #090d14; }
-	.sample-dark .sample-rail { border-color: #2d394a; background: #131923; }
-	.sample-dark .sample-content i { background: #1c2c49; }
+	.sample-dark { border-color: #303640; background: #0b0d11; }
+	.sample-dark .sample-rail { border-color: #303640; background: #16191f; }
+	.sample-dark .sample-content i { background: #20242c; }
 	.sample-dark .sample-content i:first-child { background: #98b9ff; }
-	.sample-system { background: linear-gradient(115deg, #f3f4f6 48%, #090d14 49%); }
-	@media (max-width: 350px) { .theme-options { grid-template-columns: minmax(0, 1fr); } .theme-option { grid-template-columns: 70px minmax(0, 1fr); align-items: center; } }
+	.sample-system { background: linear-gradient(115deg, #f5f5f7 48%, #0b0d11 49%); }
+	.sample-system .sample-rail { border-color: transparent; background: linear-gradient(115deg, #ffffff 48%, #16191f 49%); }
+	.sample-system .sample-content i { background: #edeef2; }
+	.sample-system .sample-content i:first-child { background: linear-gradient(90deg, #235cf3 48%, #98b9ff 49%); }
 	.pwa-intro { margin: 13px 0 14px; font-size: 1rem; }
 	.install-guide { display: grid; gap: 4px; padding: 11px 0; border-top: 1px solid var(--line); }
 	.install-guide strong { font-size: .875rem; }
@@ -1403,7 +1404,6 @@
 		.widget-profile-actions .button { flex: 1 1 100%; }
 	}
 
-	.vehicle-personalization { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 22px; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--line); align-items: start; }
 	.vehicle-color-field { min-width: 0; margin: 0; padding: 0; border: 0; }
 	.vehicle-color-field legend { margin-bottom: 4px; font-size: 1rem; font-weight: 650; }
 	.vehicle-color-options { display: grid; gap: 7px; margin-top: 12px; }
@@ -1412,14 +1412,12 @@
 	.vehicle-color-option:focus-within { outline: 2px solid var(--focus); outline-offset: 3px; }
 	.vehicle-color-option > span:not(.paint-swatch) { flex: 1; }
 	.paint-swatch { width: 24px; height: 24px; flex: 0 0 24px; border: 1px solid #7d838b; border-radius: 50%; }
-	@media (max-width: 1100px) { .vehicle-personalization { grid-template-columns: 1fr; } }
 
 	.settings-card { padding: 24px 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; }
 	.settings-card-heading h2 { margin-top: 0; font-size: 1.125rem; }
 	.settings-card-heading p:not(.section-label) { font-size: .875rem; }
 	.settings-icon { width: 24px; height: 24px; flex-basis: 24px; border-radius: 0; background: transparent; }
 	.settings-form { margin-top: 12px; }
-	.vehicle-personalization { grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 0 0 24px; padding: 0 0 24px; border-top: 0; border-bottom: 1px solid var(--line); }
 	.vehicle-color-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 	.vehicle-color-option { min-height: 48px; padding: 8px; border-color: transparent; border-radius: 8px; background: transparent; font-size: .8125rem; }
 	.vehicle-color-option.selected { border-color: var(--forest); }
@@ -1432,23 +1430,46 @@
 	@media (max-width: 700px) { .vehicle-color-options { gap: 4px; } .settings-form .field-hint { font-size: .8125rem; } }
 	@media(max-width:359px){.vehicle-color-options{grid-template-columns:minmax(0,1fr)}}
 
-	.settings-intro { align-items: center; }
-	.settings-profile { display: grid; gap: 0; min-width: 0; }
-	.settings-section-switcher { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; }
+	.settings-intro { align-items: flex-start; margin-bottom: 16px; }
+	.settings-profile { display: grid; gap: 16px; min-width: 0; }
+	.settings-section-switcher { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; margin-bottom: 0; }
 	.settings-section-switcher button { min-width: 0; overflow-wrap: anywhere; }
-	.settings-section-panel { display: grid; gap: 0; min-width: 0; padding: clamp(16px, 3vw, 28px); border: 1px solid var(--line); border-radius: 22px; background: var(--surface); box-shadow: var(--shadow); }
+	.settings-section-panel { display: grid; gap: 0; min-width: 0; padding: clamp(20px, 3vw, 30px); border: 1px solid var(--line); border-radius: 26px; background: var(--surface); box-shadow: var(--shadow); }
 	.settings-section-panel > .settings-card { min-width: 0; margin: 0; padding: 22px 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; }
 	.settings-section-panel > .settings-card:last-child { padding-bottom: 0; border-bottom: 0; }
 	.settings-section-panel .settings-card-heading h2 { margin-top: 0; }
 	.settings-section-panel .settings-card-heading p:not(.section-label) { font-size: .875rem; }
 	.settings-section-panel .settings-icon { width: 24px; height: 24px; flex-basis: 24px; border-radius: 0; background: transparent; }
 	.settings-section-panel .settings-form { margin-top: 16px; }
+	.vehicle-settings-form { display: grid; gap: 20px; }
+	.vehicle-profile-header { display: grid; grid-template-columns: minmax(0, .88fr) minmax(0, 1.12fr); align-items: center; gap: clamp(20px, 3vw, 42px); min-width: 0; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+	.vehicle-profile-art { min-width: 0; --vehicle-stage-height: 200px; }
+	.vehicle-profile-art :global(.vehicle-artwork) { width: 100%; }
+	.vehicle-profile-art :global(.vehicle-artwork figcaption) { margin-top: -3px; }
+	.vehicle-identity-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 16px; min-width: 0; }
+	.vehicle-color-field { padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+	.vehicle-color-field legend { margin-bottom: 4px; font-size: .9375rem; font-weight: 700; }
+	.vehicle-color-options { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 12px; margin-top: 8px; }
+	.vehicle-color-option { min-width: 0; min-height: 44px; padding: 6px 3px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; font-size: .8125rem; overflow-wrap: anywhere; }
+	.vehicle-color-option.selected { border-color: var(--forest); background: transparent; color: var(--forest); }
+	.vehicle-color-option:hover { background: var(--surface-soft); }
+	.vehicle-color-option:focus-within { outline-offset: 2px; }
+	.vehicle-configuration-grid { margin-top: 0; }
 	@media (max-width: 620px) {
 		.settings-section-switcher { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-		.settings-section-panel { padding: 16px; border-radius: 18px; }
+		.settings-section-panel { padding: 18px; border-radius: 24px; }
 		.settings-section-panel > .settings-card { padding: 19px 0; }
 		.settings-section-panel .settings-form .form-actions { align-items: stretch; flex-direction: column; }
 		.settings-section-panel .settings-form .form-actions > .button { width: 100%; }
+		.vehicle-profile-header { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 14px; }
+		.vehicle-profile-art { --vehicle-stage-height: 140px; }
+		.vehicle-identity-fields { grid-template-columns: minmax(0, 1fr); gap: 11px; }
+		.vehicle-color-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	}
+	@media (max-width: 430px) {
+		.vehicle-profile-header { grid-template-columns: minmax(96px, .85fr) minmax(0, 1.35fr); gap: 12px; }
+		.vehicle-profile-art { --vehicle-stage-height: 140px; }
+		.vehicle-identity-fields { grid-template-columns: minmax(0, 1fr); gap: 10px; }
 	}
 
 </style>

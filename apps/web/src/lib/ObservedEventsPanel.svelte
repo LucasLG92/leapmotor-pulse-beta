@@ -198,13 +198,13 @@
 					<div class="observed-main">
 						<strong>{fieldText(event)}: <span class="sr-only">{'cambió de '}</span>{stateText(event, event.before)} <span aria-hidden="true">→</span><span class="sr-only">{' a '}</span> {stateText(event)}</strong>
 						<p>Lectura observada: <time datetime={event.observed_at}>{fullDate(event.observed_at)}</time></p>
+						<p class="observed-source">Fuente: {event.source}</p>
 						<details>
-							<summary>Ver recepción y fuente</summary>
+							<summary>Ver horas de recepción</summary>
 							<dl>
 								<div><dt>Observada anteriormente</dt><dd><time datetime={event.previous_observed_at}>{fullDate(event.previous_observed_at, true)}</time></dd></div>
 									<div><dt>Recibida anteriormente</dt><dd><time datetime={event.previous_received_at}>{fullDate(event.previous_received_at, true)}</time></dd></div>
 									<div><dt>Recibida</dt><dd><time datetime={event.received_at}>{fullDate(event.received_at, true)}</time></dd></div>
-									<div><dt>Fuente</dt><dd>{event.source}</dd></div>
 							</dl>
 						</details>
 					</div>

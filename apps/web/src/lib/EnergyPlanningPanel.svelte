@@ -199,10 +199,10 @@
 </script>
 
 <section class="energy-planning workspace-panel" aria-labelledby="energy-planning-heading">
-	<header class="planning-heading premium-heading"><span class="planning-mark" aria-hidden="true"><Glyph name="energy" size={19} /></span><div><p class="eyebrow">Costes manuales y escenarios</p><h2 id="energy-planning-heading">Planificación de energía</h2><p>Compara lo que registraste y prueba un horario con precios que aportes tú.</p></div></header>
+	<header class="planning-heading premium-heading"><span class="planning-mark" aria-hidden="true"><Glyph name="energy" size={19} /></span><div><h2 id="energy-planning-heading">Coste y escenario</h2><p>Compara cargas registradas y prueba un horario sin iniciar la carga.</p></div></header>
 
 	<section class="comparison-section" aria-labelledby="comparison-heading">
-		<div class="planning-section-heading"><div><p class="eyebrow">Histórico registrado</p><h3 id="comparison-heading">Cargas manuales por mes</h3><p>Sin estimar datos ausentes ni mezclar fuentes automáticas o de demostración.</p></div>
+		<div class="planning-section-heading"><div><h3 id="comparison-heading">Cargas manuales por mes</h3><details class="comparison-explanation"><summary>Qué incluye</summary><p>Sin estimar datos ausentes ni mezclar fuentes automáticas o de demostración.</p></details></div>
 			<label class="range-select" for="comparison-days">Ventana<select id="comparison-days" bind:value={days} disabled={busy || comparisonLoading || !online}><option value={30}>Últimos 30 días</option><option value={90}>Últimos 90 días</option><option value={365}>Últimos 365 días</option></select></label>
 		</div>
 		{#if comparisonError}<div class="planning-error" role="alert"><span>{comparisonError}</span><button class="button button-secondary" type="button" onclick={() => void loadComparison()} disabled={!online || comparisonLoading}>Reintentar</button></div>{/if}
@@ -393,5 +393,45 @@
 		.price-field, .remove-interval { grid-column: 1; }
 		.remove-interval { grid-row: auto; justify-self: stretch; }
 		.simulation-actions .button { width: 100%; }
+	}
+	.energy-planning.workspace-panel { gap: 25px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+	.planning-heading { display: block; padding: 0 0 15px; border-bottom: 1px solid var(--line); }
+	.planning-mark { display: none; }
+	.planning-heading h2 { margin: 0; font-size: clamp(1.25rem, 2vw, 1.5rem); font-weight: 650; letter-spacing: -.035em; }
+	.planning-heading p:not(.eyebrow) { max-width: 62ch; margin-top: 4px; font-size: .8125rem; }
+	.comparison-section, .simulator-section { gap: 14px; }
+	.planning-section-heading h3 { margin: 0; font-size: 1.05rem; font-weight: 640; letter-spacing: -.02em; }
+	.comparison-explanation > summary { display: inline-flex; min-height: 36px; align-items: center; color: var(--muted); font-size: .75rem; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+	.comparison-explanation > p { max-width: 68ch; margin: 0; color: var(--muted); font-size: .8125rem; line-height: 1.5; }
+	.simulator-section { padding-top: 20px; border-top: 1px solid var(--line); }
+	.simulator-section .planning-section-heading p:not(.eyebrow) { margin-top: 5px; font-size: .8125rem; }
+	.simulator-toggle { min-height: 48px; border-radius: 12px; }
+	.range-select { min-width: 190px; }
+	select, input { border-radius: 12px; background: var(--surface-raised); }
+	.simulation-form { gap: 18px; padding: 20px; border: 1px solid var(--line); border-radius: 24px; background: var(--surface); }
+	.field { gap: 7px; }
+	.field label, .tariff-fieldset legend { font-size: .8125rem; }
+	.field small { font-size: .75rem; }
+	.tariff-fieldset { gap: 12px; padding: 15px; border: 1px solid var(--line); border-radius: 16px; }
+	.tariff-row { padding: 12px; border: 0; border-radius: 14px; background: var(--surface-soft); }
+	.remove-interval { border-radius: 11px; }
+	.result-card { gap: 15px; padding-top: 17px; }
+	.result-metrics > div { padding-block: 12px; }
+	.schedule-details li { padding: 11px 0; }
+	@media (max-width: 700px) {
+		.energy-planning.workspace-panel { gap: 21px; padding: 0; }
+		.planning-section-heading { align-items: flex-start; }
+		.simulator-toggle { width: auto; }
+		.range-select { min-width: 0; }
+		.simulation-form { padding: 16px; border-radius: 20px; }
+		.tariff-fieldset { padding: 12px; }
+		.tariff-row { padding: 12px 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; }
+	}
+	@media (max-width: 380px) {
+		.energy-planning.workspace-panel { padding: 0; }
+		.simulator-toggle { width: 100%; }
+		.planning-section-heading { flex-direction: column; }
+		.simulation-form { padding: 14px; }
+		.tariff-fieldset { padding-inline: 0; }
 	}
 </style>
