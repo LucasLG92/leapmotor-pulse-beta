@@ -1,38 +1,511 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-13",
-  "record_scope": "postpublication_web_release_receipt",
+  "updated_at": "2026-10-14",
   "objective_status": "blocked",
-  "objective_acceptance": "A0-A12, las siete puertas reales y la aceptación final siguen vigentes; una fase de software o un registro estructuralmente válido no las cierra.",
+  "objective_acceptance": "A0-A12, las siete puertas reales y la aceptación final siguen vigentes. Un registro estructuralmente válido o una fase de software completada no cierra por sí mismo el objetivo.",
+  "source_publication": {
+    "status": "published",
+    "source_only": true,
+    "scope_note": "Fuentes de optimización publicadas en ambos repositorios. La entrega web se acredita por separado; no se entregan nuevos APK/IPA ni se cierra la aceptación física.",
+    "repositories": [
+      {
+        "repository": "LucasLG92/leapmotor-pulse-beta",
+        "visibility": "public",
+        "branch": "main",
+        "commit_sha": "a1fe9b0ee6c13c0d383d1a26b1304c736bc91c9f",
+        "commit_url": "https://github.com/LucasLG92/leapmotor-pulse-beta/commit/a1fe9b0ee6c13c0d383d1a26b1304c736bc91c9f",
+        "code_commit_sha": "a1fe9b0ee6c13c0d383d1a26b1304c736bc91c9f",
+        "original_license_preserved": true
+      },
+      {
+        "repository": "LucasLG92/leapmotor-pulse",
+        "visibility": "private",
+        "branch": "main",
+        "commit_sha": "ef84661b7b469e3bd002a3032fa342af5841f28d",
+        "commit_url": "https://github.com/LucasLG92/leapmotor-pulse/commit/ef84661b7b469e3bd002a3032fa342af5841f28d",
+        "code_commit_sha": "ef84661b7b469e3bd002a3032fa342af5841f28d",
+        "original_license_preserved": true
+      }
+    ]
+  },
+  "external_ci": {
+    "status": "passed",
+    "scope_note": "CI verify y dependency-security correctas sobre los heads exactos de PR19 pública y PR18 privada; incluye flujos de navegador con SQLite de producción y conserva lifecycle del instalador público. No acredita aceptación física.",
+    "repositories": [
+      {
+        "repository": "LucasLG92/leapmotor-pulse-beta",
+        "visibility": "public",
+        "published_commit_sha": "a1fe9b0ee6c13c0d383d1a26b1304c736bc91c9f",
+        "code_head_sha": "442c4084930b26c29287d9c177ecd85089315e8f",
+        "pr_verify_run": 38481182602,
+        "pr_security_run": 38481182620,
+        "runs": [
+          {
+            "id": 38481182620,
+            "name": "dependency-security",
+            "event": "pull_request",
+            "head_sha": "442c4084930b26c29287d9c177ecd85089315e8f",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38481182620"
+          },
+          {
+            "id": 38481182602,
+            "name": "verify",
+            "event": "pull_request",
+            "head_sha": "442c4084930b26c29287d9c177ecd85089315e8f",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38481182602"
+          },
+          {
+            "id": 38481177001,
+            "name": "verify",
+            "event": "push",
+            "head_sha": "442c4084930b26c29287d9c177ecd85089315e8f",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38481177001"
+          }
+        ]
+      },
+      {
+        "repository": "LucasLG92/leapmotor-pulse",
+        "visibility": "private",
+        "published_commit_sha": "ef84661b7b469e3bd002a3032fa342af5841f28d",
+        "code_head_sha": "fdff350b8ce7220ad8a38221bd55ad1c7609158b",
+        "pr_verify_run": 38481186348,
+        "pr_security_run": 38481186272,
+        "runs": [
+          {
+            "id": 38481186272,
+            "name": "dependency-security",
+            "event": "pull_request",
+            "head_sha": "fdff350b8ce7220ad8a38221bd55ad1c7609158b",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38481186272"
+          },
+          {
+            "id": 38481186348,
+            "name": "verify",
+            "event": "pull_request",
+            "head_sha": "fdff350b8ce7220ad8a38221bd55ad1c7609158b",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38481186348"
+          },
+          {
+            "id": 38481181615,
+            "name": "verify",
+            "event": "push",
+            "head_sha": "fdff350b8ce7220ad8a38221bd55ad1c7609158b",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38481181615"
+          }
+        ]
+      }
+    ],
+    "documentation_runs": [
+      {
+        "repository": "LucasLG92/leapmotor-pulse-beta",
+        "head_sha": "2b3a4163d6c2a2d994f607ad799939d2dbbcb524",
+        "id": 38431045690,
+        "name": "verify",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38431045690"
+      },
+      {
+        "repository": "LucasLG92/leapmotor-pulse",
+        "head_sha": "735797e39c127fcd27060c256f9ccfffbf3f8667",
+        "id": 38431057935,
+        "name": "verify",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38431057935"
+      }
+    ]
+  },
+  "latest_delivered": {
+    "web": {
+      "increment": "optimization-20261014",
+      "delivered_at": "2026-10-14",
+      "status": "delivered",
+      "scope": "Sincronización y carga de pestañas bajo demanda, tres módulos backend optimizados, SQLite21/JSON17 sin migración. Salud y 37assets/26gzip contrastados por HTTPS; sin otro binario nativo.",
+      "evidence": "docs/OPTIMIZATION-RELEASE-20261014.json"
+    },
+    "android": {
+      "increment": "brand-continuity-r14-20261011",
+      "delivered_at": "2026-10-11",
+      "status": "delivered",
+      "revision": "r14",
+      "version_name": "0.1.0",
+      "version_code": 1,
+      "evidence": "docs/DELIVERY-EVIDENCE.json: android; resumen histórico y límites en docs/ACCEPTANCE.md."
+    },
+    "ios": {
+      "increment": "brand-continuity-ios-20261011",
+      "delivered_at": "2026-10-11",
+      "status": "compiled_and_simulator_startup_verified",
+      "app_and_widgetkit_compiled": true,
+      "simulator_startup_verified": true,
+      "signed_distribution": false,
+      "phone_acceptance": false,
+      "evidence": "docs/DELIVERY-EVIDENCE.json: ios; resumen histórico y límites en docs/ACCEPTANCE.md."
+    },
+    "operations": {
+      "increment": "monitor-install-20261012T082407Z",
+      "delivered_at": "2026-10-12",
+      "status": "installed_metadata_monitor_verified",
+      "scope": "Proxmox/CT107 metadata-only backup monitor, active hourly timers and backup OnFailure; initial actual checks healthy. Protected rollback; app/runtime and backup scripts unchanged. No external notification or new restore acceptance.",
+      "evidence": "docs/SECURITY-QUALIFICATION.json:backup_monitor"
+    }
+  },
   "candidates": {
     "android": {
       "status": "local_candidate_not_delivered",
+      "version_name": "0.1.1",
       "version_code": 2,
-      "version_name": "0.1.1"
+      "evidence": "docs/CANDIDATE-QUALIFICATION.json",
+      "source_scope_note": "Current generic phase5 unsigned APK includes manual journey UI and exact native paths;77JUnit/0skip, Lint0errors17warnings,44mobileassets+2emptybridges. No configuration/signing/install/physical acceptance.",
+      "phase8_artifact": {
+        "apk": "outputs/pulse-phase8-unsigned-20261013.apk",
+        "apk_sha256": "8618a4bc87530214bb3e44d14c50f6a46224480c00557bc7ac70cdf791c6eff4",
+        "size_bytes": 6535400,
+        "receipt": "outputs/pulse-phase8-unsigned-20261013.receipt.json",
+        "receipt_sha256": "3bbf4e0e6c2f45e3f198f8f8f4c8cb0103dceebbd8fa98a65c182ba6158854da",
+        "assets_exact": 44,
+        "empty_generated_bridge_assets": 2,
+        "assemble_release": "passed",
+        "lint_vital_release": "passed",
+        "prior_75_native_tests": "reused, not rerun; 60 unchanged native inputs",
+        "generic": true,
+        "signed": false,
+        "physical_acceptance": false
+      },
+      "phase4_artifact": {
+        "path": "outputs/pulse-android-unsigned-phase4-20261013-bridges.apk",
+        "sha256": "71e3db5cd519ac7208b8b3b858239faf008b191e61fc4d2bd7c6a536002de2b0",
+        "bytes": 6536128,
+        "unit_tests": 76,
+        "unit_skipped": 0,
+        "lint_warnings": 17,
+        "lint_errors": 0,
+        "dist_assets": 44,
+        "empty_bridges": 2,
+        "compiled_connection_fields_empty": 7,
+        "source_qualification": "phase4 Android/web/mobile inputs exact; later test/helper/docs changes do not alter product source",
+        "signed": false,
+        "installed": false,
+        "receipt": "evidence/phase4-charge-save-20261013/android-root-audit-bridges.json"
+      },
+      "phase5_artifact": {
+        "path": "outputs/pulse-android-unsigned-phase5-20261013.apk",
+        "sha256": "3fa15babad48b3f20214dad9d3d76f1eb8dfa43b91dfc3aea00d993c57361a14",
+        "bytes": 6544876,
+        "unit_tests": 77,
+        "unit_skipped": 0,
+        "lint_errors": 0,
+        "lint_warnings": 17,
+        "dist_assets": 44,
+        "empty_bridges": 2,
+        "runtime_connection_fields_empty": 7,
+        "signed": false,
+        "installed": false,
+        "physical_acceptance": false
+      }
     },
     "ios": {
       "status": "local_candidate_not_delivered",
       "marketing_version": "0.1.1",
-      "build_number": 2
+      "build_number": 2,
+      "evidence": "docs/CANDIDATE-QUALIFICATION.json",
+      "source_scope_note": "Phase5 App/Widget compiled and generic startup validated on public053cf1f/run38356488993;38packageXCTest plus reported UI method, PNG pixel/visual pass, generic unsigned IPA audited. No phone/OAuth/WidgetKit runtime acceptance.",
+      "phase8_artifact": {
+        "commit": "8c4aa1c581473590ec462836f41735b4510ae0eb",
+        "run_id": 38324253913,
+        "status": "completed",
+        "conclusion": "success",
+        "simulator_debug_release": true,
+        "simulator_startup": true,
+        "simulator_ui_verified": false,
+        "iphone_release": true,
+        "device_ipa_requested": true,
+        "ipa": "outputs/pulse-phase8-ios-unsigned-20261013-8c4aa1c.ipa",
+        "ipa_sha256": "687e4e488cae70afefc34417ec4c5e48f93e7017eb8801b43271d755865188fc",
+        "artifact_audit": "evidence/phase8-delivery-20261013/ios/device-artifact-audit.json",
+        "receipt": "evidence/phase8-delivery-20261013/ios/final-receipt.json",
+        "generic": true,
+        "signed": false,
+        "widget_runtime": false,
+        "physical_acceptance": false
+      },
+      "visible_startup_review": {
+        "status": "published_draft_prs_build_verified_ui_not_accepted",
+        "source_only": true,
+        "branch": "codex-ios-visible-startup-20261013",
+        "public_pr": "https://github.com/LucasLG92/leapmotor-pulse-beta/pull/11",
+        "public_head": "8f073645a7c4a4172d4901866d400428d15023cb",
+        "private_pr": "https://github.com/LucasLG92/leapmotor-pulse/pull/10",
+        "private_head": "c07831d24f1972b7bc2f2d4bc0c90028652f16cd",
+        "first_run": 38329155408,
+        "first_run_conclusion": "failure",
+        "first_ui_test_build_passed": true,
+        "first_xctest_method_execution_verified": false,
+        "diagnostic_png_review": "Generic login visible in post-failure simctl PNG; this is not the successful XCTest snapshot.",
+        "current_run": 38330388042,
+        "current_head": "8f073645a7c4a4172d4901866d400428d15023cb",
+        "current_status": "completed",
+        "semantic_readiness_verified": false,
+        "local_tests_passed": 55,
+        "local_subcases_passed": 46,
+        "independent_review_p1_p2_remaining": 0,
+        "production_deployed": false,
+        "signed": false,
+        "physical_acceptance": false,
+        "evidence": "evidence/phase2-ios-visible-startup-20261013",
+        "current_conclusion": "failure",
+        "current_failure": {
+          "stage": "launch",
+          "type": "timeout"
+        },
+        "current_ui_command_invoked": false,
+        "current_ui_test_build_passed": true,
+        "current_app_widget_simulator_debug_release_build_passed": true,
+        "current_owned_simulator_removed": true,
+        "current_device_ipa_created": false,
+        "current_receipt": "evidence/phase2-ios-visible-startup-20261013/startup-run38330388042/artifact-audit.json",
+        "diagnostic_status": "not reached in latest run; first UI failure cause remains unknown"
+      },
+      "xctest_launch_review": {
+        "status": "simulator_semantic_startup_verified_physical_pending",
+        "source_only": false,
+        "public_head": "937833cff84575977b8e4f23af382747b8eb9732",
+        "private_head": "1c134d7c840ab02e49c922997d1b57c01a325ad6",
+        "public_pr": "https://github.com/LucasLG92/leapmotor-pulse-beta/pull/11",
+        "private_pr": "https://github.com/LucasLG92/leapmotor-pulse/pull/10",
+        "run_id": 38335055825,
+        "run_status": "completed",
+        "conclusion": "success",
+        "startup_owner": "XCTest",
+        "receipt_version": 2,
+        "initial_png_scope": "pretest simulator; not App acceptance",
+        "local_tests_passed": 59,
+        "local_subcases_passed": 46,
+        "independent_review_p1_p2_remaining": 0,
+        "semantic_readiness_verified": true,
+        "physical_acceptance": false,
+        "signed_distribution": false,
+        "widget_runtime": false,
+        "evidence": "evidence/phase2-ios-xctest-launch-20261013",
+        "test_repetition": "single_test_scheme_without_repetition_options",
+        "previous_run": {
+          "id": 38332785977,
+          "head": "27e81f80a9127de4523a7eb9ac6f4b1784a2bdeb",
+          "conclusion": "failure",
+          "return_code": 64,
+          "known_error_options": [
+            "-test-iterations"
+          ],
+          "semantic_readiness_verified": false,
+          "owned_simulator_removed": true
+        },
+        "visual_review": "pass",
+        "owned_simulator_removed": true,
+        "final_receipt": "evidence/phase2-ios-xctest-launch-20261013/final-receipt.json",
+        "final_receipt_sha256": "849654a8bac2f39c4206069cca047456eb80c1e630bd96e5fec4674c85c06ec8",
+        "visual_review_receipt": "evidence/phase2-ios-xctest-launch-20261013/startup-run38335055825/visual-review.json",
+        "iphone_ipa": "outputs/pulse-ios-unsigned-20261013-937833c.ipa",
+        "iphone_ipa_sha256": "c7c4f399de557de870ab787b2ebbb28d70b2048740a43c007833dfb16de54a9b",
+        "native_xctest_passed": 36,
+        "public_apple_run_only": true,
+        "general_dependency_ci_both_heads": "success"
+      },
+      "phase4_artifact": {
+        "schema_version": 1,
+        "run_id": 38346256969,
+        "job_id": 115128280077,
+        "source_commit": "e35ebe69bdbd4000a7451cee65663b7c9009ca21",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38346256969",
+        "dispatches": 1,
+        "compiled": {
+          "app_widget_simulator_debug_release": true,
+          "ui_test_build": true,
+          "app_widget_iphoneos_release": true
+        },
+        "xctest": {
+          "core_passed": 28,
+          "credentials_passed": 9,
+          "ui_method_reported_completed": true,
+          "semantic_readiness_reported": true
+        },
+        "protocol": 2,
+        "receipt_version": 3,
+        "visual_review": {
+          "status": "pass",
+          "png_sha256": "838001727f295b5fd5e5960daf6a6fed46bef49987a6ebc8f8f36fae979fd7b1",
+          "png": "evidence/phase4-charge-save-20261013/apple-render-guard/apple/startup/startup.png",
+          "separate_review": "evidence/phase4-charge-save-20261013/apple-render-guard/apple/startup/visual-review.json",
+          "original_ci_receipt_preserved": true
+        },
+        "pixel_guard": {
+          "heading_spread": 146,
+          "notice_spread": 72,
+          "semantic_and_pixel_guard_verified": true
+        },
+        "ipa": {
+          "path": "outputs/pulse-ios-unsigned-phase4-render-guard-20261013-e35ebe6.ipa",
+          "sha256": "9ddf801cc0eb0c8fc496bb7db5f6cf2556e9b3833de107deefefdb1042acdb21",
+          "bytes": 1328738,
+          "signed": false,
+          "configured": false,
+          "arm64_app_widget": true,
+          "assets": 46,
+          "empty_generated_bridges": 2,
+          "shared_source_matches": 75,
+          "physical_acceptance": false
+        },
+        "artifacts": [
+          {
+            "id": 11789197173,
+            "name": "ios-simulator-startup",
+            "digest": "sha256:0c9dbd5006b533a600e3a25fb79f621b32fe4c5485fbd43ba5c610c0465d045e",
+            "bytes": 3746643,
+            "head": "e35ebe69bdbd4000a7451cee65663b7c9009ca21"
+          },
+          {
+            "id": 11789042345,
+            "name": "ios-spm-security",
+            "digest": "sha256:6ff42edd60a32dba01c683dba56c46702a0c1ce878472d09de66b4a67899dd11",
+            "bytes": 1633,
+            "head": "e35ebe69bdbd4000a7451cee65663b7c9009ca21"
+          },
+          {
+            "id": 11788842636,
+            "name": "ios-device-unsigned",
+            "digest": "sha256:5b8a51e7f79c1c9bfeebbf173f64b444c54df57f77b1ac692eddab510d2c3e16",
+            "bytes": 1322394,
+            "head": "e35ebe69bdbd4000a7451cee65663b7c9009ca21"
+          }
+        ],
+        "owned_simulator_removed": true,
+        "widget_runtime": false,
+        "physical_acceptance": false,
+        "spm": "no_matched_known_commit_advisories; pinned Capacitor only"
+      },
+      "phase5_artifact": {
+        "run_id": 38356488993,
+        "job_id": 115160494624,
+        "head": "053cf1f933001252a8c8a231cd87c1ee8db03daf",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38356488993",
+        "dispatches": 1,
+        "app_widget_simulator_debug_release": true,
+        "ui_test_build": true,
+        "app_widget_iphoneos_release": true,
+        "core_xctest": 29,
+        "credential_xctest": 9,
+        "startup_ui_method_completed": true,
+        "protocol": 2,
+        "receipt_version": 3,
+        "semantic_and_pixel_guard_verified": true,
+        "visual_review": "pass",
+        "png": "evidence/phase5-manual-journeys-20261013/apple/startup/startup.png",
+        "png_sha256": "f1827a8480d7dabdd327447e3ce4d3246443ac5b1171859ff634a04c4615ecd2",
+        "owned_simulator_removed": true,
+        "ipa": "outputs/pulse-ios-unsigned-phase5-20261013-053cf1f.ipa",
+        "ipa_sha256": "6b4d7229d88e696cfcb8f959344510a6c6fd378801c7703c1d8b1a1d51732c46",
+        "ipa_bytes": 1338086,
+        "files": 70,
+        "assets": 46,
+        "shared_source_matches": 78,
+        "signed": false,
+        "configured": false,
+        "widget_runtime": false,
+        "physical_installation": false,
+        "spm": {
+          "identity": "capacitor-swift-pm",
+          "version": "8.5.3",
+          "revision": "4c7f346d16196e21fbe23d4a7a6fc7af62af6742",
+          "status": "no_matched_known_commit_advisories",
+          "scope": "pinned Capacitor commit only, not exhaustive native/toolchain security"
+        },
+        "artifacts": [
+          {
+            "id": 11794090950,
+            "name": "ios-device-unsigned",
+            "digest": "sha256:dc02c9c8ac61926a49472133e0f258be98618740905b7b6af2b1ffd57b10de82",
+            "bytes": 1331564
+          },
+          {
+            "id": 11793701610,
+            "name": "ios-simulator-startup",
+            "digest": "sha256:9302ae022446e5e33296370264a48b3d3587709734723623d53ec78387b36e59",
+            "bytes": 3745503
+          },
+          {
+            "id": 11793377013,
+            "name": "ios-spm-security",
+            "digest": "sha256:6a6e07cef2cba09aa41ac44f1f5e41e75d871f5727d4e4813f927b5a1137bf11",
+            "bytes": 1633
+          }
+        ]
+      }
+    },
+    "web": {
+      "status": "local_candidate_not_delivered",
+      "scope": "Preparación, accesibilidad/historial, seis magnitudes numéricas y errores persistentes/foco/borradores de cargas, preferencias, perfiles y mantenimiento. Selección MQTT opcional de temperaturas y presiones, sin activación implícita. Errores de copias y estados de consulta/foco de acciones Push/nativas con fixtures locales. Acciones ABRP/demo y eliminación/revocación de widget: errores inciertos persistentes, exclusión mutua, guardas tras confirmar y foco estable; QA únicamente sintética. Diagnóstico pasivo de códigos crudos de seguridad/centinela con fuente y fechas, SQLite17/JSON15 e importación anterior; sin interpretación física o visor. Ciclo Push: inspección local fallida visible, reemplazo solo tras baja verificada, recuperación local explícita y guardas de desmontaje; QA sintética, no aceptación física.",
+      "evidence": "docs/CANDIDATE-QUALIFICATION.json"
+    },
+    "backup_alerts": {
+      "status": "software_verified_source_review_published",
+      "qualification": "docs/BACKUP-ALERTS-QUALIFICATION.json",
+      "source_published": true,
+      "runtime_deployed": false,
+      "physical_acceptance": false
     }
-  },
-  "current_local_increment": {
-    "id": "cockpit-and-manual-tools-20261013",
-    "status": "web_deployed_native_physical_pending",
-    "source_published": true,
-    "runtime_deployed": true,
-    "native_packaged": false,
-    "native_signed": false,
-    "storage_schema": 21,
-    "export_schema": 17
   },
   "acceptance": {
     "status": "pending",
     "physical_acceptance": false,
     "full_objective_complete": false,
-    "preserved_criteria": "A0-A12 y las siete puertas reales.",
-    "note": "Software web publicado y desplegado; aceptación física, accesibilidad móvil, native y A0-A12 pendientes."
+    "preserved_criteria": [
+      "A0-A12",
+      "seven-original-real-gates"
+    ],
+    "note": "La aceptación del producto requiere evidencia software y real aplicable; no se infiere de builds, CI, fixtures, simulador o resultados del checker."
   },
+  "historical_evidence": [
+    {
+      "record": "startup-recovery-20261011",
+      "date": "2026-10-11",
+      "increment": "startup-recovery-20261011",
+      "public_source_commit": "5e5c4920677a7e96ee438e38c23bd221ea3dd8fb",
+      "image_short_id": "0948f52f",
+      "web_delivered": true,
+      "physical_acceptance": false,
+      "evidence_reference": "docs/ACCEPTANCE.md: Recuperación de lecturas de inicio; recibo histórico startup-recovery-20261011."
+    },
+    {
+      "record": "brand-continuity-20261011",
+      "date": "2026-10-11",
+      "increment": "brand-continuity-20261011",
+      "public_source_commit": "848f9c256aa2d03a884546d4a746c5d7f0fa4333",
+      "android_revision": "r14",
+      "android_version_name": "0.1.0",
+      "android_version_code": 1,
+      "ios_app_widgetkit_compiled": true,
+      "ios_simulator_startup_verified": true,
+      "ios_signed_distribution": false,
+      "ios_phone_acceptance": false,
+      "evidence_reference": "docs/ACCEPTANCE.md: Continuidad de marca y cualificación móvil; recibo histórico brand-continuity-20261011."
+    }
+  ],
   "seven_original_real_gates": [
     {
       "id": "gate-1-negative-login-and-another-user",
@@ -83,7 +556,21 @@
       "real_criteria": [
         "Mantener abierta la aceptación física y de accesibilidad aplicable.",
         "Conservar criterios A0-A12 y las siete puertas reales."
-      ]
+      ],
+      "remaining_software_checks": [
+        "Recepción de copia descargada y restauración en navegador pendientes por permisos; no eludir denegaciones.",
+        "Activación/renovación y entrega Push reales, enlace nativo, red intermitente en dispositivos y accesibilidad con lectores de pantalla pendientes. El ciclo Push sintético local sí está verificado."
+      ],
+      "local_increment_in_progress": {
+        "name": "Cuadro de instrumentos y herramientas manuales",
+        "status": "web_deployed_native_physical_pending",
+        "source_published": true,
+        "runtime_deployed": true,
+        "signed_or_distributed": false,
+        "validation": "1370backend/131subcasos/34SDKskip,65web/8puente; seis pantallas y dos temas a1280×720CSS; 35archivos HTTPS exactos. iPhone, reflujo móvil nuevo y VoiceOver pendientes."
+      },
+      "local_increment": "Entrega web13oct del cuadro de instrumentos y herramientas manuales verificada. Los recibos de incrementos y CI anteriores conservan su alcance histórico; las siete puertas reales permanecen abiertas.",
+      "current_local_increment_reference": "docs/EVOLUTION-QUALIFICATION.json"
     },
     {
       "id": "phase-2",
@@ -96,7 +583,13 @@
       "real_criteria": [
         "Firma/distribución y pruebas de OAuth, actualización, privacidad, caducidad, widgets, PWA y push en ambos teléfonos.",
         "Un emulador no acredita un teléfono."
-      ]
+      ],
+      "remaining_software_checks": [
+        "APK configurado y firma de piloto autorizada; actualización/OAuth/widget físicos.",
+        "Firma/distribución e instalación física iOS; cualificación de App Groups/Keychain/OAuth/widgets. Arranque genérico actual del simulador pasa en run38346256969 con píxeles y revisión visual, sin aceptación de dispositivo o servicios reales."
+      ],
+      "local_increment": "Arranque genérico iOS aceptado por XCTest y captura del run38335055825; App/Widget simulador y iPhoneOS, nuevaIPA sin firma auditada.59pruebas/46subcasos fuente/stages y36XCTest Apple. PR11/10 en borrador, heads937833c/1c134d7, CI general/dependencias correcto. Firma/teléfono/OAuth/widgets reales pendientes; no se cierra fase2. Cualificación actual del incremento fase4: run38346256969,37XCTest y guardia de píxeles/captura revisada; APK/IPA actuales sin firma auditados. No cierra los criterios físicos.",
+      "current_local_increment_reference": "docs/EVOLUTION-QUALIFICATION.json"
     },
     {
       "id": "phase-3",
@@ -108,6 +601,12 @@
       "real_criteria": [
         "Lectura pasiva contrastada con el coche, incluyendo reposo y fechas.",
         "No habilitar lecturas ni usar material privado sin autorización aplicable."
+      ],
+      "local_increment": "Six numeric SDK signals preserved across adapter, collector, SQLite16, JSON14, current UI and history.",
+      "qualification": "docs/PHASE3-QUALIFICATION.json",
+      "remaining_software_checks": [
+        "Cualificar configuración/login/renovación y disponibilidad de cada señal con B10 real autorizado.",
+        "Mapear otros estados solo con semántica y unidades demostradas."
       ]
     },
     {
@@ -119,7 +618,17 @@
       ],
       "real_criteria": [
         "Validar con cargador y medidas reales; separar coste estimado de gasto real, red y autoconsumo."
-      ]
+      ],
+      "source_contract_review": "docs/SOURCE-QUALIFICATION.md",
+      "local_increment": "Altas manuales reservadas por propietario, intención/carga atómicas y reintentos sin duplicar en UI compartida. SQLite19/JSON15;1246backend/131subcasos/34SDKskip,51web/7mobile, QA con503sintético después de commit y guardas de borrador. PR pública12/privada11 borradores con CI general/dependencias correcto; APKunsigned76tests/Lint0errores17avisos; Apple38346256969 compila App/Widget y37XCTest, arranque semántico/pixel y revisión PNG pasan. Firma, clientes físicos, cargador, red/precios reales y B10 pendientes; sin merge/despliegue, fase4 sigue abierta.",
+      "qualification": "docs/CHARGE-SAVE-QUALIFICATION.json",
+      "remaining_software_checks": [
+        "Adaptador de intervalos ligado inequívocamente a sesiones y cualificado con el cargador/origen autorizado.",
+        "Reconciliación y revisiones PVPC histórico en servicio real; red/autoconsumo sólo con mediciones suficientes.",
+        "Instalación y transporte de nuevas solicitudes en ambos clientes físicos; reintento real bajo pérdidas de red y restauración operativa."
+      ],
+      "current_local_increment_reference": "docs/EVOLUTION-QUALIFICATION.json",
+      "current_web_delivery": "Herramientas manuales incluidas en la entrega web13oct; docs/COCKPIT-RELEASE-20261013.json. Los servicios y datos reales siguen pendientes."
     },
     {
       "id": "phase-5",
@@ -131,7 +640,17 @@
       "real_criteria": [
         "Validar trayectos y cobertura con datos reales.",
         "Notas, unión reversible, informes ampliados y salud estimada son mejoras opcionales, no evidencia de datos disponibles."
-      ]
+      ],
+      "source_contract_review": "docs/SOURCE-QUALIFICATION.md",
+      "qualification": "docs/MANUAL-JOURNEY-QUALIFICATION.json",
+      "local_increment": "Diario manual privado y paginado con fechas/paradas y magnitudes nullable; reserva/replay, edición revision e informe30/90/365d por propietario, SQLite20/JSON16.1285backend/131subcasos/34SDKskip,57web/7mobile y QA loopback sintética. APK genérico auditado77JUnit/Lint0errores17avisos. Fuentes filtradas publicadas en PRpública13/privada12, hashes/modos comprobados y19extrasprivados preservados; Apple38356488993 correcto,38XCTest de paquetes y método UI, guardia de píxeles/captura y nuevaIPA genérica auditada; sin despliegue, firma o aceptación B10.",
+      "remaining_software_checks": [
+        "Contrato B10 con identidad, unidades, fechas/frescura y cobertura antes de ingestión automática.",
+        "Validación con recorridos y energía reales; no deducir energía por SoC.",
+        "Recepción de exportación/restauración en navegador, firma/instalación y pruebas reales en ambos teléfonos."
+      ],
+      "current_local_increment_reference": "docs/EVOLUTION-QUALIFICATION.json",
+      "current_web_delivery": "Herramientas manuales incluidas en la entrega web13oct; docs/COCKPIT-RELEASE-20261013.json. Los servicios y datos reales siguen pendientes."
     },
     {
       "id": "phase-6",
@@ -142,7 +661,15 @@
       ],
       "real_criteria": [
         "Validar servicios reales y completar rutas/autonomía solo con datos y modelos cualificados."
-      ]
+      ],
+      "local_increment": "Six existing numeric telemetry fields selectable via MQTT, with explicit selection, HA units/discovery, TTL, privacy and software checks.",
+      "qualification": "docs/MQTT-QUALIFICATION.json",
+      "remaining_software_checks": [
+        "Recepción y cualificación HA/MQTT, ABRP, mapas/navegación en servicios y teléfonos reales.",
+        "Rutas/autonomía condicionales a decisión y modelo/datos cualificados; no añadir proveedor por implicación."
+      ],
+      "current_local_increment_reference": "docs/EVOLUTION-QUALIFICATION.json",
+      "current_web_delivery": "Herramientas manuales incluidas en la entrega web13oct; docs/COCKPIT-RELEASE-20261013.json. Los servicios y datos reales siguen pendientes."
     },
     {
       "id": "phase-7",
@@ -165,7 +692,17 @@
       "real_criteria": [
         "Probar recuperación operativa, otra cuenta, rendimiento/consumo y uso habitual reales.",
         "Mantener seguridad y recuperación como criterios continuos."
-      ]
+      ],
+      "local_increment": "Consumidor local de avisos genéricos de copias: consentimiento por dispositivo, journal durable, lectura protegida, deduplicación y reservas protegidas frente a restore. SQLite18/JSON15; suite completa, builds compartidas, QA390 y revisión independiente comprobados. Sin despliegue ni entrega física. Monitor anterior instalado el12oct; no se le atribuye el nuevo formato. Fuentes genéricas revisadas en PR pública10 y privada9, general/seguridad CI en ambos commits y build Apple del público correctos. APK e IPA actuales cualificados; sin despliegue o recepción física.",
+      "qualification": "docs/SECURITY-QUALIFICATION.json",
+      "remaining_software_checks": [
+        "Desplegar productor formato2 y consumidor con transferencia protegida de metadatos al UID de Pulse.",
+        "Comprobar recepción real de alerta/recuperación y caducidad/ausencia del monitor con consentimiento y sesión vigentes.",
+        "Observar ciclos naturales y supervisión externa de la caída del consumidor/host.",
+        "Completar copia fuera del servidor y restauración integral; seguridad, rendimiento y aceptación física siguen abiertos."
+      ],
+      "backup_alerts_qualification": "docs/BACKUP-ALERTS-QUALIFICATION.json",
+      "current_web_delivery": "Migración15→21 conservando recuentos y copia previa; recuperación de imagen sin rebobinar datos tras arranque. No acredita restauración integral ni nueva recepción real de alertas."
     },
     {
       "id": "sentinel9final",
@@ -179,19 +716,902 @@
         "Validar reglas pasivas/avisos y capacidad física de vigilancia/cámaras.",
         "Un comando aceptado o un diario de estados no acredita cámaras ni centinela.",
         "Si falta acceso, conservar el requisito pendiente; no cerrar el objetivo por cambiarlo."
+      ],
+      "local_increment": "Primary-source feasibility plus local passive diagnostic candidate: SDK1255/3636 codes integer0..255, sources/times, SQLite16→17/JSON14→15, legacy1–14 import, collapsed current UI and history. Meaning/target firmware/remote media remain unqualified; no camera, physical command or alert activation.",
+      "qualification": "docs/PHASE9-QUALIFICATION.json",
+      "remaining_software_checks": [
+        "Firmware/build and actual camera/sentry options on target; no availability inference from silence.",
+        "Authorised passive source, signal meaning/observation time/coverage in target B10; native-control effect/permissions/preconditions qualified individually if supported.",
+        "Remote media transport/authentication/session operations or chosen USB clip format must be demonstrated before implementing viewer/recording/retention. Keep remote requirement pending without its interface.",
+        "Real delivered alerts, access by user, stopped/restarted/disconnected coverage, consumption and physical acceptance; earlier phase gates remain pending."
       ]
     }
   ],
-  "local_references": [],
-  "source_publication": {
-    "status": "published",
-    "source_only": true,
-    "commit_sha": "3b8b1d39cb992f6f96296e673a1891856173f3f7",
-    "branch": "main"
+  "local_references": [
+    {
+      "path": "docs/ROADMAP.md",
+      "kind": "local"
+    },
+    {
+      "path": "docs/ACCEPTANCE.md",
+      "kind": "local"
+    },
+    {
+      "path": "docs/DELIVERY-EVIDENCE.json",
+      "kind": "local"
+    },
+    {
+      "path": "docs/CANDIDATE-QUALIFICATION.json",
+      "kind": "local"
+    },
+    {
+      "path": "docs/PHASE3-QUALIFICATION.json",
+      "kind": "local"
+    },
+    {
+      "path": "docs/SOURCE-QUALIFICATION.md",
+      "kind": "local"
+    },
+    {
+      "path": "docs/MQTT-QUALIFICATION.json",
+      "kind": "local"
+    },
+    {
+      "path": "docs/SECURITY-QUALIFICATION.json",
+      "kind": "local"
+    },
+    {
+      "path": "docs/SENTINEL-CAMERAS.md",
+      "kind": "local"
+    },
+    {
+      "path": "docs/PHASE9-QUALIFICATION.json",
+      "kind": "local"
+    },
+    {
+      "path": "docs/OPTIMIZATION-RELEASE-20261014.json",
+      "kind": "local"
+    }
+  ],
+  "source_review": {
+    "status": "published_draft_pr",
+    "repository": "LucasLG92/leapmotor-pulse-beta",
+    "branch": "codex/phase2-ios-device-ipa-20261013",
+    "commit": "d8c9e4524eaf9119094ae253ca67f01c5afa6fa5",
+    "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/pull/9",
+    "source_files_verified": 415,
+    "merged": false,
+    "runtime_delivered": false,
+    "scope": "Push lifecycle increment and optional generic unsigned iPhone IPA pipeline; no operator configuration or signing material",
+    "ci_status": "passed",
+    "ci": [
+      {
+        "id": 38315636834,
+        "name": "verify-ios",
+        "status": "completed",
+        "conclusion": "success",
+        "head_sha": "d8c9e4524eaf9119094ae253ca67f01c5afa6fa5",
+        "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38315636834"
+      },
+      {
+        "id": 38315571164,
+        "name": "dependency-security",
+        "status": "completed",
+        "conclusion": "success",
+        "head_sha": "d8c9e4524eaf9119094ae253ca67f01c5afa6fa5",
+        "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38315571164"
+      },
+      {
+        "id": 38315571179,
+        "name": "verify",
+        "status": "completed",
+        "conclusion": "success",
+        "head_sha": "d8c9e4524eaf9119094ae253ca67f01c5afa6fa5",
+        "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38315571179"
+      },
+      {
+        "id": 38315525385,
+        "name": "verify",
+        "status": "completed",
+        "conclusion": "success",
+        "head_sha": "d8c9e4524eaf9119094ae253ca67f01c5afa6fa5",
+        "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38315525385"
+      }
+    ]
   },
-  "latest_web_delivery": {
-    "status": "delivered",
-    "evidence": "docs/COCKPIT-RELEASE-20261013.json",
-    "phone_acceptance": false
+  "candidate_ios_ci": {
+    "commit": "8c4aa1c581473590ec462836f41735b4510ae0eb",
+    "run_id": 38324253913,
+    "status": "completed",
+    "conclusion": "success",
+    "simulator_debug_release": true,
+    "simulator_startup": true,
+    "simulator_ui_verified": false,
+    "iphone_release": true,
+    "device_ipa_requested": true,
+    "ipa": "outputs/pulse-phase8-ios-unsigned-20261013-8c4aa1c.ipa",
+    "ipa_sha256": "687e4e488cae70afefc34417ec4c5e48f93e7017eb8801b43271d755865188fc",
+    "artifact_audit": "evidence/phase8-delivery-20261013/ios/device-artifact-audit.json",
+    "receipt": "evidence/phase8-delivery-20261013/ios/final-receipt.json",
+    "generic": true,
+    "signed": false,
+    "widget_runtime": false,
+    "physical_acceptance": false
+  },
+  "backup_alerts_source_review": {
+    "status": "published_draft_prs_ci_passed",
+    "source_only": true,
+    "branch": "codex-phase8-backup-alerts-20261013-234809",
+    "pull_requests": {
+      "public": {
+        "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/pull/10",
+        "number": 10,
+        "head_sha": "8c4aa1c581473590ec462836f41735b4510ae0eb",
+        "draft": true
+      },
+      "private": {
+        "url": "https://github.com/LucasLG92/leapmotor-pulse/pull/9",
+        "number": 9,
+        "head_sha": "a029c4731a2d7b2376d198cbdce68f43c47172f1",
+        "draft": true
+      }
+    },
+    "commits": {
+      "public": "8c4aa1c581473590ec462836f41735b4510ae0eb",
+      "private": "a029c4731a2d7b2376d198cbdce68f43c47172f1"
+    },
+    "git_trees": {
+      "public": "790672a19a4fcb3de8bbfe01bb056f348621fb20",
+      "private": "2925eeac55007407910c857e45ae5b4cfc2190a9"
+    },
+    "tree_verification": {
+      "public": {
+        "remote_blob_count": 424,
+        "delta_count": 44,
+        "complete_exact_base_plus_approved_delta": true,
+        "sha_and_mode_match": true
+      },
+      "private": {
+        "remote_blob_count": 438,
+        "delta_count": 49,
+        "complete_exact_base_plus_approved_delta": true,
+        "sha_and_mode_match": true
+      }
+    },
+    "stage_manifest_sha256": "c21103ecdaa2e9307c0b22731936b15142d8db2c51338bc316725573150451dd",
+    "private_remote_extra_files_preserved": 19,
+    "general_dependency_runs": {
+      "public": [
+        {
+          "id": 38324095898,
+          "name": "dependency-security",
+          "event": "pull_request",
+          "head_sha": "8c4aa1c581473590ec462836f41735b4510ae0eb",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38324095898"
+        },
+        {
+          "id": 38324095916,
+          "name": "verify",
+          "event": "pull_request",
+          "head_sha": "8c4aa1c581473590ec462836f41735b4510ae0eb",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38324095916"
+        },
+        {
+          "id": 38324025813,
+          "name": "verify",
+          "event": "push",
+          "head_sha": "8c4aa1c581473590ec462836f41735b4510ae0eb",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38324025813"
+        }
+      ],
+      "private": [
+        {
+          "id": 38324098196,
+          "name": "dependency-security",
+          "event": "pull_request",
+          "head_sha": "a029c4731a2d7b2376d198cbdce68f43c47172f1",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38324098196"
+        },
+        {
+          "id": 38324098247,
+          "name": "verify",
+          "event": "pull_request",
+          "head_sha": "a029c4731a2d7b2376d198cbdce68f43c47172f1",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38324098247"
+        },
+        {
+          "id": 38324027368,
+          "name": "verify",
+          "event": "push",
+          "head_sha": "a029c4731a2d7b2376d198cbdce68f43c47172f1",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38324027368"
+        }
+      ]
+    },
+    "ios_run": {
+      "id": 38324253913,
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "8c4aa1c581473590ec462836f41735b4510ae0eb",
+      "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38324253913"
+    },
+    "receipt": "evidence/phase8-delivery-20261013/publication-final-receipt.json",
+    "merged": false,
+    "runtime_deployed": false,
+    "physical_acceptance": false,
+    "projection": "Community producer uses archive; community consumer default archive normalized to host. Canonical operator variant retains host and requires the actual configured producer profile. Security/crypto/scope/epoch logic unchanged."
+  },
+  "historical_phase2_ios_ci": {
+    "status": "passed",
+    "commit": "d8c9e4524eaf9119094ae253ca67f01c5afa6fa5",
+    "run_id": 38315636834,
+    "iphone_app_widgetkit_release": true,
+    "simulator_debug_release": true,
+    "simulator_startup": true,
+    "unsigned_ipa_sha256": "29b63bd5f054f29eb64bf025a608407d42e327bc4d71f841a62cfb2c789778eb",
+    "signed": false,
+    "phone_acceptance": false,
+    "widget_runtime": false,
+    "receipt": "docs/CANDIDATE-QUALIFICATION.json",
+    "baseline_run_with_timeouts": 38313672619
+  },
+  "ios_visible_startup_review": {
+    "status": "published_draft_prs_build_verified_ui_not_accepted",
+    "source_only": true,
+    "branch": "codex-ios-visible-startup-20261013",
+    "public_pr": "https://github.com/LucasLG92/leapmotor-pulse-beta/pull/11",
+    "public_head": "8f073645a7c4a4172d4901866d400428d15023cb",
+    "private_pr": "https://github.com/LucasLG92/leapmotor-pulse/pull/10",
+    "private_head": "c07831d24f1972b7bc2f2d4bc0c90028652f16cd",
+    "first_run": 38329155408,
+    "first_run_conclusion": "failure",
+    "first_ui_test_build_passed": true,
+    "first_xctest_method_execution_verified": false,
+    "diagnostic_png_review": "Generic login visible in post-failure simctl PNG; this is not the successful XCTest snapshot.",
+    "current_run": 38330388042,
+    "current_head": "8f073645a7c4a4172d4901866d400428d15023cb",
+    "current_status": "completed",
+    "semantic_readiness_verified": false,
+    "local_tests_passed": 55,
+    "local_subcases_passed": 46,
+    "independent_review_p1_p2_remaining": 0,
+    "production_deployed": false,
+    "signed": false,
+    "physical_acceptance": false,
+    "evidence": "evidence/phase2-ios-visible-startup-20261013",
+    "current_conclusion": "failure",
+    "current_failure": {
+      "stage": "launch",
+      "type": "timeout"
+    },
+    "current_ui_command_invoked": false,
+    "current_ui_test_build_passed": true,
+    "current_app_widget_simulator_debug_release_build_passed": true,
+    "current_owned_simulator_removed": true,
+    "current_device_ipa_created": false,
+    "current_receipt": "evidence/phase2-ios-visible-startup-20261013/startup-run38330388042/artifact-audit.json",
+    "diagnostic_status": "not reached in latest run; first UI failure cause remains unknown"
+  },
+  "ios_xctest_launch_review": {
+    "status": "simulator_semantic_startup_verified_physical_pending",
+    "source_only": false,
+    "public_head": "937833cff84575977b8e4f23af382747b8eb9732",
+    "private_head": "1c134d7c840ab02e49c922997d1b57c01a325ad6",
+    "public_pr": "https://github.com/LucasLG92/leapmotor-pulse-beta/pull/11",
+    "private_pr": "https://github.com/LucasLG92/leapmotor-pulse/pull/10",
+    "run_id": 38335055825,
+    "run_status": "completed",
+    "conclusion": "success",
+    "startup_owner": "XCTest",
+    "receipt_version": 2,
+    "initial_png_scope": "pretest simulator; not App acceptance",
+    "local_tests_passed": 59,
+    "local_subcases_passed": 46,
+    "independent_review_p1_p2_remaining": 0,
+    "semantic_readiness_verified": true,
+    "physical_acceptance": false,
+    "signed_distribution": false,
+    "widget_runtime": false,
+    "evidence": "evidence/phase2-ios-xctest-launch-20261013",
+    "test_repetition": "single_test_scheme_without_repetition_options",
+    "previous_run": {
+      "id": 38332785977,
+      "head": "27e81f80a9127de4523a7eb9ac6f4b1784a2bdeb",
+      "conclusion": "failure",
+      "return_code": 64,
+      "known_error_options": [
+        "-test-iterations"
+      ],
+      "semantic_readiness_verified": false,
+      "owned_simulator_removed": true
+    },
+    "visual_review": "pass",
+    "owned_simulator_removed": true,
+    "final_receipt": "evidence/phase2-ios-xctest-launch-20261013/final-receipt.json",
+    "final_receipt_sha256": "849654a8bac2f39c4206069cca047456eb80c1e630bd96e5fec4674c85c06ec8",
+    "visual_review_receipt": "evidence/phase2-ios-xctest-launch-20261013/startup-run38335055825/visual-review.json",
+    "iphone_ipa": "outputs/pulse-ios-unsigned-20261013-937833c.ipa",
+    "iphone_ipa_sha256": "c7c4f399de557de870ab787b2ebbb28d70b2048740a43c007833dfb16de54a9b",
+    "native_xctest_passed": 36,
+    "public_apple_run_only": true,
+    "general_dependency_ci_both_heads": "success"
+  },
+  "manual_charge_save_review": {
+    "status": "software_increment_verified_source_published_physical_pending",
+    "storage_schema": 19,
+    "export_version": 15,
+    "source_only": false,
+    "source_published": true,
+    "native_full_build_current_source": true,
+    "apple_ci_current_source": "completed_success",
+    "runtime_deployed": false,
+    "physical_acceptance": false,
+    "evidence": "evidence/phase4-charge-save-20261013",
+    "qualification": "docs/CHARGE-SAVE-QUALIFICATION.json",
+    "native_full_build_platform": "Android",
+    "public_pr": "https://github.com/LucasLG92/leapmotor-pulse-beta/pull/12",
+    "public_head": "e35ebe69bdbd4000a7451cee65663b7c9009ca21",
+    "private_pr": "https://github.com/LucasLG92/leapmotor-pulse/pull/11",
+    "private_head": "c08f9d19983f02283fed7e76a7b4b52d19de4220",
+    "android_apk": "outputs/pulse-android-unsigned-phase4-20261013-bridges.apk",
+    "android_sha256": "71e3db5cd519ac7208b8b3b858239faf008b191e61fc4d2bd7c6a536002de2b0",
+    "apple_run_id": 38346256969,
+    "android_packaging": "44 dist assets plus two original empty Capacitor bridges restored; source/test/Lint inputs unchanged",
+    "apple_visual_review": "pass",
+    "apple_compile_receipt": "evidence/phase4-charge-save-20261013/apple-render-guard/apple/terminal-run-and-artifacts.json",
+    "ios_pixel_guard": "V2 protocol and receipt3;45focal/13subcases source/two stages; real Apple semantic/pixel readiness and separate visual review pass",
+    "first_white_run": 38342561243,
+    "iphone_ipa": "outputs/pulse-ios-unsigned-phase4-render-guard-20261013-e35ebe6.ipa",
+    "iphone_ipa_sha256": "9ddf801cc0eb0c8fc496bb7db5f6cf2556e9b3833de107deefefdb1042acdb21",
+    "startup_png_sha256": "838001727f295b5fd5e5960daf6a6fed46bef49987a6ebc8f8f36fae979fd7b1",
+    "final_receipt": "evidence/phase4-charge-save-20261013/final-receipt.json",
+    "general_dependency_ci_both_current_heads": "success"
+  },
+  "manual_journeys_review": {
+    "status": "software_increment_verified_source_published_physical_pending",
+    "storage_schema": 20,
+    "export_version": 16,
+    "source_published": true,
+    "native_full_build_platform": "Android",
+    "runtime_deployed": false,
+    "physical_acceptance": false,
+    "qualification": "docs/MANUAL-JOURNEY-QUALIFICATION.json",
+    "evidence": "evidence/phase5-manual-journeys-20261013",
+    "publication": {
+      "branch": "codex-phase5-manual-journeys-20261013",
+      "public": {
+        "pr": "https://github.com/LucasLG92/leapmotor-pulse-beta/pull/13",
+        "head": "053cf1f933001252a8c8a231cd87c1ee8db03daf",
+        "tree": "b04102c45481202f3c291989848dd580364dc816",
+        "sources": 439,
+        "remote_blobs": 439
+      },
+      "private": {
+        "pr": "https://github.com/LucasLG92/leapmotor-pulse/pull/12",
+        "head": "8e1aa7e06a962067f245b1e89833e5e606ca5a95",
+        "tree": "cbdc344ef97ccded995a1a0baa79956b6b07e88e",
+        "sources": 434,
+        "remote_blobs": 453,
+        "extras_preserved": 19
+      },
+      "changed_paths": 49,
+      "draft": true,
+      "merged": false,
+      "runtime_deployed": false,
+      "main_public": "2acb4da019acb34ea7a53f57fe0310bf44408e2f",
+      "main_private": "aa2c260fc9984261eca8e0674d0131947cba05a0",
+      "hashes_modes_exact": true
+    },
+    "apple": {
+      "run_id": 38356488993,
+      "job_id": 115160494624,
+      "head": "053cf1f933001252a8c8a231cd87c1ee8db03daf",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38356488993",
+      "dispatches": 1,
+      "app_widget_simulator_debug_release": true,
+      "ui_test_build": true,
+      "app_widget_iphoneos_release": true,
+      "core_xctest": 29,
+      "credential_xctest": 9,
+      "startup_ui_method_completed": true,
+      "protocol": 2,
+      "receipt_version": 3,
+      "semantic_and_pixel_guard_verified": true,
+      "visual_review": "pass",
+      "png": "evidence/phase5-manual-journeys-20261013/apple/startup/startup.png",
+      "png_sha256": "f1827a8480d7dabdd327447e3ce4d3246443ac5b1171859ff634a04c4615ecd2",
+      "owned_simulator_removed": true,
+      "ipa": "outputs/pulse-ios-unsigned-phase5-20261013-053cf1f.ipa",
+      "ipa_sha256": "6b4d7229d88e696cfcb8f959344510a6c6fd378801c7703c1d8b1a1d51732c46",
+      "ipa_bytes": 1338086,
+      "files": 70,
+      "assets": 46,
+      "shared_source_matches": 78,
+      "signed": false,
+      "configured": false,
+      "widget_runtime": false,
+      "physical_installation": false,
+      "spm": {
+        "identity": "capacitor-swift-pm",
+        "version": "8.5.3",
+        "revision": "4c7f346d16196e21fbe23d4a7a6fc7af62af6742",
+        "status": "no_matched_known_commit_advisories",
+        "scope": "pinned Capacitor commit only, not exhaustive native/toolchain security"
+      },
+      "artifacts": [
+        {
+          "id": 11794090950,
+          "name": "ios-device-unsigned",
+          "digest": "sha256:dc02c9c8ac61926a49472133e0f258be98618740905b7b6af2b1ffd57b10de82",
+          "bytes": 1331564
+        },
+        {
+          "id": 11793701610,
+          "name": "ios-simulator-startup",
+          "digest": "sha256:9302ae022446e5e33296370264a48b3d3587709734723623d53ec78387b36e59",
+          "bytes": 3745503
+        },
+        {
+          "id": 11793377013,
+          "name": "ios-spm-security",
+          "digest": "sha256:6a6e07cef2cba09aa41ac44f1f5e41e75d871f5727d4e4813f927b5a1137bf11",
+          "bytes": 1633
+        }
+      ]
+    },
+    "final_receipt": "evidence/phase5-manual-journeys-20261013/final-receipt.json",
+    "final_receipt_sha256": "f2465daf0bf0dbf26cf173ebec92c6085c9f47827367a33baa98256f7e948943",
+    "general_dependency_ci_both_current_heads": "success"
+  },
+  "native_report_export_review": {
+    "schema_version": 1,
+    "date": "2026-10-13",
+    "increment": "phase5-native-report-export",
+    "status": "software_verified_source_published_physical_pending",
+    "goal_status": "blocked",
+    "phases": 9,
+    "real_gates_pending": 7,
+    "source": "manual",
+    "coverage": "unknown",
+    "storage_schema": 20,
+    "export_version": 16,
+    "bridge_arguments": [
+      "days"
+    ],
+    "periods": [
+      30,
+      90,
+      365
+    ],
+    "maximum_report_bytes": 65536,
+    "output_fields": [
+      "source",
+      "coverage",
+      "period",
+      "totals",
+      "months"
+    ],
+    "validation": {
+      "backend": 1319,
+      "subtests": 131,
+      "backend_skipped": 0,
+      "web": 63,
+      "mobile": 8,
+      "svelte_errors": 0,
+      "svelte_warnings": 0,
+      "contracts_types_builds": "passed; final shared sources also built in the isolated Android stage"
+    },
+    "browser": {
+      "scope": "own_loopback_real_component_mock_native_result_no_files_no_real_selector",
+      "cancel_complete_error_legacy_invalid_expired": "passed",
+      "pending_controls_focus_external_draft_late_callback": "passed",
+      "viewport_width": 390,
+      "horizontal_overflow": false,
+      "main_targets_min_height": 48,
+      "theme": "dark",
+      "console_errors": 0,
+      "fixture_binding_warnings": 6,
+      "cleanup": "server_stopped_tab_closed_viewport_reset"
+    },
+    "android": {
+      "compiled": true,
+      "selector_physical": false,
+      "file_reception": false,
+      "signed": false,
+      "installed": false,
+      "path": "outputs/pulse-android-unsigned-phase5-report-export-20261013.apk",
+      "sha256": "9cdb37198330d94d294fe07c3f5adb26a586886cfe2bde0a96e740b14adee625",
+      "bytes": 6555788,
+      "unit_tests": 93,
+      "unit_skipped": 0,
+      "lint_errors": 0,
+      "lint_warnings": 16,
+      "dist_assets": 44,
+      "empty_bridges": 2,
+      "runtime_connection_fields_empty": 7
+    },
+    "ios": {
+      "run_id": 38375107163,
+      "job_id": 115221411494,
+      "head": "70bee0f0b5434559f96a984176feea2a8f6facc7",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38375107163",
+      "compiled": true,
+      "swift_tests_executed": true,
+      "core_xctest_macos": 38,
+      "credential_xctest_macos": 9,
+      "positive_ios_protected_temporary_test_executed": false,
+      "app_widget_simulator_debug_release": true,
+      "ui_test_build": true,
+      "app_widget_iphoneos_release": true,
+      "simulator_startup_verified": true,
+      "receipt_version": 3,
+      "semantic_and_pixel_guard_verified": true,
+      "visual_review": "pass",
+      "png": "evidence/phase5-native-report-export-20261013/apple/startup/startup.png",
+      "png_sha256": "5bb7cba4719d2d73c500c71e01f71930899630ba75908a3ec41f497e70ad9dd6",
+      "owned_simulator_removed": true,
+      "ipa": "outputs/pulse-ios-unsigned-phase5-report-export-20261013-70bee0f.ipa",
+      "ipa_sha256": "f2697ea3e8d52dbca18d6706342b965e2038c46acc482b6d4b138222da819569",
+      "ipa_bytes": 1404702,
+      "files": 70,
+      "assets": 46,
+      "runtime_connection_fields_empty": 7,
+      "shared_and_native_source_matches": 97,
+      "signed": false,
+      "configured": false,
+      "installed": false,
+      "selector_physical": false,
+      "file_reception": false,
+      "widget_runtime": false,
+      "physical_installation": false,
+      "spm": {
+        "crc": "pass",
+        "members": 4,
+        "receipt_hashes_match": true,
+        "upstream_manifest_matches_pinned_source_policy": true,
+        "binary_checksums_match_pinned_source_policy": true,
+        "lock_package_matches": true,
+        "package": {
+          "identity": "capacitor-swift-pm",
+          "revision": "4c7f346d16196e21fbe23d4a7a6fc7af62af6742",
+          "version": "8.5.3"
+        },
+        "status": "no_matched_known_commit_advisories",
+        "scope": "pinned Capacitor commit only; not exhaustive native/toolchain security",
+        "local_audit_correction": "manifest receipt binds the upstream checkout manifest, not the App CapApp-SPM manifest"
+      },
+      "artifacts": [
+        {
+          "id": 11801203007,
+          "name": "ios-spm-security",
+          "digest": "sha256:d85db3a0c357790ab3ee23bb9d0add5513c53e581948a60ff1b8bd3d88ad4010",
+          "bytes": 1633
+        },
+        {
+          "id": 11801093231,
+          "name": "ios-simulator-startup",
+          "digest": "sha256:2ab6401a578f9a80d37a2409f80ebdfa449ed2c12fa7814f2badc443d6b47c58",
+          "bytes": 3744610
+        },
+        {
+          "id": 11800993364,
+          "name": "ios-device-unsigned",
+          "digest": "sha256:25fc0fc6ea42b65dfc2adc1599beeee2745ebd832876c50aac9616b40d88a6d2",
+          "bytes": 1398018
+        }
+      ],
+      "source_revisions_dispatched": 6,
+      "unchanged_source_reruns": 0
+    },
+    "source_published": true,
+    "merged": false,
+    "runtime_deployed": false,
+    "limits": [
+      "Completion of a system picker is not physical file reception.",
+      "No phone, cloud provider, real network loss, signing, OAuth, widget, B10 or charger acceptance.",
+      "Nine phases, seven real gates and A0-A12 remain pending as applicable; sentry/cameras final."
+    ],
+    "evidence": "evidence/phase5-native-report-export-20261013",
+    "source_freeze_note": "Published R6 source and source ZIPs remain immutable pre-publication snapshots; this local qualification records the exact final head and artifacts.",
+    "publication": {
+      "revision": "r6",
+      "branch": "codex-phase5-native-report-export-20261013",
+      "scope": "one exact iOS SDK dictionary adaptation",
+      "public": {
+        "head": "70bee0f0b5434559f96a984176feea2a8f6facc7",
+        "tree": "ae3ee63f6df9c84011ddc20ded67d123147490bf",
+        "blobs": 450,
+        "pr": 14,
+        "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/pull/14"
+      },
+      "private": {
+        "head": "063f2dd8d1d9c2486b768f1f9a863738c498a69c",
+        "tree": "641249cae9cf1954059bc5e654137e0d7bb071fc",
+        "blobs": 464,
+        "approvedSourceFiles": 445,
+        "preservedExtraBlobs": 19,
+        "pr": 13,
+        "url": "https://github.com/LucasLG92/leapmotor-pulse/pull/13"
+      },
+      "force": false,
+      "mainModified": false,
+      "apple": "completed_success_own_r6_head",
+      "changed_paths": 23,
+      "draft": true,
+      "merged": false,
+      "runtime_deployed": false,
+      "main_public": "2acb4da019acb34ea7a53f57fe0310bf44408e2f",
+      "main_private": "aa2c260fc9984261eca8e0674d0131947cba05a0",
+      "hashes_modes_exact": true
+    },
+    "final_review": {
+      "reviewer": "ios_visible_startup_review",
+      "read_only": true,
+      "p1": 0,
+      "p2": 0,
+      "source_files": 450,
+      "selected_native_shared_sources": 97,
+      "zip_sha_size_crc": true,
+      "ipa_matches_downloaded_receipt_and_output": true,
+      "app_widget_arm64_iphoneos_unsigned": true,
+      "runtime_connection_fields_empty": 7,
+      "assets": 46,
+      "bridge_binary_markers": true,
+      "startup_receipt_v3_semantic_pixel_guard": true,
+      "png_viewed": true,
+      "owned_simulator_removed": true,
+      "tests_reexecuted": false,
+      "independent_binary_reconstruction": false,
+      "positive_ios_protected_temporary_test_executed": false,
+      "spm_scope": "pinned Capacitor commit only",
+      "physical_acceptance": false
+    },
+    "ci": {
+      "public": [
+        {
+          "id": 38375107163,
+          "name": "verify-ios",
+          "event": "workflow_dispatch",
+          "head": "70bee0f0b5434559f96a984176feea2a8f6facc7",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38375107163"
+        },
+        {
+          "id": 38375018124,
+          "name": "dependency-security",
+          "event": "pull_request",
+          "head": "70bee0f0b5434559f96a984176feea2a8f6facc7",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38375018124"
+        },
+        {
+          "id": 38375018020,
+          "name": "verify",
+          "event": "pull_request",
+          "head": "70bee0f0b5434559f96a984176feea2a8f6facc7",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38375018020"
+        },
+        {
+          "id": 38375011754,
+          "name": "verify",
+          "event": "push",
+          "head": "70bee0f0b5434559f96a984176feea2a8f6facc7",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38375011754"
+        }
+      ],
+      "private": [
+        {
+          "id": 38375022024,
+          "name": "dependency-security",
+          "event": "pull_request",
+          "head": "063f2dd8d1d9c2486b768f1f9a863738c498a69c",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38375022024"
+        },
+        {
+          "id": 38375022104,
+          "name": "verify",
+          "event": "pull_request",
+          "head": "063f2dd8d1d9c2486b768f1f9a863738c498a69c",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38375022104"
+        },
+        {
+          "id": 38375015459,
+          "name": "verify",
+          "event": "push",
+          "head": "063f2dd8d1d9c2486b768f1f9a863738c498a69c",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38375015459"
+        }
+      ]
+    },
+    "final_receipt": "/home/lucaslg/Documents/Codex/2026-10-11/analiza-el-proyecto-de-01a1161e-cc50/evidence/phase5-native-report-export-20261013/final-receipt.json",
+    "final_receipt_sha256": "27284330eb7eb406a8b05a65b3ae01a4edaa233e8639b410694728eb3b9c5320"
+  },
+  "current_local_increment": {
+    "id": "optimization-20261014",
+    "status": "web_deployed_native_physical_pending",
+    "source_published": true,
+    "runtime_deployed": true,
+    "native_packaged": false,
+    "native_signed": false,
+    "storage_schema": 21,
+    "export_schema": 17,
+    "contract": "docs/OPTIMIZATIONS-20261014.md",
+    "qualification": "docs/OPTIMIZATION-RELEASE-20261014.json",
+    "artifact_note": "La compilación Debug/pruebas JVM Android y la estructura iOS no acreditan nuevos paquetes ni aceptación física. APK/IPA anteriores conservan su fecha y alcance.",
+    "delivery_receipt": "docs/OPTIMIZATION-RELEASE-20261014.json"
+  },
+  "optimization_release": {
+    "schema_version": 1,
+    "release": "optimization-20261014",
+    "updated_at": "2026-10-14",
+    "scope": "reviewed_sources_and_web_delivery",
+    "source_published": true,
+    "runtime_web": {
+      "deployed": true,
+      "healthy": true,
+      "image": "sha256:e088135886ae80f574ec19acc824c4ea638f327ced16c5446d33e5c0beb4eaed",
+      "previous_image": "sha256:0fbc8f80d2f4d4cab1692e8df6a60a1b05902606a21bef51030e7692d40bce45",
+      "storage_schema": 21,
+      "export_schema": 17,
+      "schema_unchanged": true,
+      "backend_modules_changed": 3,
+      "private_configuration_preserved": true,
+      "database_rollback": false,
+      "https_public_assets_verified": 37,
+      "gzip_assets_verified": 26,
+      "public_asset_hash_mismatches": 0,
+      "anonymous_private_api_status": 401,
+      "tls_verified": true,
+      "entry": [
+        "assets/index-wY4Ic1dS.js",
+        "assets/index-BoAitTBm.css"
+      ]
+    },
+    "source_publication": [
+      {
+        "side": "public",
+        "repo": "LucasLG92/leapmotor-pulse-beta",
+        "main": "a1fe9b0ee6c13c0d383d1a26b1304c736bc91c9f",
+        "head": "442c4084930b26c29287d9c177ecd85089315e8f",
+        "tree": "f67b7774089f7c619d4d39720aa855276c3a9109",
+        "pr": 19,
+        "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/pull/19",
+        "checks": [
+          {
+            "id": 38481182620,
+            "name": "dependency-security",
+            "event": "pull_request",
+            "head_sha": "442c4084930b26c29287d9c177ecd85089315e8f",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38481182620"
+          },
+          {
+            "id": 38481182602,
+            "name": "verify",
+            "event": "pull_request",
+            "head_sha": "442c4084930b26c29287d9c177ecd85089315e8f",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38481182602"
+          },
+          {
+            "id": 38481177001,
+            "name": "verify",
+            "event": "push",
+            "head_sha": "442c4084930b26c29287d9c177ecd85089315e8f",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38481177001"
+          }
+        ]
+      },
+      {
+        "side": "private",
+        "repo": "LucasLG92/leapmotor-pulse",
+        "main": "ef84661b7b469e3bd002a3032fa342af5841f28d",
+        "head": "fdff350b8ce7220ad8a38221bd55ad1c7609158b",
+        "tree": "a995d867bf6e2085494e62ca75c68c031138aca6",
+        "pr": 18,
+        "url": "https://github.com/LucasLG92/leapmotor-pulse/pull/18",
+        "checks": [
+          {
+            "id": 38481186272,
+            "name": "dependency-security",
+            "event": "pull_request",
+            "head_sha": "fdff350b8ce7220ad8a38221bd55ad1c7609158b",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38481186272"
+          },
+          {
+            "id": 38481186348,
+            "name": "verify",
+            "event": "pull_request",
+            "head_sha": "fdff350b8ce7220ad8a38221bd55ad1c7609158b",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38481186348"
+          },
+          {
+            "id": 38481181615,
+            "name": "verify",
+            "event": "push",
+            "head_sha": "fdff350b8ce7220ad8a38221bd55ad1c7609158b",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38481181615"
+          }
+        ]
+      }
+    ],
+    "validation": {
+      "backend_tests": 1373,
+      "backend_subtests": 131,
+      "optional_sdk_skips": 34,
+      "web_tests": 74,
+      "browser_flows": 4,
+      "mobile_bridge_tests": 9,
+      "android_jvm_tests": 104,
+      "android_debug_compiled": true,
+      "web_build": true,
+      "mobile_build": true,
+      "svelte_errors": 0,
+      "svelte_warnings": 0,
+      "ios_structure_checked": true,
+      "ios_xcode_compiled": false,
+      "six_locks_scanned": true,
+      "known_advisories": 0,
+      "independent_review": "No confirmed P1/P2 remaining; debounce race corrected"
+    },
+    "acceptance": {
+      "physical_iphone_received": false,
+      "authenticated_production_ui_tested": false,
+      "new_native_binary_delivered": false,
+      "ios_current_source_xcode_compiled": false,
+      "real_vehicle_and_charger": false,
+      "full_objective_complete": false,
+      "cameras_sentinel": "phase9_final_pending"
+    },
+    "privacy": {
+      "runtime_env_values_read": false,
+      "operational_database_copied_to_workspace": false,
+      "private_extras_copied_to_public": false,
+      "publication_source_paths": 35,
+      "public_community_installer_preserved": true
+    },
+    "notes": [
+      "CI entries refer to exact code heads; documentation-only delivery metadata is separate.",
+      "Backup and rollback material remain protected on the server; rollback changes image only without rewinding data.",
+      "The initial staging mount syntax was corrected before activation; no failed image was activated."
+    ]
   }
 }

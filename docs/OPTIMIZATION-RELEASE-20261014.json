@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "release": "optimization-20261014",
+  "updated_at": "2026-10-14",
+  "scope": "reviewed_sources_and_web_delivery",
+  "source_published": true,
+  "runtime_web": {
+    "deployed": true,
+    "healthy": true,
+    "image": "sha256:e088135886ae80f574ec19acc824c4ea638f327ced16c5446d33e5c0beb4eaed",
+    "previous_image": "sha256:0fbc8f80d2f4d4cab1692e8df6a60a1b05902606a21bef51030e7692d40bce45",
+    "storage_schema": 21,
+    "export_schema": 17,
+    "schema_unchanged": true,
+    "backend_modules_changed": 3,
+    "private_configuration_preserved": true,
+    "database_rollback": false,
+    "https_public_assets_verified": 37,
+    "gzip_assets_verified": 26,
+    "public_asset_hash_mismatches": 0,
+    "anonymous_private_api_status": 401,
+    "tls_verified": true,
+    "entry": [
+      "assets/index-wY4Ic1dS.js",
+      "assets/index-BoAitTBm.css"
+    ]
+  },
+  "source_publication": [
+    {
+      "side": "public",
+      "repo": "LucasLG92/leapmotor-pulse-beta",
+      "main": "a1fe9b0ee6c13c0d383d1a26b1304c736bc91c9f",
+      "head": "442c4084930b26c29287d9c177ecd85089315e8f",
+      "tree": "f67b7774089f7c619d4d39720aa855276c3a9109",
+      "pr": 19,
+      "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/pull/19",
+      "checks": [
+        {
+          "id": 38481182620,
+          "name": "dependency-security",
+          "event": "pull_request",
+          "head_sha": "442c4084930b26c29287d9c177ecd85089315e8f",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38481182620"
+        },
+        {
+          "id": 38481182602,
+          "name": "verify",
+          "event": "pull_request",
+          "head_sha": "442c4084930b26c29287d9c177ecd85089315e8f",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38481182602"
+        },
+        {
+          "id": 38481177001,
+          "name": "verify",
+          "event": "push",
+          "head_sha": "442c4084930b26c29287d9c177ecd85089315e8f",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38481177001"
+        }
+      ]
+    },
+    {
+      "side": "private",
+      "repo": "LucasLG92/leapmotor-pulse",
+      "main": "ef84661b7b469e3bd002a3032fa342af5841f28d",
+      "head": "fdff350b8ce7220ad8a38221bd55ad1c7609158b",
+      "tree": "a995d867bf6e2085494e62ca75c68c031138aca6",
+      "pr": 18,
+      "url": "https://github.com/LucasLG92/leapmotor-pulse/pull/18",
+      "checks": [
+        {
+          "id": 38481186272,
+          "name": "dependency-security",
+          "event": "pull_request",
+          "head_sha": "fdff350b8ce7220ad8a38221bd55ad1c7609158b",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38481186272"
+        },
+        {
+          "id": 38481186348,
+          "name": "verify",
+          "event": "pull_request",
+          "head_sha": "fdff350b8ce7220ad8a38221bd55ad1c7609158b",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38481186348"
+        },
+        {
+          "id": 38481181615,
+          "name": "verify",
+          "event": "push",
+          "head_sha": "fdff350b8ce7220ad8a38221bd55ad1c7609158b",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38481181615"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "backend_tests": 1373,
+    "backend_subtests": 131,
+    "optional_sdk_skips": 34,
+    "web_tests": 74,
+    "browser_flows": 4,
+    "mobile_bridge_tests": 9,
+    "android_jvm_tests": 104,
+    "android_debug_compiled": true,
+    "web_build": true,
+    "mobile_build": true,
+    "svelte_errors": 0,
+    "svelte_warnings": 0,
+    "ios_structure_checked": true,
+    "ios_xcode_compiled": false,
+    "six_locks_scanned": true,
+    "known_advisories": 0,
+    "independent_review": "No confirmed P1/P2 remaining; debounce race corrected"
+  },
+  "acceptance": {
+    "physical_iphone_received": false,
+    "authenticated_production_ui_tested": false,
+    "new_native_binary_delivered": false,
+    "ios_current_source_xcode_compiled": false,
+    "real_vehicle_and_charger": false,
+    "full_objective_complete": false,
+    "cameras_sentinel": "phase9_final_pending"
+  },
+  "privacy": {
+    "runtime_env_values_read": false,
+    "operational_database_copied_to_workspace": false,
+    "private_extras_copied_to_public": false,
+    "publication_source_paths": 35,
+    "public_community_installer_preserved": true
+  },
+  "notes": [
+    "CI entries refer to exact code heads; documentation-only delivery metadata is separate.",
+    "Backup and rollback material remain protected on the server; rollback changes image only without rewinding data.",
+    "The initial staging mount syntax was corrected before activation; no failed image was activated."
+  ]
+}

@@ -1,4 +1,4 @@
-# Sincronización y consultas: incremento local, 14 de octubre de 2026
+# Sincronización y consultas: entrega web, 14 de octubre de 2026
 
 El refresco del estado agrupa consultas simultáneas, registra los eventos inmediatamente y reconcilia cuando cambian los datos durante una lectura. Ignora respuestas de otra sesión, se invalida antes de mutaciones/restauración y tiene un plazo de 30 segundos para liberar lecturas que no terminan. La lógica se separa en `state-refresh.ts`.
 
@@ -22,6 +22,6 @@ La cancelación nativa es opcional y se anuncia por status. Los clientes antiguo
 
 ## Entrega y límites
 
-Este documento describe fuentes y comprobaciones locales. Publicación, CI externa, despliegue y nuevos APK/IPA no se acreditan con este incremento. Los resultados anteriores conservan su fecha y alcance. No cierra fases, puertas reales, coche/cargador, widgets, firma, accesibilidad, rendimiento o batería físicos. Centinela/cámaras permanece al final.
+Fuentes publicadas y fusionadas en ambos repositorios; CI general y de dependencias correcta sobre los heads exactos. La web está desplegada y saludable, con 37 recursos y 26 gzip contrastados por HTTPS. El [recibo de entrega](OPTIMIZATION-RELEASE-20261014.json) distingue esta entrega web de nuevos APK/IPA, que siguen pendientes. Los resultados anteriores conservan su fecha y alcance. No cierra fases, puertas reales, coche/cargador, widgets, firma, accesibilidad, rendimiento o batería físicos. Centinela/cámaras permanece al final.
 
 Los conteos SQL muestran una consulta de trayectos por documento frente a tres anteriores y eliminación de las dos lecturas globales de sesiones del cargador. No son una medición de latencia o consumo. Evidencia local y baseline de recuperación en `evidence/optimization-20261014` del workspace, sin datos operativos.
