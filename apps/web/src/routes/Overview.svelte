@@ -539,7 +539,7 @@
 </div>
 
 <style>
-.overview-page { min-width: 0; }
+.overview-page { min-width: 0; container-type: inline-size; container-name: vehicle; }
 .vehicle-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 28px; }
 .vehicle-heading .eyebrow { color: var(--forest); font-size: .625rem; letter-spacing: .16em; }
 .vehicle-heading h2 { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin: 8px 0 0; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.12; font-weight: 650; letter-spacing: -.055em; }
@@ -697,5 +697,17 @@
  .everyday-links a { padding: 20px; }
  .journal-columns { gap: 0; }
  .connection-drawer { padding-inline: 16px; }
+}
+@container vehicle (max-width: 15rem) {
+ .control-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; }
+ .vehicle-state { grid-template-columns: minmax(0, 1fr); }
+ .vehicle-readings { grid-template-columns: minmax(0, 1fr); }
+ .battery-reading { border-left: 0; border-top: 1px solid var(--line); padding: 16px 0 0; }
+ .reading-status { flex-wrap: wrap; }
+}
+@container vehicle (max-width: 10rem) {
+ .control-actions { grid-template-columns: minmax(0, 1fr); }
+ .control-action { flex-direction: row; text-align: left; overflow-wrap: normal; }
+ .control-circle { flex: 0 0 48px; }
 }
 </style>
