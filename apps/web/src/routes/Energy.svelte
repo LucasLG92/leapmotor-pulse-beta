@@ -7,6 +7,7 @@
 	import { count, dateTime, euros, localDateTimeValue, number } from '../lib/format';
 	import type { ChargeCreationRequest, ChargeQuote, ChargeQuotePayload, ChargeSession, EnergyAnalytics, PageProps, PricingMethod } from '../lib/types';
 	type AnalyticsDays = 30 | 90 | 365;
+	type EnergySection = 'summary' | 'records' | 'planning';
 	const analyticsRanges: AnalyticsDays[] = [30, 90, 365];
 	const analyticsSources = [
 		{ key: 'manual' as const, label: 'Manual' },
@@ -30,6 +31,7 @@
 	let analyticsRequest = 0;
 	let analyticsRequestKey = '';
 	let chargeRequestKey = '';
+	let activeSection = $state<EnergySection>('summary');
 	let personalDataReady = $state(false);
 	let personalDataOnline: boolean | undefined;
 	let personalExpanded = $state(untrack(() => pulseState.mode === 'demo'));
@@ -110,6 +112,7 @@
 	$effect(() => {
 		const ready = personalDataReady;
 		const visible = personalExpanded;
+		const summaryVisible = activeSection === 'summary';
 		const currentRevision = revision;
 		const currentDays = analyticsDays;
 		const currentlyOnline = online;
@@ -136,11 +139,13 @@
 			analyticsRequestKey = '';
 		}
 		personalDataOnline = true;
-		if (!ready || !visible) return;
-		const chargeKey = String(currentRevision);
-		if (chargeRequestKey !== chargeKey) {
-			chargeRequestKey = chargeKey;
-			void loadPage(offset, true);
+		if (!ready || (!visible && !summaryVisible)) return;
+		if (visible) {
+			const chargeKey = String(currentRevision);
+			if (chargeRequestKey !== chargeKey) {
+				chargeRequestKey = chargeKey;
+				void loadPage(offset, true);
+			}
 		}
 		const analyticsKey = `${currentRevision}:${currentDays}`;
 		if (analyticsRequestKey !== analyticsKey) {
@@ -180,7 +185,7 @@
 
 	async function loadAnalytics(days: AnalyticsDays, requestRevision: number) {
 		const request = ++analyticsRequest;
-		if (!mounted || !personalExpanded) return;
+		if (!mounted || (!personalExpanded && activeSection !== 'summary')) return;
 		if (!online) {
 			analytics = null;
 			analyticsLoading = false;
@@ -221,11 +226,16 @@
 		personalExpanded = !personalExpanded;
 	}
 
-	function focusChargeForm() {
+	function activateSection(section: EnergySection) {
+		activeSection = section;
+		if (section === 'records') personalExpanded = true;
+	}
+
+	async function focusChargeForm() {
+		activeSection = 'records';
 		personalExpanded = true;
-		window.setTimeout(() => {
-			if (mounted) document.getElementById('charge-date')?.focus();
-		}, 0);
+		await tick();
+		if (mounted) document.getElementById('charge-date')?.focus();
 	}
 
 	onMount(() => {
@@ -388,9 +398,10 @@
 		saveError = '';
 		clearQuote();
 		chargeBaseline = chargeFormFingerprint();
-		window.setTimeout(() => {
-			if (mounted) document.getElementById('charge-date')?.focus();
-		}, 0);
+		activeSection = 'records';
+		personalExpanded = true;
+		await tick();
+		if (mounted) document.getElementById('charge-date')?.focus();
 	}
 
 	function cancelEdit() {
@@ -690,45 +701,34 @@
 	}
 </script>
 
-<section class="page-intro energy-intro">
-	<div class="energy-intro-copy">
-		<p class="energy-intro-kicker eyebrow"><Glyph name="energy" size={16} /> TU ENERGÍA, EN UN SOLO LUGAR</p>
+<header class="premium-heading energy-intro">
+	<div>
 		<h2>Energía</h2>
-		<p>Consulta las sesiones del cargador, su coste y los registros personales por separado.</p>
+		<p>Cargas, trayectos y coste de tu B10.</p>
 	</div>
-	<span class="status-pill" class:status-demo={pulseState.mode === 'demo'}><span class="status-dot"></span>{pulseState.mode === 'demo' ? 'Demostración activa' : pulseState.mode === 'telemetry_read_only' ? 'Lecturas del servidor' : 'Cargas y coste'}</span>
-</section>
+</header>
 
-<section class="energy-session-layout" aria-label="Cargador y criterio de coste">
-	<div class="energy-charger-column">
-		<ChargerPanel {online} {busy} {revision} {quoteCharge} {onSessionExpired} pricingMethod={pulseState.settings.pricing_method ?? 'manual'} />
-	</div>
-	<aside class="energy-cost-profile" aria-labelledby="energy-cost-profile-title">
-		<h3 id="energy-cost-profile-title">Coste y procedencia</h3>
-		<p>Las sesiones importadas vienen de evcc. Las cargas personales mantienen su origen y método de precio.</p>
-		<dl class="energy-cost-facts">
-			<div><dt>Precio para nuevas cargas manuales</dt><dd>{pulseState.settings.pricing_method === 'pvpc' ? 'PVPC · Península' : 'Precio fijo'}</dd></div>
-			{#if pulseState.settings.pricing_method !== 'pvpc'}<div><dt>Tarifa configurada</dt><dd>{euros(pulseState.settings.tariff_eur_kwh)} / kWh</dd></div>{/if}
-		</dl>
-		<a class="energy-settings-link" href="/settings">Revisar tarifa en Ajustes</a>
-	</aside>
-</section>
+<nav class="section-switcher energy-switcher" aria-label="Secciones de energía">
+	<button type="button" aria-pressed={activeSection === 'summary'} aria-controls="energy-summary-view" onclick={() => activateSection('summary')}>Resumen</button>
+	<button type="button" aria-pressed={activeSection === 'records'} aria-controls="energy-records-view" onclick={() => activateSection('records')}>Registros</button>
+	<button type="button" aria-pressed={activeSection === 'planning'} aria-controls="energy-planning-view" onclick={() => activateSection('planning')}>Planificar</button>
+</nav>
 
-<section class="energy-totals" aria-labelledby="energy-totals-title">
-	<div class="energy-totals-heading">
+<section id="energy-summary-view" class="energy-view workspace-panel" aria-labelledby="energy-summary-title" hidden={activeSection !== 'summary'}>
+	<header class="energy-summary-heading">
 		<div>
-			<p class="section-label"><Glyph name="energy" size={14} /> TOTALES REGISTRADOS</p>
-			<h2 id="energy-totals-title">Totales personales</h2>
-			<p>Los registros manuales y la demostración conservan sus propios totales.</p>
+			<h3 id="energy-summary-title">Tus cargas</h3>
+			<p>Totales acumulados de tus registros personales.</p>
 		</div>
-		<span class="energy-totals-scope">Las sesiones comunicadas por evcc se muestran aparte.</span>
-	</div>
+		<button class="button button-primary" type="button" onclick={focusChargeForm}>Añadir carga</button>
+	</header>
+<section class="energy-totals" aria-labelledby="energy-summary-title">
 	{#if online}
-		<div class="energy-total-groups" class:energy-total-groups-demo={pulseState.mode === 'demo'}>
+		<div class="energy-total-groups" class:energy-total-groups-demo={pulseState.mode === 'demo'} role="group" aria-label="Totales por origen">
 			<article class="energy-total-group" aria-labelledby="manual-totals-title">
 				<div class="energy-total-group-heading">
 					<span class="source-dot source-manual" aria-hidden="true"></span>
-					<div><h3 id="manual-totals-title">Manual</h3><p>Registros personales guardados en Pulse</p></div>
+					<div><h3 id="manual-totals-title">Manual</h3></div>
 				</div>
 				<dl class="energy-total-metrics">
 					<div><dt>Energía registrada</dt><dd>{pulseState.energy.totals_by_source?.manual?.kwh == null ? 'Sin datos' : `${number(pulseState.energy.totals_by_source.manual.kwh)} kWh`}</dd></div>
@@ -740,7 +740,7 @@
 				<article class="energy-total-group energy-total-group-demo" aria-labelledby="demo-totals-title">
 					<div class="energy-total-group-heading">
 						<span class="source-dot source-demo" aria-hidden="true"></span>
-						<div><h3 id="demo-totals-title">Demostración</h3><p>Registros ficticios, sin sumar sesiones evcc</p></div>
+						<div><h3 id="demo-totals-title">Demostración</h3></div>
 					</div>
 					<dl class="energy-total-metrics">
 						<div><dt>Energía registrada</dt><dd>{demoTotals?.kwh == null ? 'Sin datos' : `${number(demoTotals.kwh)} kWh`}</dd></div>
@@ -768,7 +768,131 @@
 	{/if}
 </section>
 
-<EnergyPlanningPanel {busy} {online} {revision} {drafts} {confirmAction} {onSessionExpired} />
+<section class="analytics-panel" aria-labelledby="analytics-title">
+	<div class="analytics-heading">
+		<div class="analytics-title-copy"><h2 id="analytics-title">Energía y coste por período</h2><p>Manual y demostración; las lecturas del vehículo se muestran aparte.</p></div>
+		<div class="analytics-range-control" role="group" aria-label="Período de analítica">
+			{#each analyticsRanges as days (days)}
+				<button class="analytics-range-button" class:analytics-range-selected={analyticsDays === days} type="button" aria-pressed={analyticsDays === days} disabled={!online} onclick={() => chooseAnalyticsDays(days)}>{days} días</button>
+			{/each}
+		</div>
+	</div>
+
+	{#if analyticsLoading && !analytics}
+		<div class="analytics-loading" role="status"><span class="loading-dot"></span> Cargando analítica de {analyticsDays} días…</div>
+	{:else if analyticsError && !analytics}
+		<div class="analytics-error" role="alert"><div><strong>{online ? 'No se pudo cargar la analítica' : 'Analítica no disponible sin conexión'}</strong><p>{analyticsError}</p></div><button class="button button-secondary" type="button" disabled={!online || analyticsLoading} onclick={retryAnalytics}>{analyticsLoading ? 'Cargando…' : online ? 'Reintentar' : 'Sin conexión'}</button></div>
+	{:else if analytics}
+		<div class="analytics-window"><span>Período UTC: {analyticsWindowDate(analytics.window_start)} – {analyticsWindowDate(analytics.window_end)}</span><span>Agrupación mensual en UTC</span>{#if analyticsLoading}<span role="status">Actualizando…</span>{/if}</div>
+		<div class="analytics-source-grid" role="group" aria-label="Sesiones de carga por origen">
+			{#each analyticsSources as source (source.key)}
+				{@const aggregate = analytics[source.key]}
+				<article class="analytics-source-card" class:analytics-source-demo={source.key === 'demo'} aria-labelledby={`analytics-${source.key}-title`}>
+					<div class="analytics-source-heading"><h3 id={`analytics-${source.key}-title`}><i class:source-demo={source.key === 'demo'} class="source-dot"></i>{source.label}</h3><span class="badge" class:badge-demo={source.key === 'demo'}>{count(aggregate.sessions)} sesiones</span></div>
+					{#if aggregate.sessions > 0}
+						<div class="analytics-metrics">
+							<div><span>Energía cargada</span><strong>{number(aggregate.kwh)} <small>kWh</small></strong></div>
+							<div><span>Coste</span><strong>{euros(aggregate.cost_eur)}</strong></div>
+							<div><span>Tarifa efectiva</span><strong>{effectiveTariff(aggregate.effective_tariff_eur_kwh)}</strong></div>
+						</div>
+					{:else}
+						<p class="analytics-empty-source">Sin registros {source.key === 'manual' ? 'manuales' : 'de demostración'} en este período.</p>
+					{/if}
+				</article>
+			{/each}
+		</div>
+
+		<section class="analytics-months" aria-labelledby="monthly-title">
+			<div class="analytics-subheading"><div><h3 id="monthly-title">Energía por mes</h3></div><span class="badge">Meses UTC</span></div>
+			<p class="analytics-explainer">Cada barra suma sesiones del origen indicado. No se rellenan meses ni huecos con estimaciones.</p>
+			{#if analytics.months.length === 0 || analytics.months.every((month) => month.manual.sessions === 0 && month.demo.sessions === 0)}
+				<div class="analytics-empty-chart"><span class="analytics-empty-mark"><Glyph name="energy" size={20} /></span><strong>Sin registros en esta ventana</strong><span>No hay sesiones manuales o de demostración para representar.</span></div>
+			{:else}
+				<ol class="month-chart" aria-label="Kilovatios hora por mes UTC, separados por origen">
+					{#each analytics.months as month (month.month)}
+						<li class="month-chart-row">
+							<strong class="month-chart-label">{monthLabel(month.month)}</strong>
+							<div class="month-origin-group">
+								<div class="month-origin-row"><span>Manual</span><progress class="month-bar month-bar-manual" value={month.manual.kwh} max={analyticsMaxMonthlyKwh} aria-label={`Manual, ${monthLabel(month.month)}: ${number(month.manual.kwh)} kWh`}></progress><strong>{number(month.manual.kwh)} kWh</strong></div>
+								<dl class="month-origin-metrics" aria-label={`Agregados mensuales de Manual, ${monthLabel(month.month)}`}>
+									<div><dt>Sesiones</dt><dd>{count(month.manual.sessions)}</dd></div>
+									<div><dt>Coste</dt><dd>{euros(month.manual.cost_eur)}</dd></div>
+									<div><dt>Tarifa efectiva</dt><dd>{effectiveTariff(month.manual.effective_tariff_eur_kwh)}</dd></div>
+								</dl>
+							</div>
+							<div class="month-origin-group">
+								<div class="month-origin-row"><span>Demo</span><progress class="month-bar month-bar-demo" value={month.demo.kwh} max={analyticsMaxMonthlyKwh} aria-label={`Demo, ${monthLabel(month.month)}: ${number(month.demo.kwh)} kWh`}></progress><strong>{number(month.demo.kwh)} kWh</strong></div>
+								<dl class="month-origin-metrics" aria-label={`Agregados mensuales de Demo, ${monthLabel(month.month)}`}>
+									<div><dt>Sesiones</dt><dd>{count(month.demo.sessions)}</dd></div>
+									<div><dt>Coste</dt><dd>{euros(month.demo.cost_eur)}</dd></div>
+									<div><dt>Tarifa efectiva</dt><dd>{effectiveTariff(month.demo.effective_tariff_eur_kwh)}</dd></div>
+								</dl>
+							</div>
+						</li>
+					{/each}
+				</ol>
+			{/if}
+		</section>
+
+		<section class="analytics-coverage" aria-labelledby="coverage-title">
+			<div class="analytics-coverage-heading"><h3 id="coverage-title">Lecturas del vehículo</h3><span class="badge">Sin estimación</span></div>
+			<p class="analytics-explainer">La cobertura describe muestras recibidas. No identifica conducción, trayectos ni consumo del vehículo.</p>
+			{#if analytics.observations.observed_count === 0}
+				<div class="analytics-observations-empty">{analytics.observations.sample_count === 0 ? 'No hay muestras retenidas.' : 'No hay observaciones válidas en esta ventana; las muestras retenidas pueden quedar fuera del período o no tener una hora válida.'}</div>
+			{/if}
+			<details class="analytics-coverage-details">
+				<summary>Ver detalles de las lecturas</summary>
+				<div class="analytics-coverage-content">
+					<p class="analytics-retention-note">Retención limitada a las últimas {count(analytics.observations.retention_limit)} muestras como máximo. Muestras, ausencias de observación y diagnósticos de timestamps abarcan esa retención; observaciones válidas y cobertura corresponden al período seleccionado.</p>
+					<div class="coverage-metrics">
+						<div><span>Muestras retenidas</span><strong>{count(analytics.observations.sample_count)}</strong></div>
+						<div><span>Observadas</span><strong>{count(analytics.observations.observed_count)}</strong></div>
+						<div><span>Antes del período</span><strong>{count(analytics.observations.outside_window_count)}</strong></div>
+						<div><span>Muestras sin observación</span><strong>{count(analytics.observations.missing_observation_count)}</strong></div>
+						<div><span>Huecos detectados</span><strong>{count(analytics.observations.gap_count)}</strong></div>
+						<div><span>Cobertura temporal</span><strong>{analytics.observations.coverage_percent === null ? '—' : `${number(analytics.observations.coverage_percent)}%`}</strong></div>
+						<div><span>Hueco máximo</span><strong>{gapDuration(analytics.observations.max_gap_seconds)}</strong></div>
+						<div class="coverage-last-observation"><span>Última observación</span><strong>{observedAtUtc(analytics.observations.last_observed_at)}</strong></div>
+					</div>
+					<div class="analytics-technical-details" aria-label="Análisis técnico no cualificado">
+						<strong>Análisis técnico no cualificado</strong>
+						<dl>
+							<div><dt>Tiempo cubierto por lecturas</dt><dd>{gapDuration(analytics.observations.covered_seconds)}</dd></div>
+							<div><dt>Primera observación</dt><dd>{observedAtUtc(analytics.observations.first_observed_at)}</dd></div>
+							<div><dt>Variación de odómetro comunicada</dt><dd>{analytics.observations.odometer_delta_km === null ? 'No disponible' : `${number(analytics.observations.odometer_delta_km)} km`}</dd></div>
+							<div><dt>Intervalos candidatos elegibles</dt><dd>{count(analytics.observations.eligible_interval_count)}</dd></div>
+							<div><dt>Validación</dt><dd>No cualificado</dd></div>
+						</dl>
+						<p>Estos valores describen lecturas y candidatos de intervalos. No acreditan un viaje, consumo del vehículo ni una sesión de carga validada.</p>
+					</div>
+					<div class="analytics-quality-details">Diagnósticos en la retención — Posteriores al período: {count(analytics.observations.future_timestamp_count)} <span aria-hidden="true">·</span> No monótonos: {count(analytics.observations.non_monotonic_count)} <span aria-hidden="true">·</span> Duplicados: {count(analytics.observations.duplicate_time_count)}</div>
+				</div>
+			</details>
+			<div class="analytics-consumption"><strong>—</strong><span><b>Consumo del vehículo</b><small>Energía del vehículo aún no observada.</small></span></div>
+		</section>
+	{/if}
+</section>
+</section>
+<section id="energy-records-view" class="energy-view records-view" aria-labelledby="personal-records-title" hidden={activeSection !== 'records'}>
+<section class="energy-charger-disclosure" aria-label="Sesiones importadas del cargador">
+	<details class="charger-disclosure workspace-panel">
+		<summary><span><strong>Estado del cargador y sesiones evcc</strong><small>Datos comunicados por la integración del servidor</small></span><span class="charger-disclosure-action">Consultar</span></summary>
+		<div class="energy-session-layout">
+			<div class="energy-charger-column">
+				<ChargerPanel {online} {busy} {revision} {quoteCharge} {onSessionExpired} pricingMethod={pulseState.settings.pricing_method ?? 'manual'} />
+			</div>
+			<aside class="energy-cost-profile" aria-labelledby="energy-cost-profile-title">
+				<h3 id="energy-cost-profile-title">Coste y procedencia</h3>
+				<p>Las sesiones importadas vienen de evcc. Las cargas personales mantienen su origen y método de precio.</p>
+				<dl class="energy-cost-facts">
+					<div><dt>Precio para nuevas cargas manuales</dt><dd>{pulseState.settings.pricing_method === 'pvpc' ? 'PVPC · Península' : 'Precio fijo'}</dd></div>
+					{#if pulseState.settings.pricing_method !== 'pvpc'}<div><dt>Tarifa configurada</dt><dd>{euros(pulseState.settings.tariff_eur_kwh)} / kWh</dd></div>{/if}
+				</dl>
+				<a class="energy-settings-link" href="/settings">Revisar tarifa en Ajustes</a>
+			</aside>
+		</div>
+	</details>
+</section>
 
 <section class="personal-records" aria-labelledby="personal-records-title">
 	<div class="personal-records-heading">
@@ -895,120 +1019,20 @@
 		<div class="notice energy-note"><Glyph name="overview" size={17} /><span>Las cifras describen lo registrado. Pulse no estima consumos ni inventa sesiones ausentes.</span></div>
 	</aside>
 </section>
-<section class="analytics-panel card" aria-labelledby="analytics-title">
-	<div class="analytics-heading">
-			<div class="analytics-title-copy"><p class="analytics-kicker"><Glyph name="activity" size={14} /> EVOLUCIÓN POR PERÍODO</p><h2 id="analytics-title">Energía y coste por período</h2><p>Compara cargas manuales y de demostración. Las lecturas del vehículo se muestran aparte.</p></div>
-		<div class="analytics-range-control" role="group" aria-label="Período de analítica">
-			{#each analyticsRanges as days (days)}
-				<button class="analytics-range-button" class:analytics-range-selected={analyticsDays === days} type="button" aria-pressed={analyticsDays === days} disabled={!online} onclick={() => chooseAnalyticsDays(days)}>{days} días</button>
-			{/each}
-		</div>
-	</div>
 
-	{#if analyticsLoading && !analytics}
-		<div class="analytics-loading" role="status"><span class="loading-dot"></span> Cargando analítica de {analyticsDays} días…</div>
-	{:else if analyticsError && !analytics}
-		<div class="analytics-error" role="alert"><div><strong>{online ? 'No se pudo cargar la analítica' : 'Analítica no disponible sin conexión'}</strong><p>{analyticsError}</p></div><button class="button button-secondary" type="button" disabled={!online || analyticsLoading} onclick={retryAnalytics}>{analyticsLoading ? 'Cargando…' : online ? 'Reintentar' : 'Sin conexión'}</button></div>
-	{:else if analytics}
-		<div class="analytics-window"><span>Período UTC: {analyticsWindowDate(analytics.window_start)} – {analyticsWindowDate(analytics.window_end)}</span><span>Agrupación mensual en UTC</span>{#if analyticsLoading}<span role="status">Actualizando…</span>{/if}</div>
-		<div class="analytics-source-grid" role="group" aria-label="Sesiones de carga por origen">
-			{#each analyticsSources as source (source.key)}
-				{@const aggregate = analytics[source.key]}
-				<article class="analytics-source-card" class:analytics-source-demo={source.key === 'demo'} aria-labelledby={`analytics-${source.key}-title`}>
-					<div class="analytics-source-heading"><h3 id={`analytics-${source.key}-title`}><i class:source-demo={source.key === 'demo'} class="source-dot"></i>{source.label}</h3><span class="badge" class:badge-demo={source.key === 'demo'}>{count(aggregate.sessions)} sesiones</span></div>
-					{#if aggregate.sessions > 0}
-						<div class="analytics-metrics">
-							<div><span>Energía cargada</span><strong>{number(aggregate.kwh)} <small>kWh</small></strong></div>
-							<div><span>Coste</span><strong>{euros(aggregate.cost_eur)}</strong></div>
-							<div><span>Tarifa efectiva</span><strong>{effectiveTariff(aggregate.effective_tariff_eur_kwh)}</strong></div>
-						</div>
-					{:else}
-						<p class="analytics-empty-source">Sin registros {source.key === 'manual' ? 'manuales' : 'de demostración'} en este período.</p>
-					{/if}
-				</article>
-			{/each}
-		</div>
-
-		<section class="analytics-months" aria-labelledby="monthly-title">
-			<div class="analytics-subheading"><div><h3 id="monthly-title">Energía por mes</h3></div><span class="badge">Meses UTC</span></div>
-			<p class="analytics-explainer">Cada barra suma sesiones del origen indicado. No se rellenan meses ni huecos con estimaciones.</p>
-			{#if analytics.months.length === 0 || analytics.months.every((month) => month.manual.sessions === 0 && month.demo.sessions === 0)}
-				<div class="analytics-empty-chart"><span class="analytics-empty-mark"><Glyph name="energy" size={20} /></span><strong>Sin registros en esta ventana</strong><span>No hay sesiones manuales o de demostración para representar.</span></div>
-			{:else}
-				<ol class="month-chart" aria-label="Kilovatios hora por mes UTC, separados por origen">
-					{#each analytics.months as month (month.month)}
-						<li class="month-chart-row">
-							<strong class="month-chart-label">{monthLabel(month.month)}</strong>
-							<div class="month-origin-group">
-								<div class="month-origin-row"><span>Manual</span><progress class="month-bar month-bar-manual" value={month.manual.kwh} max={analyticsMaxMonthlyKwh} aria-label={`Manual, ${monthLabel(month.month)}: ${number(month.manual.kwh)} kWh`}></progress><strong>{number(month.manual.kwh)} kWh</strong></div>
-								<dl class="month-origin-metrics" aria-label={`Agregados mensuales de Manual, ${monthLabel(month.month)}`}>
-									<div><dt>Sesiones</dt><dd>{count(month.manual.sessions)}</dd></div>
-									<div><dt>Coste</dt><dd>{euros(month.manual.cost_eur)}</dd></div>
-									<div><dt>Tarifa efectiva</dt><dd>{effectiveTariff(month.manual.effective_tariff_eur_kwh)}</dd></div>
-								</dl>
-							</div>
-							<div class="month-origin-group">
-								<div class="month-origin-row"><span>Demo</span><progress class="month-bar month-bar-demo" value={month.demo.kwh} max={analyticsMaxMonthlyKwh} aria-label={`Demo, ${monthLabel(month.month)}: ${number(month.demo.kwh)} kWh`}></progress><strong>{number(month.demo.kwh)} kWh</strong></div>
-								<dl class="month-origin-metrics" aria-label={`Agregados mensuales de Demo, ${monthLabel(month.month)}`}>
-									<div><dt>Sesiones</dt><dd>{count(month.demo.sessions)}</dd></div>
-									<div><dt>Coste</dt><dd>{euros(month.demo.cost_eur)}</dd></div>
-									<div><dt>Tarifa efectiva</dt><dd>{effectiveTariff(month.demo.effective_tariff_eur_kwh)}</dd></div>
-								</dl>
-							</div>
-						</li>
-					{/each}
-				</ol>
-			{/if}
-		</section>
-
-		<section class="analytics-coverage" aria-labelledby="coverage-title">
-			<div class="analytics-coverage-heading"><h3 id="coverage-title">Lecturas del vehículo</h3><span class="badge">Sin estimación</span></div>
-			<p class="analytics-explainer">La cobertura describe muestras recibidas. No identifica conducción, trayectos ni consumo del vehículo.</p>
-			{#if analytics.observations.observed_count === 0}
-				<div class="analytics-observations-empty">{analytics.observations.sample_count === 0 ? 'No hay muestras retenidas.' : 'No hay observaciones válidas en esta ventana; las muestras retenidas pueden quedar fuera del período o no tener una hora válida.'}</div>
-			{/if}
-			<details class="analytics-coverage-details">
-				<summary>Ver detalles de las lecturas</summary>
-				<div class="analytics-coverage-content">
-					<p class="analytics-retention-note">Retención limitada a las últimas {count(analytics.observations.retention_limit)} muestras como máximo. Muestras, ausencias de observación y diagnósticos de timestamps abarcan esa retención; observaciones válidas y cobertura corresponden al período seleccionado.</p>
-					<div class="coverage-metrics">
-						<div><span>Muestras retenidas</span><strong>{count(analytics.observations.sample_count)}</strong></div>
-						<div><span>Observadas</span><strong>{count(analytics.observations.observed_count)}</strong></div>
-						<div><span>Antes del período</span><strong>{count(analytics.observations.outside_window_count)}</strong></div>
-						<div><span>Muestras sin observación</span><strong>{count(analytics.observations.missing_observation_count)}</strong></div>
-						<div><span>Huecos detectados</span><strong>{count(analytics.observations.gap_count)}</strong></div>
-						<div><span>Cobertura temporal</span><strong>{analytics.observations.coverage_percent === null ? '—' : `${number(analytics.observations.coverage_percent)}%`}</strong></div>
-						<div><span>Hueco máximo</span><strong>{gapDuration(analytics.observations.max_gap_seconds)}</strong></div>
-						<div class="coverage-last-observation"><span>Última observación</span><strong>{observedAtUtc(analytics.observations.last_observed_at)}</strong></div>
-					</div>
-					<div class="analytics-technical-details" aria-label="Análisis técnico no cualificado">
-						<strong>Análisis técnico no cualificado</strong>
-						<dl>
-							<div><dt>Tiempo cubierto por lecturas</dt><dd>{gapDuration(analytics.observations.covered_seconds)}</dd></div>
-							<div><dt>Primera observación</dt><dd>{observedAtUtc(analytics.observations.first_observed_at)}</dd></div>
-							<div><dt>Variación de odómetro comunicada</dt><dd>{analytics.observations.odometer_delta_km === null ? 'No disponible' : `${number(analytics.observations.odometer_delta_km)} km`}</dd></div>
-							<div><dt>Intervalos candidatos elegibles</dt><dd>{count(analytics.observations.eligible_interval_count)}</dd></div>
-							<div><dt>Validación</dt><dd>No cualificado</dd></div>
-						</dl>
-						<p>Estos valores describen lecturas y candidatos de intervalos. No acreditan un viaje, consumo del vehículo ni una sesión de carga validada.</p>
-					</div>
-					<div class="analytics-quality-details">Diagnósticos en la retención — Posteriores al período: {count(analytics.observations.future_timestamp_count)} <span aria-hidden="true">·</span> No monótonos: {count(analytics.observations.non_monotonic_count)} <span aria-hidden="true">·</span> Duplicados: {count(analytics.observations.duplicate_time_count)}</div>
-				</div>
-			</details>
-			<div class="analytics-consumption"><strong>—</strong><span><b>Consumo del vehículo</b><small>Energía del vehículo aún no observada.</small></span></div>
-		</section>
-	{/if}
-</section>
 </div>
+</section>
+</section>
+<section id="energy-planning-view" class="energy-view planning-view" aria-labelledby="energy-planning-heading" hidden={activeSection !== 'planning'}>
+	<EnergyPlanningPanel {busy} {online} {revision} {drafts} {confirmAction} {onSessionExpired} />
 </section>
 
 <style>
 	.analytics-panel { display: grid; gap: 19px; margin-top: 28px; padding: 22px 0 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; }
 	.analytics-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
 	.analytics-title-copy { display: grid; justify-items: start; gap: 0; }
-	.analytics-kicker, .energy-intro-kicker, .personal-records-kicker { display: inline-flex; align-items: center; gap: 7px; margin: 0; color: var(--forest); font-size: .75rem; font-weight: 720; letter-spacing: .075em; }
-	.analytics-kicker :global(svg), .energy-intro-kicker :global(svg), .personal-records-kicker :global(svg), .energy-totals-heading .section-label :global(svg) { flex: 0 0 auto; }
-	.energy-intro-copy { display: grid; justify-items: start; gap: 5px; }
+	.personal-records-kicker { display: inline-flex; align-items: center; gap: 7px; margin: 0; color: var(--forest); font-size: .75rem; font-weight: 720; letter-spacing: .075em; }
+	.personal-records-kicker :global(svg) { flex: 0 0 auto; }
 	.energy-intro h2 { margin: 0; }
 	.analytics-heading h2 { margin: 5px 0 0; font-size: 1.125rem; font-weight: 640; letter-spacing: -.03em; }
 	.analytics-title-copy > p:last-child { max-width: 580px; margin: 7px 0 0; color: var(--muted); font-size: 1rem; line-height: 1.55; }
@@ -1096,11 +1120,6 @@
 	.energy-personal-content[hidden] { display: none; }
 	.form-icon { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 11px; background: var(--forest-soft); color: var(--forest); }
 	.energy-totals { display: grid; gap: 17px; margin: 0 0 30px; padding-top: 20px; border-top: 1px solid var(--line); }
-	.energy-totals-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
-	.energy-totals-heading .section-label { display: flex; align-items: center; gap: 7px; margin: 0; }
-	.energy-totals-heading h2 { margin: 5px 0 0; font-size: 1.25rem; font-weight: 650; letter-spacing: -.025em; }
-	.energy-totals-heading > div > p:last-child { margin: 6px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
-	.energy-totals-scope { max-width: 250px; padding: 7px 0 3px 14px; border-left: 2px solid var(--forest); color: var(--muted); font-size: .8125rem; line-height: 1.5; }
 	.energy-total-groups { display: grid; grid-template-columns: minmax(0, 1fr); border-block: 1px solid var(--line); }
 	.energy-total-groups-demo { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); }
 	.energy-total-group { min-width: 0; padding: 17px 22px 18px 0; }
@@ -1109,7 +1128,6 @@
 	.energy-total-group-heading .source-dot { flex: 0 0 8px; margin-top: 6px; }
 	.energy-total-group-heading > div { min-width: 0; }
 	.energy-total-group-heading h3 { margin: 0; font-size: .9375rem; font-weight: 680; }
-	.energy-total-group-heading p { margin: 4px 0 0; color: var(--muted); font-size: .8125rem; line-height: 1.45; }
 	.energy-total-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; margin: 18px 0 0; }
 	.energy-total-metrics > div { display: grid; align-content: start; gap: 5px; min-width: 0; }
 	.energy-total-metrics dt { color: var(--muted); font-size: .8125rem; line-height: 1.4; }
@@ -1239,7 +1257,6 @@
 	}
 	.energy-intro { margin-bottom: 24px; }
 	.energy-intro h2 { font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing: -.035em; }
-	.energy-intro-kicker { font-size: .6875rem; }
 	.energy-session-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(245px, .72fr); align-items: start; gap: clamp(20px, 3vw, 42px); margin: 0 0 34px; }
 	.energy-charger-column { min-width: 0; }
 	:global(.charger-panel.card) { margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
@@ -1266,13 +1283,84 @@
 		.energy-cost-profile { margin-top: 0; padding: 15px 0 0; border-top: 1px solid var(--line); border-left: 0; }
 	}
 	@media (max-width: 700px) {
-		.energy-totals-heading { align-items: flex-start; flex-direction: column; }
-		.energy-totals-scope { max-width: none; padding: 0 0 0 11px; }
 		.energy-total-groups-demo { grid-template-columns: minmax(0, 1fr); }
 		.energy-total-group, .energy-total-group + .energy-total-group { padding: 15px 0; border-left: 0; }
 		.energy-total-group + .energy-total-group { border-top: 1px solid var(--line); }
 		.energy-total-metrics { gap: 12px; }
 		.analytics-source-card { padding-right: 0; }
 		.analytics-source-card + .analytics-source-card { padding-left: 0; border-top: 1px solid var(--line); border-left: 0; }
+	}
+	.energy-intro { margin-bottom: 16px; }
+	.energy-intro > div > p { max-width: 42ch; }
+	.energy-switcher { margin-bottom: 18px; }
+	.energy-view { display: grid; gap: 20px; min-width: 0; }
+	.energy-view.workspace-panel { padding: clamp(16px, 2.2vw, 26px); border: 1px solid var(--line); border-radius: 22px; background: var(--surface); box-shadow: var(--shadow); }
+	.energy-view[hidden] { display: none; }
+	.energy-summary-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+	.energy-summary-heading h3 { margin: 0; font-size: clamp(1.12rem, 1.8vw, 1.4rem); font-weight: 650; letter-spacing: -.025em; }
+	.energy-summary-heading p { margin: 3px 0 0; color: var(--muted); font-size: .8125rem; }
+	.energy-summary-heading > .button { min-height: 48px; flex: 0 0 auto; }
+	.energy-totals { margin: 0; padding: 0; border: 0; }
+	.energy-total-group { padding-block: 4px; }
+	.energy-total-group + .energy-total-group { border-left-color: var(--line); }
+	.energy-total-group-heading h3 { font-size: .8125rem; font-weight: 650; }
+	.energy-total-metrics { margin-top: 12px; }
+	.energy-total-metrics dt { font-size: .75rem; }
+	.energy-total-metrics dd { font-size: clamp(1.15rem, 2.3vw, 1.65rem); letter-spacing: -.035em; }
+	.demo-trip-totals { margin-top: 13px; padding-top: 10px; }
+	.demo-trip-note { max-width: 65ch; }
+	.analytics-panel { gap: 15px; margin: 0; padding: 20px 0 0; }
+	.analytics-heading { align-items: flex-end; }
+	.analytics-title-copy h2 { margin: 0; font-size: 1rem; font-weight: 650; letter-spacing: -.02em; }
+	.analytics-title-copy > p:last-child { margin-top: 4px; font-size: .8125rem; }
+	.analytics-range-control { padding: 2px; border-radius: 10px; }
+	.analytics-range-button { min-width: 60px; min-height: 42px; padding-inline: 8px; font-size: .75rem; }
+	.analytics-range-selected { border-color: var(--forest); color: var(--ink); box-shadow: inset 0 -2px var(--forest); }
+	.analytics-months, .analytics-coverage { padding-top: 14px; }
+	.records-view { gap: 22px; }
+	.charger-disclosure { overflow: clip; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+	.charger-disclosure > summary { display: flex; min-height: 62px; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 16px; color: var(--ink); cursor: pointer; list-style: none; }
+	.charger-disclosure > summary::-webkit-details-marker { display: none; }
+	.charger-disclosure > summary > span:first-child { display: grid; gap: 2px; }
+	.charger-disclosure > summary strong { font-size: .875rem; font-weight: 650; }
+	.charger-disclosure > summary small { color: var(--muted); font-size: .75rem; }
+	.charger-disclosure-action { flex: 0 0 auto; color: var(--forest); font-size: .75rem; font-weight: 700; }
+	.charger-disclosure[open] > summary { border-bottom: 1px solid var(--line); }
+	.charger-disclosure[open] > .energy-session-layout { margin: 0; padding: 16px; }
+	.personal-records { gap: 10px; margin: 0; }
+	.personal-records-heading { padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+	.personal-records-heading h2 { margin-top: 0; font-size: 1rem; }
+	.personal-records-kicker { display: none; }
+	.personal-records-heading > div:first-child > p:last-child { margin-top: 3px; font-size: .8125rem; }
+	.personal-records-actions .button { min-height: 44px; }
+	.energy-main-grid { gap: 24px; margin-top: 0; }
+	.charge-form-card.card { position: static; padding: 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; }
+	.charge-form-card .section-heading { margin-top: 16px; }
+	.charge-form { margin-top: 12px; }
+	.analytics-coverage-details > summary { min-height: 44px; }
+	@media (max-width: 680px) {
+		.energy-summary-heading { align-items: stretch; flex-direction: column; }
+		.energy-summary-heading > .button { width: 100%; }
+		.analytics-heading { align-items: stretch; flex-direction: column; }
+		.analytics-range-control { width: 100%; }
+		.analytics-range-button { flex: 1 1 0; }
+		.energy-total-groups-demo { grid-template-columns: minmax(0, 1fr); }
+		.energy-total-group, .energy-total-group + .energy-total-group { padding: 10px 0; border-left: 0; }
+		.energy-total-group + .energy-total-group { border-top: 1px solid var(--line); }
+		.energy-total-metrics { gap: 12px; }
+		.energy-main-grid { grid-template-columns: minmax(0, 1fr); }
+		.personal-records-heading { align-items: stretch; flex-direction: column; }
+		.personal-records-actions { justify-content: stretch; }
+		.personal-records-actions .button { flex: 1 1 140px; }
+	}
+	@media (max-width: 380px) {
+		.energy-view.workspace-panel { padding: 15px 13px; border-radius: 18px; }
+		.analytics-range-button { min-width: 0; padding-inline: 4px; font-size: .6875rem; }
+		.energy-total-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+		.energy-total-metrics dt { font-size: .75rem; }
+		.energy-total-metrics dd { font-size: clamp(1.45rem, 8vw, 2rem); }
+		.charger-disclosure > summary { align-items: flex-start; padding-inline: 12px; }
+		.charger-disclosure-action { white-space: nowrap; }
+		.charger-disclosure[open] > .energy-session-layout { padding: 12px; }
 	}
 </style>

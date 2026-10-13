@@ -425,11 +425,10 @@
 	}
 </script>
 
-<section class="page-intro navigation-intro">
+<section class="page-intro premium-heading navigation-intro">
 	<div class="navigation-intro-copy">
-		<p class="navigation-intro-kicker eyebrow"><Glyph name="navigation" size={16} /> DESTINOS Y LUGARES GUARDADOS</p>
-		<h2>¿A dónde vamos?</h2>
-		<p>Encuentra lugares y cargadores. Abre el mapa cuando lo necesites.</p>
+		<h2>Encuentra tu destino</h2>
+		<p>Busca una dirección o introduce coordenadas públicas.</p>
 	</div>
 </section>
 
@@ -442,29 +441,15 @@
 
 {#if statusBusy}
 	<div class="status-loading" role="status">Consultando la disponibilidad de navegación…</div>
-{:else if status?.enabled}
-	<div class="provider-status"><span class="status-dot"></span><span>Búsqueda pública disponible mediante OpenStreetMap.</span></div>
 {:else if status && !status.enabled}
 	<div class="notice notice-accent" role="status">Los servicios públicos de lugares, cargadores y mapa están desactivados en Pulse. Puedes introducir coordenadas públicas para preparar enlaces a mapas externos.</div>
 {/if}
 
 <div class="navigation-layout" class:map-visible={mapOpen}>
 	<div class="navigation-main-column">
-		{#if mapOpen && selectedPlace}
-	<section class="map-card card" id="navigation-map" aria-labelledby="map-heading">
-				<div class="map-card-heading">
-					<div><h3 id="map-heading" class="navigation-section-title"><Glyph name="navigation" size={16} />Mapa del destino</h3><p>{selectedPlace.name}</p></div>
-					<button class="button button-secondary button-small" type="button" onclick={() => mapOpen = false}>Ocultar mapa</button>
-				</div>
-				<MapCanvas point={selectedPlace} {stations} tile={navigation.tile} onCenter={onMapCenter} onSelectStation={(station) => selectedStation = station} onError={(message) => mapError = message} {theme} />
-				{#if mapError}<p class="map-feedback" role="status">{mapError}</p>{/if}
-				<p class="fine-print map-guidance">Usa los botones del mapa para acercar o alejar. La rueda del ratón sigue desplazando la página; mover el mapa no consulta cargadores.</p>
-			</section>
-		{/if}
-
-		<section class="search-card card card-pad" aria-labelledby="places-heading">
+				<section class="search-card card card-pad" aria-labelledby="places-heading">
 			<div class="section-heading search-heading">
-				<div><h3 id="places-heading" class="navigation-section-title"><Glyph name="search" size={16} />Buscar un lugar</h3><p>Una ciudad, dirección o punto de interés.</p></div>
+				<h3 id="places-heading" class="sr-only">Buscar un destino</h3>
 				<span class="source-chip">OpenStreetMap</span>
 			</div>
 			<form class="place-search-form" onsubmit={searchPlaces}>
@@ -489,30 +474,7 @@
 				<div class="empty-search"><span class="empty-search-mark" aria-hidden="true"><Glyph name="search" size={17} /></span><div><h4>No se encontraron lugares</h4><p>Prueba con una ciudad o una referencia más concreta.</p></div></div>
 			{/if}
 		</section>
-
-		<section class="manual-card card card-pad" aria-labelledby="manual-heading">
-			<div class="section-heading manual-heading">
-				<div><h3 id="manual-heading" class="navigation-section-title"><Glyph name="navigation" size={16} />Usar coordenadas públicas</h3><p>Alternativa sin proveedor de búsqueda. Introduce las coordenadas de un lugar público.</p></div>
-			</div>
-			<form class="manual-form" onsubmit={chooseManualPlace}>
-				<div class="field">
-					<label for="public-latitude">Latitud</label>
-					<input id="public-latitude" name="latitude" bind:this={latitudeInput} inputmode="decimal" autocomplete="off" value={manualLatitude} oninput={(event) => { manualLatitude = event.currentTarget.value; latitudeError = ''; }} placeholder="40.4168" aria-invalid={latitudeError ? 'true' : undefined} aria-describedby={latitudeError ? 'coordinates-help latitude-error' : 'coordinates-help'} disabled={!online || authExpired} />
-					{#if latitudeError}<p id="latitude-error" class="inline-error" role="alert">{latitudeError}</p>{/if}
-				</div>
-				<div class="field">
-					<label for="public-longitude">Longitud</label>
-					<input id="public-longitude" name="longitude" bind:this={longitudeInput} inputmode="decimal" autocomplete="off" value={manualLongitude} oninput={(event) => { manualLongitude = event.currentTarget.value; longitudeError = ''; }} placeholder="-3.7038" aria-invalid={longitudeError ? 'true' : undefined} aria-describedby={longitudeError ? 'coordinates-help longitude-error' : 'coordinates-help'} disabled={!online || authExpired} />
-					{#if longitudeError}<p id="longitude-error" class="inline-error" role="alert">{longitudeError}</p>{/if}
-				</div>
-				<button class="button button-secondary manual-submit" type="submit" disabled={!online || authExpired}>Usar estas coordenadas</button>
-			</form>
-			<p id="coordinates-help" class="field-hint coordinates-hint">Puedes usar punto o coma decimal. Estas coordenadas no representan la posición del vehículo.</p>
-		</section>
-	</div>
-
-	<aside class="navigation-side-column">
-		{#if selectedPlace}
+				{#if selectedPlace}
 			<section class="destination-card card card-pad" aria-labelledby="destination-heading">
 				<div class="section-heading destination-heading">
 					<div><h3 id="destination-heading">{selectedPlace.name}</h3></div>
@@ -571,19 +533,49 @@
 				<p>Selecciona un resultado o usa coordenadas públicas para mostrar opciones de mapa y consultar cargadores cercanos.</p>
 			</section>
 		{/if}
-		<NavigationFavoritesPanel {busy} {online} {revision} {drafts} {mutate} {confirmAction} {onSessionExpired} />
-		<div class="notice navigation-limit-note"><span>Los datos de lugares y cargadores vienen de OpenStreetMap. No se consulta la ubicación del vehículo y no se presenta una ruta ni disponibilidad en tiempo real.</span></div>
+				<section class="manual-card card card-pad" aria-labelledby="manual-heading">
+			<div class="section-heading manual-heading">
+				<div><h3 id="manual-heading" class="navigation-section-title"><Glyph name="navigation" size={16} />Usar coordenadas</h3><p>Alternativa sin proveedor de búsqueda. Introduce las coordenadas de un lugar público.</p></div>
+			</div>
+			<form class="manual-form" onsubmit={chooseManualPlace}>
+				<div class="field">
+					<label for="public-latitude">Latitud</label>
+					<input id="public-latitude" name="latitude" bind:this={latitudeInput} inputmode="decimal" autocomplete="off" value={manualLatitude} oninput={(event) => { manualLatitude = event.currentTarget.value; latitudeError = ''; }} placeholder="40.4168" aria-invalid={latitudeError ? 'true' : undefined} aria-describedby={latitudeError ? 'coordinates-help latitude-error' : 'coordinates-help'} disabled={!online || authExpired} />
+					{#if latitudeError}<p id="latitude-error" class="inline-error" role="alert">{latitudeError}</p>{/if}
+				</div>
+				<div class="field">
+					<label for="public-longitude">Longitud</label>
+					<input id="public-longitude" name="longitude" bind:this={longitudeInput} inputmode="decimal" autocomplete="off" value={manualLongitude} oninput={(event) => { manualLongitude = event.currentTarget.value; longitudeError = ''; }} placeholder="-3.7038" aria-invalid={longitudeError ? 'true' : undefined} aria-describedby={longitudeError ? 'coordinates-help longitude-error' : 'coordinates-help'} disabled={!online || authExpired} />
+					{#if longitudeError}<p id="longitude-error" class="inline-error" role="alert">{longitudeError}</p>{/if}
+				</div>
+				<button class="button button-secondary manual-submit" type="submit" disabled={!online || authExpired}>Usar estas coordenadas</button>
+			</form>
+			<p id="coordinates-help" class="field-hint coordinates-hint">Puedes usar punto o coma decimal. Estas coordenadas no representan la posición del vehículo.</p>
+		</section>
+	</div>
+
+	<aside class="navigation-side-column" aria-label="Mapa y lugares guardados">
+				{#if mapOpen && selectedPlace}
+	<section class="map-card card" id="navigation-map" aria-labelledby="map-heading">
+				<div class="map-card-heading">
+					<div><h3 id="map-heading" class="navigation-section-title"><Glyph name="navigation" size={16} />Mapa</h3><p>{selectedPlace.name}</p></div>
+					<button class="button button-secondary button-small" type="button" onclick={() => mapOpen = false}>Ocultar mapa</button>
+				</div>
+				<MapCanvas point={selectedPlace} {stations} tile={navigation.tile} onCenter={onMapCenter} onSelectStation={(station) => selectedStation = station} onError={(message) => mapError = message} {theme} />
+				{#if mapError}<p class="map-feedback" role="status">{mapError}</p>{/if}
+				<p class="fine-print map-guidance">Usa los botones del mapa para acercar o alejar. La rueda del ratón sigue desplazando la página; mover el mapa no consulta cargadores.</p>
+			</section>
+		{/if}
+				<NavigationFavoritesPanel {busy} {online} {revision} {drafts} {mutate} {confirmAction} {onSessionExpired} />
+				<div class="notice navigation-limit-note"><span>Los datos de lugares y cargadores vienen de OpenStreetMap. No se consulta la ubicación del vehículo y no se presenta una ruta ni disponibilidad en tiempo real.</span></div>
 	</aside>
 </div>
-
 <style>
 	.navigation-intro { align-items: flex-start; margin-bottom: 18px; }
 	.navigation-intro-copy { display: grid; justify-items: start; gap: 5px; }
-	.navigation-intro-kicker { display: inline-flex; align-items: center; gap: 7px; margin: 0; color: var(--forest); font-size: .6875rem; font-weight: 720; letter-spacing: .075em; }
-	.navigation-intro-kicker :global(svg) { flex: 0 0 auto; }
 	.navigation-intro h2 { margin: 0; font-size: clamp(1.375rem, 2.6vw, 1.85rem); }
 	.navigation-intro p { max-width: 70ch; }
-	.status-loading, .provider-status { display: flex; min-height: 44px; align-items: center; gap: 9px; margin: 0 0 14px; color: var(--muted-strong); font-size: .875rem; }
+	.status-loading { display: flex; min-height: 44px; align-items: center; gap: 9px; margin: 0 0 14px; color: var(--muted-strong); font-size: .875rem; }
 	.status-loading { padding-left: 2px; }
 	.navigation-layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(18rem, .9fr); align-items: start; gap: 16px; }
 	.navigation-main-column, .navigation-side-column { display: grid; min-width: 0; gap: 16px; }
@@ -681,4 +673,30 @@
 	.navigation-layout,.navigation-layout.map-visible{grid-template-columns:minmax(280px,.85fr) minmax(0,1.15fr);gap:32px}.navigation-main-column,.navigation-side-column{gap:24px}.search-card,.manual-card,.destination-card{padding:0 0 24px;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent}.place-results,.station-list{gap:0}.place-result,.station-card{border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:16px 0}.place-result:hover,.place-result[aria-pressed="true"]{background:var(--forest-soft)}.station-facts div,.destination-coordinates div{border-radius:0;background:transparent;padding:8px 0}.destination-empty{padding:24px 0;min-height:280px;border:0;border-radius:0;background:transparent}.destination-empty h3{font-size:1.25rem}.empty-search{border:0;padding:16px 0;border-radius:0;background:transparent}.map-card{border-radius:18px}.source-chip{background:var(--forest-soft);color:var(--forest);border:0}.manual-heading,.search-heading{margin-bottom:16px}.station-address,.station-operator{font-size:.8125rem}
 	@media(max-width:1000px){.navigation-layout,.navigation-layout.map-visible{grid-template-columns:minmax(0,1fr)}.navigation-main-column,.navigation-side-column{gap:24px}}
 	@media(max-width:560px){.destination-empty{min-height:200px}.station-facts{grid-template-columns:repeat(2,minmax(0,1fr))}.navigation-layout{gap:24px}}
+
+	.navigation-intro { align-items: flex-end; }
+	.navigation-intro h2 { font-size: clamp(2rem, 4vw, 3rem); }
+	.navigation-layout, .navigation-layout.map-visible { grid-template-columns: minmax(0, 1.3fr) minmax(18rem, .7fr); align-items: start; gap: clamp(24px, 4vw, 42px); }
+	.navigation-main-column, .navigation-side-column { gap: 26px; min-width: 0; }
+	.navigation-main-column > .search-card, .navigation-main-column > .manual-card, .navigation-main-column > .destination-card, .navigation-main-column > .destination-empty {
+		min-width: 0; padding: 0 0 24px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none;
+	}
+	.navigation-main-column > .search-card { order: 0; }
+	.navigation-main-column > .destination-card, .navigation-main-column > .destination-empty { order: 1; }
+	.navigation-main-column > .manual-card { order: 2; }
+	.navigation-main-column > .destination-empty { min-height: 0; align-content: start; }
+	.manual-heading, .search-heading { margin-bottom: 14px; }
+	.navigation-side-column { align-content: start; }
+	.navigation-side-column > .map-card { margin: 0; padding: 12px; }
+	.coordinates-hint { max-width: 65ch; }
+	.charger-search-button { justify-self: stretch; }
+	@media (max-width: 1000px) {
+		.navigation-layout, .navigation-layout.map-visible { grid-template-columns: minmax(0, 1fr); }
+		.navigation-side-column { grid-template-columns: minmax(0, 1fr); }
+	}
+	@media (max-width: 560px) {
+		.navigation-layout, .navigation-layout.map-visible { gap: 24px; }
+		.navigation-main-column > .search-card, .navigation-main-column > .manual-card, .navigation-main-column > .destination-card, .navigation-main-column > .destination-empty { padding-bottom: 19px; }
+		.charger-search-button { width: 100%; }
+	}
 </style>

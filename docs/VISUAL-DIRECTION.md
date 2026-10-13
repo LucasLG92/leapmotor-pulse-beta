@@ -1,32 +1,36 @@
 # Dirección visual de Pulse
 
-La dirección combina el **cuadro de instrumentos personal del B10** para la lectura inmediata con el **cuaderno de viaje** para Actividad. Cada pantalla usa la composición que explica mejor su tarea; una cuadrícula de tarjetas no es el lenguaje por defecto.
+Pulse es un mando personal del B10: automóvil premium, porcelana, negro profundo y azul eléctrico. El vehículo y las acciones cotidianas definen la composición. La información técnica se abre cuando hace falta, conservando origen, caducidad y límites de las funciones.
 
-## Jerarquía por pantalla
+## Composición por tarea
 
-- **Coche:** vehículo y magnitudes protagonistas, con origen y momento de lectura visibles; banda de estado y acciones contextuales después.
-- **Energía:** registros y comparación lideran. El simulador informativo queda plegado hasta que se solicita.
-- **Actividad:** cronología en filas abiertas para trayectos y mantenimientos; el detalle se revela al abrir una entrada.
-- **Mapa:** destinos guardados y acción externa explícita. Sin mapa, posición o ruta fingidos.
-- **Estados:** línea temporal de fecha, cambio y procedencia en lugar de repetir tarjetas de estado.
-- **Ajustes:** grupos nombrados por propósito y detalles técnicos disponibles a demanda.
+La navegación principal tiene cinco destinos directos: Coche, Energía, Diario, Mapa y Perfil. Estados se abre desde la cabecera y también desde la navegación de escritorio. Las URL existentes se conservan.
 
-## Ritmo, color e interacción
+- **Coche:** imagen propia abierta, lecturas de autonomía y batería, controles agrupados, estado recibido y procedencia. Destinos y cargas ofrecen continuidad; el diario aporta un resumen. Conexión y cargador tienen un desplegable específico.
+- **Energía:** resumen personal primero. Registros y planificación tienen vistas locales; las herramientas no desplazan la tarea cotidiana.
+- **Diario:** trayectos, mantenimiento y acciones tienen secciones propias.
+- **Mapa:** destino y favoritos lideran. Búsqueda externa y coordenadas mantienen sus permisos, atribución y límites.
+- **Perfil:** vehículo, conexiones, preferencias y datos. El enlace `/settings#preparation` abre Conexiones y conserva el foco de preparación.
+- **Estados:** eventos, señales y detalles separados por intención. No se representa un centinela o cámaras como disponibles.
 
-La tipografía de sistema, cifras tabulares cuando ayudan a comparar, separadores y espacio entre filas establecen jerarquía. Superficies cerradas se reservan para contenido que necesita contexto propio. Los temas Claro y Charcoal conservan contraste y significado consistente; verde comunica un estado favorable, ámbar atención/demo y rojo error.
+## Sistema visual
 
-El contenido refluye a una columna en móvil, respeta safe areas y permite que etiquetas y texto largos envuelvan. Tablas desplazan su propio contenedor. Foco de teclado visible, controles táctiles de al menos 48 px y `prefers-reduced-motion` evitan que la densidad visual limite el uso. No hay animación permanente ni fuentes, paquetes o assets remotos.
+Tipografía de sistema, cifras tabulares, títulos breves y separación por espacio y líneas. Paleta clara `#f3f4f6`, `#ffffff`, `#10151e`, `#165dfa`; oscura `#090d14`, `#131923`, `#f5f7fc`, `#98b9ff`. Los nombres históricos de tokens se conservan por compatibilidad: `--forest` es ahora el acento azul. Ámbar comunica atención; rojo, error. El color se acompaña de texto.
 
-## Evidencia y límites
+La cabecera compacta deja espacio al contenido. La navegación móvil es una barra continua con cinco etiquetas visibles y safe areas. Los controles principales tienen áreas táctiles de 44–48 px como mínimo. El foco visible usa un contorno de 3 px. Las listas y los detalles sustituyen la acumulación de tarjetas anidadas.
 
-La entrega anterior se revisó a 1280×720 CSS en los dos temas y seis rutas, sin overflow horizontal ni errores/avisos de consola observados. Se comprobó que el simulador conserva el borrador al plegarse y al cancelar la salida, y un flujo de actualización desde una PWA local anterior. Esto no sustituye reflujo en teléfono, VoiceOver, aceptación física ni pruebas de servicio/vehículo reales. Ningún indicador decorativo afirma sensores, GPS, cámaras, centinela o capacidad física.
+## Interacción y continuidad
 
-## Refinamiento cotidiano del 13 de octubre de 2026
+Las selecciones locales usan botones `aria-pressed` y paneles `hidden`; los formularios siguen montados y mantienen borradores y DraftGuard. Cada acción que abre un formulario selecciona antes su sección y conserva el enfoque. La navegación global, confirmaciones, reintento de carga y actualización PWA mantienen sus contratos.
 
-La tesis evoluciona hacia **tu garaje personal, con calma y respuesta**. Las [referencias primarias adicionales](UI-REFERENCES-20261013.md) de Rivian, Tesla, Tibber, Oura y Wallet orientan jerarquía e interacción; los componentes y recursos de Pulse conservan su autoría y licencia.
+La entrada de la vista y del coche es breve (280–360 ms), sin bucles ni señales que finjan actividad en directo. `prefers-reduced-motion` elimina el movimiento ornamental. El tema se elige en Perfil y conserva la preferencia existente de dispositivo/claro/oscuro.
 
-Autonomía y batería preceden al escenario tonal del coche, los accesos frecuentes tienen un contorno táctil reconocible y la navegación móvil flota sobre el borde seguro. Diario, energía y lugares guardados combinan títulos, separadores, iconos y vacíos orientados al siguiente paso. Ajustes ofrece una vista previa de Claro, Charcoal y Sistema. El estado de carga de una sección dispone de reintento y restaura el foco si vuelve a fallar sin que el usuario haya movido el foco.
+## Referencias y autoría
 
-Las entradas y respuestas de controles duran 120–280 ms, sin actividad decorativa continua; reduced-motion elimina la animación ornamental. El simulador permanece montado al plegarse para conservar borradores. La actualización mantiene los contratos, cálculos, API y capacidades anteriores.
+La referencia de [Tobi en X](https://x.com/tobiadonadon_/status/2106430529113301163) orienta la tesis visual y la revisión del render. Las [referencias de aplicaciones](UI-REFERENCES-20261013.md) sirven para estudiar jerarquía. [My Porsche, actualización de 2024](https://newsroom.porsche.com/en_US/2024/products/porscheextensive-update-my-porsche-app-35134.html) aporta concentración de información y accesos; [Lucid](https://lucidmotors.com/knowledge/ownership/lucid-app/the-basics/the-lucid-app) aporta prioridad del coche y controles. Son referencias de diseño, no equivalencia de capacidades.
 
-Esta iteración se inspeccionó en navegador a 709×682 CSS (área de contenido de 700 px) con datos sintéticos: las seis rutas sin desbordamiento horizontal, ambos temas, persistencia de apariencia, foco al navegar y cancelación de salida con borrador conservado. No acredita iPhone físico, VoiceOver, 320 px ni escala de texto; movimiento reducido y fallo repetido de importación se revisaron en código, sin simulación de dispositivo.
+No se copian código, imágenes, fuentes o plantillas de estas aplicaciones. Pulse conserva su código y recursos propios. No se incorporan dependencias, nuevas APIs, sensores, cálculos ni persistencia.
+
+## Validación
+
+La revisión usa datos sintéticos y dimensiones reales de la superficie de navegador disponible. Debe comprobar ambas apariencias, seis rutas, borradores entre secciones, foco y enlaces de preparación, contraste y ausencia de desbordamiento. Un render de navegador en Linux no acredita recepción física en iPhone, VoiceOver ni pruebas con el B10. La entrega de código, despliegue estático y actualización del cliente se verifican por separado.

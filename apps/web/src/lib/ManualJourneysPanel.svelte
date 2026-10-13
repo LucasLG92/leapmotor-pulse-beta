@@ -27,6 +27,7 @@
 	let exportMessage = $state(''), exportError = $state(false), exporting = $state(false);
 	let exportButton = $state<HTMLButtonElement | undefined>();
 	let reportHeading = $state<HTMLHeadingElement | undefined>();
+	let reportDetailsElement = $state<HTMLDetailsElement | undefined>();
 	let baseline = JSON.stringify({ form: emptyJourneyForm(), tagDraft: '' });
 	let mounted = false, readGeneration = 0, editGeneration = 0, observedReadKey = '';
 	let reads: AbortController | null = null;
@@ -248,7 +249,7 @@
 					exporting = false; await tick();
 					if (mounted && focused && document.hasFocus() && document.activeElement === document.body) {
 						if (exportButton && !exportButton.disabled) exportButton.focus();
-						else reportHeading?.focus();
+						else if (reportDetailsElement) { reportDetailsElement.open = true; await tick(); reportHeading?.focus(); }
 					}
 				}
 			}
@@ -265,13 +266,12 @@
 	}
 </script>
 
-<section class="manual-journeys" aria-labelledby="manual-journeys-heading">
+<section class="manual-journeys workspace-panel" aria-labelledby="manual-journeys-heading">
 	<div class="panel-header">
-		<div class="panel-title-row"><span class="panel-mark" aria-hidden="true"><Glyph name="activity" size={18} /></span><div class="panel-copy"><span class="eyebrow">DIARIO PERSONAL</span><h2 id="manual-journeys-heading">Trayectos manuales</h2><p>Tu registro privado en Pulse, separado de los datos de demostración y del vehículo.</p></div></div>
+		<div class="panel-title-row"><div class="panel-copy"><h2 id="manual-journeys-heading">Trayectos manuales</h2></div></div>
 		<button class="button button-primary" disabled={busy || saving || !online} onclick={() => open()}>Añadir trayecto</button>
 	</div>
-	{#if editorOpen}
-		<form class="journey-form" onsubmit={save} novalidate aria-labelledby="journey-form-heading">
+	<form class="journey-form" hidden={!editorOpen} onsubmit={save} novalidate aria-labelledby="journey-form-heading">
 			<div class="form-intro"><div><span class="eyebrow">{editing ? 'ACTUALIZAR REGISTRO' : 'NUEVO REGISTRO'}</span><h3 id="journey-form-heading">{editing ? 'Editar trayecto manual' : 'Registrar un trayecto terminado'}</h3></div><p>Incluye solo los datos que conoces. No completamos información que no hayas indicado.</p></div>
 			<div class="field"><label for="journey-time-basis">Zona de las fechas</label><select id="journey-time-basis" value={form.timeBasis} onchange={changeBasis} disabled={busy || saving}><option value="local">Hora del dispositivo ({timezone})</option><option value="utc">UTC</option></select></div>
 			<p class="muted">Fechas en {form.timeBasis === 'utc' ? 'UTC' : timezone}. Si cambias la zona, se convierten las horas válidas. Distancia y energía son opcionales: vacío significa que no tienes ese dato.</p>
@@ -301,14 +301,16 @@
 				<button type="button" class="button button-secondary" disabled={busy || saving || form.stops.length >= 32} onclick={() => { form.stops = [...form.stops, { started: '', ended: '' }]; }}>Añadir parada</button>
 			</fieldset>
 			<div class="actions"><button class="button button-primary" disabled={busy || saving || !online} type="submit">{saving ? 'Guardando…' : sent ? 'Reintentar el mismo guardado' : editing ? 'Guardar cambios' : 'Guardar trayecto'}</button><button class="button button-secondary" type="button" disabled={busy || saving} onclick={cancel}>Descartar formulario</button></div>
-		</form>
-	{/if}
+	</form>
+	<details class="journey-filter-details">
+	<summary>Buscar y filtrar trayectos</summary>
 	<form class="journey-filters" onsubmit={submitFilters} aria-label="Buscar trayectos manuales">
 		<div class="filter-search"><label for="journey-search">Buscar por texto</label><input id="journey-search" type="search" maxlength="200" bind:value={searchInput} placeholder="Origen, destino, nota o etiqueta" aria-invalid={!!filterError} aria-describedby={filterError ? 'journey-filter-error journey-search-hint' : 'journey-search-hint'} /><small id="journey-search-hint">La búsqueda recorre origen, destino, notas y etiquetas.</small></div>
 		<div class="filter-tag"><label for="journey-filter-tag">Etiqueta exacta</label><input id="journey-filter-tag" maxlength="64" bind:value={tagInput} placeholder="Por ejemplo: trabajo" aria-invalid={!!filterError} aria-describedby={filterError ? 'journey-filter-error' : undefined} /></div>
 		<div class="filter-actions"><button class="button button-primary" type="submit" disabled={busy || saving || !online}>Buscar</button>{#if appliedSearch || appliedTag || searchInput || tagInput}<button class="button button-quiet" type="button" disabled={busy || saving} onclick={clearFilters}>Limpiar</button>{/if}</div>
 		{#if filterError}<p class="form-error" id="journey-filter-error" role="alert">{filterError}</p>{/if}
 	</form>
+	</details>
 	{#if loading}<p role="status">Cargando diario manual…</p>
 	{:else if readError}<div class="read-error"><p role="alert">{readError}</p><button class="button button-secondary" disabled={busy || !online || saving} onclick={load}>Actualizar diario</button></div>
 	{:else if page}
@@ -337,7 +339,10 @@
 		</div>
 		{#if page.total > pageSize}<nav class="pagination" aria-label="Páginas de trayectos manuales"><button class="button button-secondary" disabled={busy || saving || offset === 0} onclick={() => offset = Math.max(0, offset - pageSize)}>Anteriores</button><span>{offset + 1}–{Math.min(offset + pageSize, page.total)} de {count(page.total)}</span><button class="button button-secondary" disabled={busy || saving || offset + pageSize >= page.total} onclick={() => offset += pageSize}>Siguientes</button></nav>{/if}
 	{/if}
-	<div class="report-heading"><div><span class="eyebrow">RESUMEN</span><h3 bind:this={reportHeading} tabindex="-1">Informe de tus registros</h3></div><div class="field period-field"><label for="journey-period">Periodo</label><select id="journey-period" bind:value={days} disabled={busy || saving || exporting}><option value={30}>Últimos 30 días</option><option value={90}>Últimos 90 días</option><option value={365}>Últimos 365 días</option></select></div></div>
+	<details class="report-details" bind:this={reportDetailsElement}>
+	<summary>Resumen y exportación</summary>
+	<div class="report-content">
+	<div class="report-heading"><div><h3 bind:this={reportHeading} tabindex="-1">Informe de tus registros</h3></div><div class="field period-field"><label for="journey-period">Periodo</label><select id="journey-period" bind:value={days} disabled={busy || saving || exporting}><option value={30}>Últimos 30 días</option><option value={90}>Últimos 90 días</option><option value={365}>Últimos 365 días</option></select></div></div>
 	{#if report && reportRevision === revision && report.period.days === days && total}
 		<div class="report-context"><span class="report-period">{days} días · {report.period.timezone}</span><span class="coverage-note">Cobertura desconocida</span></div>
 		<p class="muted">Se incluyen trayectos completos por su fecha de inicio. Este resumen reúne solo registros manuales que has guardado; no confirma que estén incluidos todos tus viajes.</p>
@@ -358,6 +363,8 @@
 		</div>
 	{/if}
 	{#if exportMessage}<p role={exportError ? 'alert' : 'status'}>{exportMessage}</p>{/if}
+	</div>
+	</details>
 </section>
 
 <style>
@@ -366,10 +373,7 @@
 	p, label, dt, dd { font-size: .875rem; line-height: 1.6; } p, dt, .muted { color: var(--muted); }
 	.panel-header, .list-heading, .report-heading { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
 	.panel-title-row { display: flex; min-width: 0; align-items: flex-start; gap: 12px; }
-	.panel-mark { display: grid; width: 40px; height: 40px; flex: 0 0 40px; place-items: center; border: 1px solid var(--line); border-radius: 12px; background: var(--forest-soft); color: var(--forest); }
-	.panel-mark :global(svg) { display: block; }
 	.panel-copy { display: grid; gap: 6px; flex: 1 1 260px; }
-	.panel-copy > p { max-width: 55ch; }
 	.eyebrow { color: var(--forest); font-size: .6875rem; font-weight: 750; letter-spacing: .09em; }
 	.journey-form { padding: clamp(18px, 3vw, 28px); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface-soft); display: grid; gap: 18px; }
 	.form-intro { display: flex; justify-content: space-between; align-items: end; flex-wrap: wrap; gap: 12px 22px; }
@@ -464,4 +468,25 @@
 	@media (max-width: 760px) { .journey-filters { grid-template-columns: minmax(0, 1fr) minmax(0, .8fr); } .filter-actions { grid-column: 1 / -1; } }
 	@media (max-width: 580px) { .form-grid, .stop-row { grid-template-columns: minmax(0, 1fr); } .journey-form { padding: 17px 14px; } .journey-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .report-totals { grid-template-columns: minmax(0, 1fr); gap: 7px; } .report-totals > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; } .report-totals dd { font-size: 1rem; text-align: right; } .journey-filters { grid-template-columns: minmax(0, 1fr); } .filter-actions { grid-column: auto; } .journey-details summary { grid-template-columns: minmax(0, 1fr); gap: 4px; } .details-hint { grid-column: 1; grid-row: auto; justify-self: start; } .months > div { grid-template-columns: repeat(2, minmax(0, 1fr)); } .months > div span:not(:first-child) { text-align: left; } }
 	@media (max-width: 380px) { .tag-input-row { flex-wrap: wrap; } .tag-input-row .button { width: 100%; } .journey-metrics { grid-template-columns: minmax(0, 1fr); } .pagination { flex-wrap: wrap; } .pagination > span { order: -1; width: 100%; } }
+	.manual-journeys.workspace-panel { gap: 13px; padding: clamp(15px, 2vw, 23px); border: 1px solid var(--line); border-radius: 20px; background: var(--surface); box-shadow: var(--shadow); }
+	.panel-header { align-items: center; gap: 12px; }
+	.panel-title-row { align-items: center; }
+	.panel-copy { gap: 0; }
+	.panel-copy h2 { margin: 0; font-size: clamp(1.05rem, 1.6vw, 1.3rem); letter-spacing: -.02em; }
+	.journey-form { padding: 16px 0; border-bottom: 1px solid var(--line); background: transparent; }
+	.journey-filter-details, .report-details { border-block: 1px solid var(--line); }
+	.journey-filter-details > summary, .report-details > summary { display: flex; min-height: 46px; align-items: center; justify-content: space-between; color: var(--muted-strong); font-size: .8125rem; font-weight: 650; }
+	.journey-filters { margin-top: 0; padding: 12px 0; border-bottom: 0; }
+	.list-heading { margin: 0; padding-top: 3px; }
+	.journey-entry.evolution-item { padding-block: 11px; }
+	.journey-entry-body { gap: 5px; }
+	.report-content { display: grid; gap: 12px; padding: 10px 0 3px; }
+	.report-heading { padding-top: 0; border-top: 0; }
+	.report-heading h3 { margin: 0; font-size: 1rem; }
+	.report-details .report-content > .muted { margin: 0; font-size: .8125rem; }
+	@media (max-width: 580px) {
+		.manual-journeys.workspace-panel { padding: 14px; border-radius: 17px; }
+		.panel-header { align-items: stretch; flex-direction: column; }
+		.panel-header > .button { width: 100%; }
+	}
 </style>

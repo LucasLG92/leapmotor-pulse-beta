@@ -149,7 +149,7 @@
 </script>
 
 <section class="favorites-panel" aria-labelledby="favorites-heading">
-	<header class="favorites-header"><div class="favorites-headline"><span class="favorites-mark" aria-hidden="true"><Glyph name="navigation" size={18} /></span><div><p class="eyebrow">Lugares guardados</p><h2 id="favorites-heading">Favoritos de navegación</h2><p>Guarda coordenadas que escribas tú y abre la ruta en una aplicación de mapas cuando quieras.</p></div></div><button class="button button-primary" type="button" disabled={busy || saving || !online} onclick={openForm}><Glyph name="plus" size={16} /> Añadir lugar</button></header>
+	<header class="favorites-header"><div><h2 id="favorites-heading">Favoritos</h2></div><button class="button button-primary" type="button" disabled={busy || saving || !online} onclick={openForm}><Glyph name="plus" size={16} /> Añadir lugar</button></header>
 	{#if actionError}<div class="favorite-error" role="alert"><span>{actionError}</span><button class="button button-secondary" type="button" onclick={() => void load()} disabled={!online || loading}>Actualizar lista</button></div>{/if}
 	{#if readError}<div class="favorite-error" role="alert"><span>{readError}</span><button class="button button-secondary" type="button" onclick={() => void load()} disabled={!online || loading}>Reintentar</button></div>{/if}
 	{#if loading}<p class="state-message" role="status">Consultando favoritos…</p>{/if}
@@ -172,7 +172,7 @@
 			<div class="favorites-intro"><p>{total} {total === 1 ? 'lugar guardado' : 'lugares guardados'}</p><span>Las coordenadas se muestran para que puedas revisarlas antes de salir a mapas.</span></div>
 			<ul class="favorite-list evolution-list" aria-label="Lugares favoritos">{#each page.items as favorite (favorite.id)}
 				{@const links = linksFor(favorite)}
-				<li><article class="favorite-card evolution-item"><div class="favorite-symbol" aria-hidden="true"><Glyph name="navigation" size={21} /></div><div class="favorite-main"><div class="favorite-title"><h3>{favorite.name}</h3><span>Entrada manual</span></div><p class="coordinates"><span>Lat {coordinateFormat.format(favorite.latitude)}</span><span>Lon {coordinateFormat.format(favorite.longitude)}</span></p><p class="favorite-note">Abre la ruta en el servicio elegido. Pulse no comparte tu ubicación actual.</p></div><div class="favorite-actions">{#if links}<a class="button button-secondary" href={links.google} target="_blank" rel="noopener noreferrer">Google Maps</a><a class="button button-secondary" href={links.apple} target="_blank" rel="noopener noreferrer">Apple Maps</a>{:else}<span class="link-unavailable">Coordenadas no aptas para enlaces externos</span>{/if}<button class="button button-quiet danger-text" type="button" disabled={busy || saving || !online} onclick={() => void remove(favorite)}>Quitar favorito</button></div></article></li>
+				<li><article class="favorite-card evolution-item"><div class="favorite-main"><div class="favorite-title"><h3>{favorite.name}</h3><span>Entrada manual</span></div><p class="coordinates"><span>Lat {coordinateFormat.format(favorite.latitude)}</span><span>Lon {coordinateFormat.format(favorite.longitude)}</span></p><p class="favorite-note">Abre las coordenadas en el servicio elegido. Pulse no comparte tu ubicación actual.</p></div><div class="favorite-actions">{#if links}<a class="button button-secondary" href={links.google} target="_blank" rel="noopener noreferrer">Google Maps</a><a class="button button-secondary" href={links.apple} target="_blank" rel="noopener noreferrer">Apple Maps</a>{:else}<span class="link-unavailable">Coordenadas no aptas para enlaces externos</span>{/if}<button class="button button-quiet danger-text" type="button" disabled={busy || saving || !online} onclick={() => void remove(favorite)}>Quitar favorito</button></div></article></li>
 				{/each}</ul>
 		{:else}<div class="empty-state"><span class="favorite-empty-mark" aria-hidden="true"><Glyph name="navigation" size={24} /></span><h3>Aún no hay lugares guardados</h3><p>Añade las coordenadas manualmente para tener accesos disponibles cuando tú los abras.</p><button class="button button-primary" type="button" disabled={busy || saving || !online} onclick={openForm}>Añadir el primero</button></div>{/if}
 	{:else if !loading && !readError}<p class="state-message">Conéctate para consultar la lista guardada en tu cuenta.</p>{/if}
@@ -181,12 +181,9 @@
 <style>
 	.favorites-panel { display: grid; gap: 16px; min-width: 0; }
 	.favorites-header, .form-heading, .form-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-	.favorites-header { align-items: flex-end; }
-	.favorites-headline { display: flex; min-width: 0; align-items: flex-start; gap: 12px; }
-	.favorites-mark { display: grid; width: 40px; height: 40px; flex: 0 0 40px; place-items: center; border: 1px solid var(--line); border-radius: 12px; background: var(--forest-soft); color: var(--forest); }
-	.favorites-mark :global(svg), .favorite-symbol :global(svg), .favorite-empty-mark :global(svg) { display: block; }
-	.favorites-header h2 { margin: 2px 0 4px; font-size: clamp(1.35rem, 2vw, 1.75rem); letter-spacing: -.025em; }
-	.favorites-header p:not(.eyebrow) { max-width: 64ch; margin: 0; color: var(--muted); }
+	.favorites-header { align-items: flex-start; padding-bottom: 17px; border-bottom: 1px solid var(--line); }
+	.favorites-header h2 { margin: 0; font-size: 1.2rem; letter-spacing: -.03em; }
+	.favorite-empty-mark :global(svg) { display: block; }
 	.eyebrow { margin: 0; color: var(--forest); font-size: .75rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
 	.button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 48px; padding: 9px 14px; border: 1px solid transparent; border-radius: 11px; font: inherit; font-weight: 680; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease; }
 	.button-primary { background: var(--forest); color: var(--on-primary); }
@@ -216,9 +213,7 @@
 	.favorites-intro { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 14px; color: var(--muted); font-size: .8125rem; }
 	.favorites-intro p { margin: 0; color: var(--ink); font-weight: 680; }
 	.favorite-list.evolution-list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
-	.favorite-card.evolution-item { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: start; gap: 12px; min-width: 0; padding: 22px 0; border-bottom: 1px solid var(--line); background: transparent; }
-	.favorite-symbol { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 12px; background: var(--forest-soft); color: var(--forest); }
-	.favorite-symbol { flex: 0 0 42px; }
+	.favorite-card.evolution-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 12px 18px; min-width: 0; padding: 17px 0; border-bottom: 1px solid var(--line); background: transparent; }
 	.favorite-main { display: grid; gap: 6px; min-width: 0; }
 	.favorite-title { display: flex; align-items: baseline; flex-wrap: wrap; gap: 5px 9px; }
 	.favorite-title h3 { margin: 0; font-size: 1.05rem; }
@@ -236,4 +231,14 @@
 	.empty-state p { max-width: 58ch; color: var(--muted); }
 	@media (max-width: 660px) { .favorites-header { align-items: stretch; flex-direction: column; }.favorites-header > button { width: 100%; }.favorite-card.evolution-item { grid-template-columns: 42px minmax(0, 1fr); }.favorite-actions { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }.favorite-actions .button-quiet, .link-unavailable { grid-column: 1 / -1; }.favorite-fields { grid-template-columns: 1fr; }.field.full { grid-column: auto; } }
 	@media (prefers-reduced-motion: reduce) { .button { transition: none; }.button-primary:hover:not(:disabled) { transform: none; } }
+	.favorite-main { gap: 5px; }
+	.favorite-title h3 { font-size: .9375rem; }
+	.favorite-actions { grid-template-columns: minmax(0, 1fr); align-items: start; }
+	.favorite-actions .button { min-height: 44px; }
+	.favorite-actions .button-quiet { padding-inline: 8px; }
+	@media (max-width: 660px) {
+		.favorite-card.evolution-item { grid-template-columns: minmax(0, 1fr); }
+		.favorite-actions { grid-column: auto; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+		.favorite-actions .button-quiet, .link-unavailable { grid-column: 1 / -1; }
+	}
 </style>
