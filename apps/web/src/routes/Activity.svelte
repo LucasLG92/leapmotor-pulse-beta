@@ -8,6 +8,8 @@
 	import type { CommandHistoryEntry, MaintenanceItem, PageProps } from '../lib/types';
 
 	let { pulseState, busy, online, revision, mutate, reserveJourneyCreation, confirmAction, drafts, onSessionExpired }: PageProps = $props();
+	type DiarySection = 'journeys' | 'maintenance' | 'actions';
+	let activeDiarySection = $state<DiarySection>('journeys');
 	let commandHistory = $state<CommandHistoryEntry[]>([]);
 	let loadingCommands = $state(true);
 	let commandError = $state('');
@@ -25,6 +27,10 @@
 	let observedOnline: boolean | undefined;
 	let journeys = $derived(pulseState.journeys);
 	let maintenance = $derived(pulseState.maintenance);
+
+	function selectDiarySection(section: DiarySection) {
+		activeDiarySection = section;
+	}
 
 	function isMaintenanceDirty(): boolean {
 		return title !== maintenanceBaseline.title || dueDate !== maintenanceBaseline.dueDate;
@@ -191,19 +197,22 @@
 	}
 </script>
 
-<section class="page-intro activity-intro">
+<header class="premium-heading activity-intro">
 	<div>
-		<p class="activity-intro-kicker eyebrow"><Glyph name="activity" size={16} /> TU DIARIO DE VIAJE</p>
-		<h2>Tu diario</h2>
-		<p>Tu registro manual de trayectos, demostración y mantenimiento guardado en Pulse, cada uno con su fecha.</p>
+		<h2>Diario</h2>
+		<p>Trayectos, mantenimiento y acciones guardadas en Pulse.</p>
 	</div>
-	<span class="status-pill" class:status-demo={pulseState.mode === 'demo'}><span class="status-dot"></span>{pulseState.mode === 'demo' ? 'Incluye datos simulados' : 'Solo datos guardados'}</span>
-</section>
+</header>
 
-<section class="activity-grid">
-	<div class="activity-main-column">
-		<ManualJourneysPanel {busy} {online} {revision} {drafts} {mutate} {reserveJourneyCreation} {confirmAction} {onSessionExpired} />
-		<section aria-labelledby="journeys-heading">
+<nav class="section-switcher diary-switcher" aria-label="Secciones del diario">
+	<button type="button" aria-pressed={activeDiarySection === 'journeys'} aria-controls="diary-trips-view" onclick={() => selectDiarySection('journeys')}>Trayectos</button>
+	<button type="button" aria-pressed={activeDiarySection === 'maintenance'} aria-controls="diary-maintenance-view" onclick={() => selectDiarySection('maintenance')}>Mantenimiento</button>
+	<button type="button" aria-pressed={activeDiarySection === 'actions'} aria-controls="diary-actions-view" onclick={() => selectDiarySection('actions')}>Acciones</button>
+</nav>
+
+<section id="diary-trips-view" class="diary-view" aria-label="Trayectos" hidden={activeDiarySection !== 'journeys'}>
+<ManualJourneysPanel {busy} {online} {revision} {drafts} {mutate} {reserveJourneyCreation} {confirmAction} {onSessionExpired} />
+<section class="journey-source-panel workspace-panel" aria-labelledby="journeys-heading">
 			<div class="section-heading"><div><h2 id="journeys-heading" class="activity-section-title"><Glyph name="activity" size={16} />{pulseState.mode === 'demo' ? 'Trayectos de demostración' : 'Trayectos automáticos'}</h2><p class="activity-section-copy">{pulseState.mode === 'demo' ? 'Registros ficticios, separados de tu diario manual.' : 'La recepción del vehículo requiere una integración cualificada.'}</p></div><span class="badge">{count(journeys.length)} disponibles</span></div>
 			{#if journeys.length === 0}
 				<div class="empty-state"><span class="empty-mark"><Glyph name="activity" /></span><h3>No hay trayectos recibidos</h3><p>{pulseState.mode === 'demo' ? 'El servidor no entrega recorridos en este momento.' : 'Pulse aún no tiene una integración que reciba recorridos del vehículo.'}</p>{#if pulseState.mode !== 'demo'}<a class="button button-secondary" href="/settings#preparation">Revisar preparación</a>{/if}</div>
@@ -219,33 +228,10 @@
 				</div>
 			{/if}
 		</section>
-
-		<section aria-labelledby="command-history-heading">
-			<div class="section-heading"><div><h2 id="command-history-heading" class="activity-section-title"><Glyph name="settings" size={16} />Historial de acciones</h2><p class="activity-section-copy">Resultados guardados por Pulse; no son confirmaciones del coche.</p></div><span class="badge badge-demo">Simulaciones</span></div>
-			{#if loadingCommands}
-				<div class="card loading-card" role="status">Cargando historial…</div>
-			{:else if commandError}
-				<div class="empty-state"><h3>{online ? 'No se pudo abrir el historial' : 'Historial sin conexión'}</h3><p role="alert" aria-atomic="true">{commandError}</p><button class="button button-secondary" type="button" disabled={busy || !online || loadingCommands} onclick={loadCommandHistory}>Reintentar</button></div>
-			{:else if commandHistory.length === 0}
-				<div class="empty-state"><span class="empty-mark"><Glyph name="settings" /></span><h3>No hay acciones registradas</h3><p>Cuando se active una acción de demostración, aparecerá aquí con su resultado.</p></div>
-			{:else}
-				<div class="command-history card evolution-list">
-					{#each commandHistory as item (item.id)}
-						<article class="history-row evolution-item">
-							<span class="history-icon"><Glyph name="check" size={16} /></span>
-							<div><strong>{commandLabel(item.command)}</strong><p>{item.message}</p></div>
-							<div class="history-meta"><span class="badge badge-demo">{item.status === 'simulated' ? 'Simulada' : item.status}</span><time datetime={item.created_at}>{dateTime(item.created_at)}</time></div>
-						</article>
-					{/each}
-				</div>
-			{/if}
-			<p class="fine-print history-footnote">Las acciones son simulaciones registradas por el servidor. No se ha enviado ninguna orden al vehículo.</p>
-		</section>
-	</div>
-
-	<aside class="activity-side-column">
+</section>
+<section id="diary-maintenance-view" class="activity-side-column diary-view" aria-label="Mantenimiento" hidden={activeDiarySection !== 'maintenance'}>
 		<MaintenancePlansPanel {busy} {online} {revision} {drafts} {mutate} {confirmAction} {onSessionExpired} />
-		<details class="maintenance-legacy" aria-labelledby="maintenance-heading">
+		<details class="maintenance-legacy workspace-panel" aria-labelledby="maintenance-heading">
 			<summary><span class="legacy-summary-copy"><strong id="maintenance-heading">Recordatorios por fecha</strong><small>Registro anterior de mantenimiento personal</small></span><span class="badge">{count(maintenance.length)}</span></summary>
 			<div class="legacy-maintenance-content">
 				<p class="activity-section-copy">Conservamos aquí los recordatorios guardados con fecha prevista. Tus planes de mantenimiento actuales aparecen en la sección principal.</p>
@@ -280,19 +266,34 @@
 		</details>
 
 		<div class="notice"><Glyph name="protection" size={17} /><span>Actividad muestra únicamente los registros recibidos o añadidos en Pulse. Los datos ficticios se marcan como simulaciones.</span></div>
-	</aside>
-</section>
+	</section>
+<section id="diary-actions-view" class="diary-view diary-actions-view workspace-panel" aria-labelledby="command-history-heading" hidden={activeDiarySection !== 'actions'}>
+			<div class="section-heading"><div><h2 id="command-history-heading" class="activity-section-title"><Glyph name="settings" size={16} />Historial de acciones</h2><p class="activity-section-copy">Resultados guardados por Pulse; no son confirmaciones del coche.</p></div><span class="badge badge-demo">Simulaciones</span></div>
+			{#if loadingCommands}
+				<div class="card loading-card" role="status">Cargando historial…</div>
+			{:else if commandError}
+				<div class="empty-state"><h3>{online ? 'No se pudo abrir el historial' : 'Historial sin conexión'}</h3><p role="alert" aria-atomic="true">{commandError}</p><button class="button button-secondary" type="button" disabled={busy || !online || loadingCommands} onclick={loadCommandHistory}>Reintentar</button></div>
+			{:else if commandHistory.length === 0}
+				<div class="empty-state"><span class="empty-mark"><Glyph name="settings" /></span><h3>No hay acciones registradas</h3><p>Cuando se active una acción de demostración, aparecerá aquí con su resultado.</p></div>
+			{:else}
+				<div class="command-history card evolution-list">
+					{#each commandHistory as item (item.id)}
+						<article class="history-row evolution-item">
+							<span class="history-icon"><Glyph name="check" size={16} /></span>
+							<div><strong>{commandLabel(item.command)}</strong><p>{item.message}</p></div>
+							<div class="history-meta"><span class="badge badge-demo">{item.status === 'simulated' ? 'Simulada' : item.status}</span><time datetime={item.created_at}>{dateTime(item.created_at)}</time></div>
+						</article>
+					{/each}
+				</div>
+			{/if}
+			<p class="fine-print history-footnote">Las acciones son simulaciones registradas por el servidor. No se ha enviado ninguna orden al vehículo.</p>
+		</section>
 
 <style>
-	.activity-intro-kicker { display: inline-flex; align-items: center; gap: 7px; margin: 0 0 3px; color: var(--forest); font-size: .6875rem; font-weight: 720; letter-spacing: .075em; }
-	.activity-intro-kicker :global(svg) { flex: 0 0 auto; }
-	.page-intro h2 { margin: 0; font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing: -.035em; }
 	.activity-section-title { display: flex; align-items: center; gap: 8px; }
 	.activity-section-title :global(svg) { flex: 0 0 auto; color: var(--forest); }
 	.activity-section-copy { max-width: 58ch; margin: 6px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
-	.activity-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: clamp(28px, 4vw, 48px); }
-	.activity-main-column, .activity-side-column { display: grid; min-width: 0; gap: clamp(28px, 4vw, 48px); }
-	.activity-grid .section-heading { margin-top: 0; }
+	.activity-side-column { display: grid; min-width: 0; gap: 18px; }
 	.journey-list.card, .command-history.card { overflow: visible; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 	.journey-list, .command-history { overflow: hidden; }
 	.journey-row.evolution-item { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 79px; padding: 15px 4px; border-bottom: 1px solid var(--line); }
@@ -343,14 +344,7 @@
 	.maintenance-legacy[open] > summary { border-bottom: 1px solid var(--line); }
 	.activity-side-column > .notice { font-size: .875rem; }
 	.activity-side-column > .notice :global(svg) { flex: 0 0 17px; color: var(--forest); }
-	@media (max-width: 940px) {
-		.activity-grid { grid-template-columns: minmax(0, 1fr); }
-		.activity-side-column { grid-template-columns: minmax(0, 1fr); align-items: start; }
-		.activity-side-column > :first-child { grid-row: auto; }
-	}
 	@media (max-width: 700px) {
-		.activity-side-column { grid-template-columns: 1fr; }
-		.activity-side-column > :first-child { grid-row: auto; }
 		.journey-row.evolution-item { padding-inline: 11px; }
 		.command-history .history-row.evolution-item { grid-template-columns: 29px minmax(0, 1fr); }
 		.history-meta { grid-column: 2; display: flex; align-items: center; justify-items: start; }
@@ -363,5 +357,17 @@
 		.journey-energy span { text-align: right; }
 		.history-meta { flex-wrap: wrap; }
 		.maintenance-actions { gap: 2px 6px; }
+	}
+	.activity-intro { margin-bottom: 14px; }
+	.diary-switcher { margin-bottom: 16px; }
+	.diary-view { display: grid; gap: 14px; min-width: 0; }
+	.diary-view[hidden] { display: none; }
+	.journey-source-panel.workspace-panel { display: grid; gap: 14px; padding: clamp(15px, 2vw, 23px); border: 1px solid var(--line); border-radius: 20px; background: var(--surface); box-shadow: var(--shadow); }
+	.diary-actions-view.workspace-panel { padding: clamp(15px, 2vw, 23px); border: 1px solid var(--line); border-radius: 20px; background: var(--surface); box-shadow: var(--shadow); }
+	.maintenance-legacy.workspace-panel { padding-top: 8px; padding-bottom: 8px; }
+	.diary-view > .notice { margin-top: 2px; }
+	@media (max-width: 560px) {
+		.activity-intro { align-items: flex-start; }
+		.journey-source-panel.workspace-panel, .diary-actions-view.workspace-panel { padding: 14px; border-radius: 17px; }
 	}
 </style>

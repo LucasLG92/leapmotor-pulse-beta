@@ -17,6 +17,11 @@
 	type PreferencesDraft = { vehicleName: string; model: string; vehicleColor: VehicleColor; homeLabel: string; tariff: string; pricingMethod: PricingMethod };
 
 	let { pulseState, busy, online, revision, user, theme, canInstall, mutate, createWidgetPairing, notifications, runNotificationAction, confirmAction, setTheme, onLogout, onExport, onImport, onInstall, drafts, settingsSection }: PageProps = $props();
+	type SettingsSection = 'vehicle' | 'connections' | 'preferences' | 'data';
+	let settingsSectionOverride = $state<SettingsSection | null>(null);
+	let activeSettingsSection = $derived(settingsSectionOverride ?? (settingsSection === 'preparation' ? 'connections' : 'vehicle'));
+	$effect(() => { if (settingsSection === 'preparation') settingsSectionOverride = null; });
+	function selectSettingsSection(section: SettingsSection) { settingsSectionOverride = section; }
 	let vehicleName = $state('');
 	let model = $state('');
 	let vehicleColor = $state<VehicleColor>(null);
@@ -510,7 +515,7 @@
 		} finally {
 			if (!settingsDisposed) {
 				widgetProfileBusy = false;
-				await restoreSettingsActionFocus(previousFocus, widgetProfilesHeading, revoked);
+				await restoreSettingsActionFocus(previousFocus, widgetProfilesHeading, revoked, 'data');
 			}
 		}
 	}
@@ -520,12 +525,17 @@
 		return section && active instanceof HTMLElement && section.contains(active) ? active : null;
 	}
 
-	async function restoreSettingsActionFocus(previous: HTMLElement | null, fallback: HTMLElement | undefined, preferFallback = false) {
+	async function restoreSettingsActionFocus(previous: HTMLElement | null, fallback: HTMLElement | undefined, preferFallback = false, section?: SettingsSection) {
 		await tick();
 		if (!previous || settingsDisposed || !document.hasFocus() || document.activeElement !== document.body) return;
 		// A confirmed removal can reach the list after this tick. Its trigger is not a stable focus target.
 		const target = !preferFallback && previous.isConnected && !previous.matches(':disabled') ? previous : fallback;
-		if (target?.isConnected && !target.matches(':disabled')) target.focus();
+		if (!target?.isConnected || target.matches(':disabled')) return;
+		if (section) {
+			selectSettingsSection(section);
+			await tick();
+		}
+		if (!settingsDisposed && document.hasFocus() && document.activeElement === document.body && target.isConnected && !target.matches(':disabled')) target.focus();
 	}
 
 	function selectWidgetProfile(profileId: string) {
@@ -547,6 +557,9 @@
 		if (settingsDisposed || !widgetProfileFormOpen || request !== widgetProfileSwitchRequest) return;
 		const active = document.activeElement;
 		if (active !== document.body && active !== trigger) return;
+		selectSettingsSection('data');
+		await tick();
+		if (settingsDisposed || !widgetProfileFormOpen || request !== widgetProfileSwitchRequest) return;
 		document.getElementById('widget-profile-name')?.focus();
 	}
 
@@ -555,6 +568,9 @@
 		if (settingsDisposed || widgetProfileFormOpen || request !== widgetProfileSwitchRequest) return;
 		const active = document.activeElement;
 		if (active !== document.body && active !== previousFocus) return;
+		selectSettingsSection('data');
+		await tick();
+		if (settingsDisposed || widgetProfileFormOpen || request !== widgetProfileSwitchRequest) return;
 		widgetProfilesHeading?.focus();
 	}
 
@@ -622,6 +638,9 @@
 	async function showWidgetProfileError(field: 'name' | 'fields' | 'age', message: string) {
 		widgetProfileFormError = message;
 		widgetProfileFormErrorField = field;
+		await tick();
+		if (settingsDisposed) return;
+		selectSettingsSection('data');
 		await tick();
 		if (settingsDisposed) return;
 		const targetId = field === 'name'
@@ -738,7 +757,11 @@
 		const focusTarget = focusOrigin && formAtSubmit?.contains(focusOrigin) && !focusOrigin.matches(':disabled')
 			? focusOrigin
 			: namedTarget && !namedTarget.matches(':disabled') ? namedTarget : null;
-		focusTarget?.focus();
+		if (focusTarget) {
+			selectSettingsSection('data');
+			await tick();
+			if (!settingsDisposed && document.hasFocus() && document.activeElement === document.body && focusTarget.isConnected) focusTarget.focus();
+		}
 	}
 
 	async function deleteWidgetProfile(profile: WidgetProfile) {
@@ -767,7 +790,7 @@
 		} finally {
 			if (!settingsDisposed) {
 				widgetProfileBusy = false;
-				await restoreSettingsActionFocus(previousFocus, widgetProfilesHeading, deleted);
+		await restoreSettingsActionFocus(previousFocus, widgetProfilesHeading, deleted, 'data');
 			}
 		}
 	}
@@ -834,7 +857,9 @@
 				preferencesSaving = false;
 				await tick();
 				if (!settingsDisposed && settingsError && document.hasFocus() && document.activeElement === document.body && previousFocus?.isConnected) {
-					previousFocus.focus({ preventScroll: true });
+					selectSettingsSection('vehicle');
+					await tick();
+					if (!settingsDisposed && document.hasFocus() && document.activeElement === document.body && previousFocus.isConnected) previousFocus.focus({ preventScroll: true });
 				}
 			}
 		}
@@ -844,7 +869,11 @@
 		settingsError = message;
 		settingsErrorField = field;
 		await tick();
-		if (!settingsDisposed) document.getElementById(field === 'vehicleName' ? 'vehicle-name' : field === 'model' ? 'vehicle-model' : field === 'homeLabel' ? 'home-label' : 'tariff')?.focus();
+		if (!settingsDisposed) {
+			selectSettingsSection('vehicle');
+			await tick();
+			if (!settingsDisposed) document.getElementById(field === 'vehicleName' ? 'vehicle-name' : field === 'model' ? 'vehicle-model' : field === 'homeLabel' ? 'home-label' : 'tariff')?.focus();
+		}
 	}
 
 	function clearSettingsError(field: 'vehicleName' | 'model' | 'homeLabel' | 'tariff') {
@@ -873,7 +902,7 @@
 		} finally {
 			if (!settingsDisposed) {
 				demoToggleBusy = false;
-				await restoreSettingsActionFocus(previousFocus, connectionHeading);
+				await restoreSettingsActionFocus(previousFocus, connectionHeading, false, 'connections');
 			}
 		}
 	}
@@ -892,6 +921,9 @@
 		const active = document.activeElement;
 		const activeInClosedDialog = Boolean(active?.closest('dialog:not([open])'));
 		if (active !== document.body && active !== fileInput && active !== button && !activeInClosedDialog) return;
+		selectSettingsSection('data');
+		await tick();
+		if (settingsDisposed || request !== importPickerRequest || !document.hasFocus() || !button.isConnected || button.disabled) return;
 		button.focus();
 	}
 
@@ -938,7 +970,9 @@
 				backupBusy = false;
 				await tick();
 				if (!settingsDisposed && document.hasFocus() && document.activeElement === document.body && previousFocus?.isConnected) {
-					previousFocus.focus({ preventScroll: true });
+					selectSettingsSection('data');
+					await tick();
+					if (!settingsDisposed && document.hasFocus() && document.activeElement === document.body && previousFocus.isConnected) previousFocus.focus({ preventScroll: true });
 				}
 			}
 		}
@@ -946,21 +980,26 @@
 
 </script>
 
-<section class="page-intro">
+<section class="page-intro premium-heading settings-intro">
 	<div>
-		<p class="eyebrow">UN ESPACIO QUE ES TUYO</p>
-		<h2>A tu manera.</h2>
-		<p>Personaliza tu B10, elige cómo calcular las cargas y revisa los servicios conectados.</p>
+		<h2>Tu perfil</h2>
+		<p>Ajusta el B10, las conexiones y tus datos de Pulse.</p>
 	</div>
 	<span class="status-pill"><span class="status-dot"></span>{user || 'Cuenta personal'}</span>
 </section>
 
-<section class="settings-layout">
-	<div class="settings-primary">
-		<div class="settings-purpose-group" role="group" aria-labelledby="settings-services-group">
-			<p id="settings-services-group" class="settings-group-label">Vehículo y servicios</p>
-		<section class="settings-card card" aria-labelledby="profile-heading">
-			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="settings" size={18} /></span><div><h2 id="profile-heading">Tu B10 y tu tarifa</h2><p>Información propia para organizar los registros de Pulse.</p></div></div>
+<section class="settings-profile" aria-label="Configuración del perfil">
+	<div class="section-switcher settings-section-switcher" role="group" aria-label="Secciones del perfil">
+		<button type="button" aria-pressed={activeSettingsSection === 'vehicle'} aria-controls="settings-panel-vehicle" onclick={() => selectSettingsSection('vehicle')}>Vehículo</button>
+		<button type="button" aria-pressed={activeSettingsSection === 'connections'} aria-controls="settings-panel-connections" onclick={() => selectSettingsSection('connections')}>Conexiones</button>
+		<button type="button" aria-pressed={activeSettingsSection === 'preferences'} aria-controls="settings-panel-preferences" onclick={() => selectSettingsSection('preferences')}>Preferencias</button>
+		<button type="button" aria-pressed={activeSettingsSection === 'data'} aria-controls="settings-panel-data" onclick={() => selectSettingsSection('data')}>Datos</button>
+	</div>
+
+	<section id="settings-panel-vehicle" class="workspace-panel settings-section-panel" aria-labelledby="settings-panel-vehicle-heading" hidden={activeSettingsSection !== 'vehicle'}>
+		<h2 id="settings-panel-vehicle-heading" class="sr-only">Vehículo</h2>
+				<section class="settings-card" aria-labelledby="profile-heading">
+			<h2 id="profile-heading" class="sr-only">Vehículo, aspecto y cálculo de tarifa</h2>
 			<form class="settings-form" onsubmit={saveSettings}>
 				<div class="vehicle-personalization">
 					<VehicleArtwork color={vehicleColor} />
@@ -995,8 +1034,11 @@
 				<div class="form-actions"><button class="button button-primary" type="submit" disabled={busy}>{busy ? 'Guardando…' : 'Guardar ajustes'}</button>{#if pricingMethod === 'manual'}<span class="settings-current-rate">Tarifa fija actual: {euros(pulseState.settings.tariff_eur_kwh)} / kWh</span>{:else}<span class="settings-current-rate">Método seleccionado: PVPC automático · Península</span>{/if}</div>
 			</form>
 		</section>
+	</section>
 
-		<section bind:this={connectionSection} class="settings-card card" aria-labelledby="connection-heading">
+	<section id="settings-panel-connections" class="workspace-panel settings-section-panel" aria-labelledby="settings-panel-connections-heading" hidden={activeSettingsSection !== 'connections'}>
+		<h2 id="settings-panel-connections-heading" class="sr-only">Conexiones</h2>
+				<section bind:this={connectionSection} class="settings-card" aria-labelledby="connection-heading">
 			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="plug" size={18} /></span><div><h2 bind:this={connectionHeading} id="connection-heading" tabindex="-1">Vehículo y servicios</h2><p>El estado procede de la API de Pulse.</p></div></div>
 			<div class="connection-status-card">
 				<span class="connection-status-mark"><Glyph name="plug" size={19} /></span>
@@ -1016,20 +1058,51 @@
 
 		<SetupPanel {pulseState} {online} expanded={settingsSection === 'preparation'} />
 
-		<section class="settings-card card" aria-labelledby="home-integration-heading">
+		<section class="settings-card" aria-labelledby="home-integration-heading">
 			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="overview" size={18} /></span><div><h2 id="home-integration-heading">Home Assistant</h2><p>Consulta las lecturas de Pulse desde tu sistema de casa.</p></div></div>
 			<HomeIntegrationPanel mqtt={pulseState.integrations?.mqtt} {online} />
 		</section>
 
-		<section class="settings-card card" aria-labelledby="abrp-integration-heading">
+		<section class="settings-card" aria-labelledby="abrp-integration-heading">
 			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="navigation" size={18} /></span><div><h2 id="abrp-integration-heading">ABRP</h2><p>Comparte solo una lectura válida de batería y su hora de observación.</p></div></div>
 			<AbrpIntegrationPanel abrp={pulseState.integrations?.abrp} mode={pulseState.mode} {online} {busy} {mutate} {confirmAction} />
 		</section>
-		</div>
+	</section>
 
-		<div class="settings-purpose-group" role="group" aria-labelledby="settings-backup-group">
-			<p id="settings-backup-group" class="settings-group-label">Copias y continuidad</p>
-		<section class="settings-card card" aria-labelledby="backup-heading">
+	<section id="settings-panel-preferences" class="workspace-panel settings-section-panel" aria-labelledby="settings-panel-preferences-heading" hidden={activeSettingsSection !== 'preferences'}>
+		<h2 id="settings-panel-preferences-heading" class="sr-only">Preferencias</h2>
+				<section class="settings-card" aria-labelledby="appearance-heading">
+			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="sun" size={18} /></span><div><h2 id="appearance-heading">Apariencia</h2></div></div>
+			<fieldset class="theme-field theme-choices" aria-describedby="theme-hint">
+				<legend>Elige cómo se siente Pulse</legend>
+				<div class="theme-options">
+					{#each [{ id: 'light', label: 'Claro' }, { id: 'dark', label: 'Oscuro' }, { id: 'system', label: 'Sistema' }] as option (option.id)}
+						<button class="theme-option" class:selected={theme === option.id} type="button" aria-pressed={theme === option.id} onclick={() => setTheme(option.id as ThemePreference)}>
+							<span class="theme-sample" class:sample-dark={option.id === 'dark'} class:sample-system={option.id === 'system'} aria-hidden="true"><span class="sample-rail"></span><span class="sample-content"><i></i><i></i><i></i></span></span>
+							<span class="theme-option-label">{option.label}<span class="theme-check" aria-hidden="true">{#if theme === option.id}<Glyph name="check" size={14} />{/if}</span></span>
+						</button>
+					{/each}
+				</div>
+				<p id="theme-hint" class="field-hint">Sistema acompaña la apariencia de tu dispositivo. Esta preferencia se guarda en este navegador.</p>
+			</fieldset>
+		</section>
+
+		{#if !isNativeApp()}
+		<section class="settings-card" aria-labelledby="pwa-heading">
+			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="overview" size={18} /></span><div><h2 id="pwa-heading">Instala Pulse</h2></div></div>
+			<p class="muted-copy pwa-intro">La PWA puede abrirse como una aplicación y mostrar una pantalla genérica sin conexión. Los datos siguen en el servidor.</p>
+			{#if canInstall}<button class="button button-primary button-block" type="button" onclick={onInstall}>Instalar Pulse</button>{/if}
+			<div class="install-guide"><strong>iPhone o iPad</strong><span>En Safari, abre Compartir y elige «Añadir a pantalla de inicio».</span></div>
+			<div class="install-guide"><strong>Android</strong><span>En el menú de Chrome, selecciona «Instalar aplicación» o «Añadir a pantalla de inicio».</span></div>
+			<p class="fine-print">La disponibilidad de instalación depende del navegador y de la configuración del dispositivo.</p>
+		</section>
+		{/if}
+				<PushNotificationsPanel {online} {revision} {busy} native={isNativeApp()} {notifications} {runNotificationAction} {confirmAction} {drafts} />
+	</section>
+
+	<section id="settings-panel-data" class="workspace-panel settings-section-panel" aria-labelledby="settings-panel-data-heading" hidden={activeSettingsSection !== 'data'}>
+		<h2 id="settings-panel-data-heading" class="sr-only">Datos guardados</h2>
+				<section class="settings-card" aria-labelledby="backup-heading">
 			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="download" size={18} /></span><div><h2 id="backup-heading">Exportar o restaurar</h2><p>Los archivos se procesan en esta sesión y se envían al servidor solo al restaurar.</p></div></div>
 			<div class="backup-actions">
 				<div><strong>Descargar una copia</strong><span>El servidor prepara un JSON versionado con tus datos de Pulse.</span></div>
@@ -1044,45 +1117,7 @@
 			{#if backupError}<p class="form-error" role="alert">{backupError}</p>{/if}
 			<p class="fine-print">No cargues archivos que contengan claves, contraseñas o datos que no quieras importar. No es posible restaurar un archivo SQL.</p>
 		</section>
-		</div>
-	</div>
-
-	<aside class="settings-secondary">
-		<div class="settings-purpose-group" role="group" aria-labelledby="settings-preferences-group">
-			<p id="settings-preferences-group" class="settings-group-label">Preferencias de uso</p>
-		<section class="settings-card card" aria-labelledby="appearance-heading">
-			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="sun" size={18} /></span><div><h2 id="appearance-heading">Apariencia</h2></div></div>
-			<fieldset class="theme-field theme-choices" aria-describedby="theme-hint">
-				<legend>Elige cómo se siente Pulse</legend>
-				<div class="theme-options">
-					{#each [{ id: 'light', label: 'Claro' }, { id: 'dark', label: 'Charcoal' }, { id: 'system', label: 'Sistema' }] as option (option.id)}
-						<button class="theme-option" class:selected={theme === option.id} type="button" aria-pressed={theme === option.id} onclick={() => setTheme(option.id as ThemePreference)}>
-							<span class="theme-sample" class:sample-dark={option.id === 'dark'} class:sample-system={option.id === 'system'} aria-hidden="true"><span class="sample-rail"></span><span class="sample-content"><i></i><i></i><i></i></span></span>
-							<span class="theme-option-label">{option.label}<span class="theme-check" aria-hidden="true">{#if theme === option.id}<Glyph name="check" size={14} />{/if}</span></span>
-						</button>
-					{/each}
-				</div>
-				<p id="theme-hint" class="field-hint">Sistema acompaña la apariencia de tu dispositivo. Esta preferencia se guarda en este navegador.</p>
-			</fieldset>
-		</section>
-
-		{#if !isNativeApp()}
-		<section class="settings-card card" aria-labelledby="pwa-heading">
-			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="overview" size={18} /></span><div><h2 id="pwa-heading">Instala Pulse</h2></div></div>
-			<p class="muted-copy pwa-intro">La PWA puede abrirse como una aplicación y mostrar una pantalla genérica sin conexión. Los datos siguen en el servidor.</p>
-			{#if canInstall}<button class="button button-primary button-block" type="button" onclick={onInstall}>Instalar Pulse</button>{/if}
-			<div class="install-guide"><strong>iPhone o iPad</strong><span>En Safari, abre Compartir y elige «Añadir a pantalla de inicio».</span></div>
-			<div class="install-guide"><strong>Android</strong><span>En el menú de Chrome, selecciona «Instalar aplicación» o «Añadir a pantalla de inicio».</span></div>
-			<p class="fine-print">La disponibilidad de instalación depende del navegador y de la configuración del dispositivo.</p>
-		</section>
-		{/if}
-		</div>
-
-		<div class="settings-purpose-group" role="group" aria-labelledby="settings-access-group">
-			<p id="settings-access-group" class="settings-group-label">Notificaciones, dispositivos y acceso</p>
-		<PushNotificationsPanel {online} {revision} {busy} native={isNativeApp()} {notifications} {runNotificationAction} {confirmAction} {drafts} />
-
-		<section bind:this={widgetSection} class="settings-card card" aria-labelledby="widgets-heading">
+				<section bind:this={widgetSection} class="settings-card" aria-labelledby="widgets-heading">
 			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="activity" size={18} /></span><div><h2 id="widgets-heading" tabindex="-1" bind:this={widgetProfilesHeading}>Perfiles de widget</h2><p>{isNativeApp() ? 'Prepara vistas compactas para el widget de esta app.' : 'Prepara vistas compactas para una futura extensión móvil.'}</p></div></div>
 			<p class="muted-copy widget-intro">El editor guarda tus perfiles en el servidor. El widget consulta los campos que selecciones, sin conectar Pulse con el vehículo.</p>
 			{#if widgetActionError}<p class="form-error" role="alert">{widgetActionError}</p>{/if}
@@ -1213,19 +1248,15 @@
 			{/if}
 			<p class="fine-print widget-native-note">El editor guarda preferencias en Pulse. El widget consulta únicamente los campos del perfil elegido; esto no inicia una vinculación del vehículo.</p>
 		</section>
-
-		<section class="settings-card account-card card" aria-labelledby="account-heading">
+				<section class="settings-card account-card" aria-labelledby="account-heading">
 			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="protection" size={18} /></span><div><h2 id="account-heading">Acceso privado</h2></div></div>
 			<p class="muted-copy">Sesión: <strong>{user || 'Desarrollo local'}</strong>. La autenticación la gestiona el servidor.</p>
 			<button class="button button-quiet button-block" type="button" disabled={busy} onclick={onLogout}>Cerrar sesión</button>
 		</section>
-		</div>
-	</aside>
+	</section>
 </section>
 
 <style>
-	.settings-layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(275px, .8fr); align-items: start; gap: 17px; }
-	.settings-primary, .settings-secondary { display: grid; gap: 15px; min-width: 0; }
 	.settings-card { padding: 19px; }
 	.settings-card-heading { display: flex; align-items: flex-start; gap: 11px; }
 	.settings-icon { display: grid; width: 37px; height: 37px; flex: 0 0 37px; place-items: center; border-radius: 10px; background: var(--forest-soft); color: var(--forest); }
@@ -1265,23 +1296,22 @@
 	.theme-option.selected { border-color: var(--forest); color: var(--forest); background: var(--forest-soft); box-shadow: 0 0 0 1px var(--forest); }
 	.theme-option-label { display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: .75rem; font-weight: 650; }
 	.theme-check { display: grid; flex: 0 0 16px; width: 16px; height: 16px; place-items: center; }
-	.theme-sample { display: flex; height: 56px; overflow: hidden; border: 1px solid #89968c; border-radius: 7px; background: #f5f6f4; }
-	.sample-rail { flex: 0 0 22%; border-right: 1px solid #dfe4df; background: #ffffff; }
+	.theme-sample { display: flex; height: 56px; overflow: hidden; border: 1px solid #d7dce4; border-radius: 7px; background: #f3f4f6; }
+	.sample-rail { flex: 0 0 22%; border-right: 1px solid #dde2e9; background: #ffffff; }
 	.sample-content { display: grid; flex: 1; align-content: center; gap: 5px; padding: 9px; }
-	.sample-content i { height: 4px; border-radius: 4px; background: #b8ddc8; }
-	.sample-content i:first-child { width: 55%; height: 7px; background: #246c4b; }
+	.sample-content i { height: 4px; border-radius: 4px; background: #e9efff; }
+	.sample-content i:first-child { width: 55%; height: 7px; background: var(--forest); }
 	.sample-content i:last-child { width: 70%; }
-	.sample-dark { background: #1c1f21; }
-	.sample-dark .sample-rail { border-color: #3b4240; background: #2c3133; }
-	.sample-dark .sample-content i { background: #48554b; }
-	.sample-dark .sample-content i:first-child { background: #9cddba; }
-	.sample-system { background: linear-gradient(115deg, #f5f6f4 48%, #1c1f21 49%); }
+	.sample-dark { border-color: #2d394a; background: #090d14; }
+	.sample-dark .sample-rail { border-color: #2d394a; background: #131923; }
+	.sample-dark .sample-content i { background: #1c2c49; }
+	.sample-dark .sample-content i:first-child { background: #98b9ff; }
+	.sample-system { background: linear-gradient(115deg, #f3f4f6 48%, #090d14 49%); }
 	@media (max-width: 350px) { .theme-options { grid-template-columns: minmax(0, 1fr); } .theme-option { grid-template-columns: 70px minmax(0, 1fr); align-items: center; } }
 	.pwa-intro { margin: 13px 0 14px; font-size: 1rem; }
 	.install-guide { display: grid; gap: 4px; padding: 11px 0; border-top: 1px solid var(--line); }
 	.install-guide strong { font-size: .875rem; }
 	.install-guide span { color: var(--muted); font-size: .875rem; line-height: 1.5; }
-	.settings-secondary .fine-print { margin-top: 8px; }
 	.widget-intro { margin: 12px 0 14px; font-size: 1rem; line-height: 1.55; }
 	.widget-count { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--muted); font-size: .875rem; }
 	.widget-count strong { color: var(--ink); font-size: .875rem; font-variant-numeric: tabular-nums; }
@@ -1365,12 +1395,9 @@
 	.widget-profile-form .button { font-size: .875rem; }
 	.account-card .muted-copy { margin: 12px 0; font-size: .875rem; }
 	.account-card .muted-copy strong { color: var(--ink); font-weight: 650; }
-	@media (max-width: 950px) { .settings-layout { grid-template-columns: 1fr; } .settings-secondary { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
-	@media (max-width: 700px) { .settings-secondary { grid-template-columns: 1fr; } .settings-card { padding: 16px; } .settings-form .form-actions { align-items: flex-start; flex-direction: column; } }
 	@media (max-width: 430px) { .connection-status-card { grid-template-columns: 34px minmax(0, 1fr); } .connection-status-card > .badge { grid-column: 2; justify-self: start; } .demo-setting-row, .backup-actions { align-items: flex-start; flex-direction: column; } .backup-actions .button { width: 100%; } .native-grant-row { align-items: flex-start; flex-direction: column; } .native-revoke { width: 100%; } .native-pairing-footer { align-items: flex-start; flex-direction: column; } .native-pairing-footer > div { width: 100%; } .native-pairing-footer .button { flex: 1 1 0; } }
 
 	@media (max-width: 360px) {
-		.settings-card { padding: 13px; }
 		.widget-count { align-items: flex-start; flex-wrap: wrap; gap: 6px; }
 		.widget-profile-actions { flex-wrap: wrap; }
 		.widget-profile-actions .button { flex: 1 1 100%; }
@@ -1387,14 +1414,41 @@
 	.paint-swatch { width: 24px; height: 24px; flex: 0 0 24px; border: 1px solid #7d838b; border-radius: 50%; }
 	@media (max-width: 1100px) { .vehicle-personalization { grid-template-columns: 1fr; } }
 
-	.settings-layout{grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:48px}.settings-primary,.settings-secondary{gap:0}.settings-card{padding:24px 0;border:0;border-top:1px solid var(--line);border-radius:0;background:transparent;box-shadow:none}.settings-card-heading h2{font-size:1.125rem;margin-top:0}.settings-card-heading p:not(.section-label){font-size:.875rem}.settings-icon{width:24px;height:24px;flex-basis:24px;background:transparent;border-radius:0}.settings-form{margin-top:12px}.vehicle-personalization{grid-template-columns:minmax(0,1fr);margin:0 0 24px;padding:0 0 24px;border-top:0;border-bottom:1px solid var(--line);gap:12px}.vehicle-color-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.vehicle-color-option{background:transparent;min-height:48px;padding:8px;border-color:transparent;border-radius:8px;font-size:.8125rem}.vehicle-color-option.selected{border-color:var(--forest)}.vehicle-color-option:hover{background:var(--surface-soft)}.paint-swatch{border-color:var(--line-strong)}.connection-status-card{padding:14px 0;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent}.pvpc-setting-note{border:0;background:var(--forest-soft);color:var(--forest)}.form-grid{gap:20px 16px}.settings-current-rate{font-size:.8125rem}
-	.settings-purpose-group { display: grid; gap: 0; min-width: 0; }
-	.settings-group-label { margin: 0; padding: 0 0 13px; border-bottom: 1px solid var(--line-strong); color: var(--forest); font-size: .75rem; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
-	.settings-purpose-group > .settings-card:first-of-type { border-top: 0; padding-top: 17px; }
-	.settings-primary > .settings-purpose-group:first-child > .settings-card:first-of-type { padding-top: 18px; }
-	.settings-secondary { grid-template-columns: minmax(0, 1fr); }
-	@media(max-width:1000px){.settings-layout{grid-template-columns:minmax(0,1fr);gap:24px}.settings-secondary{grid-template-columns:minmax(0,1fr)}}
-	@media(max-width:700px){.settings-layout{gap:0}.settings-card{padding:24px 0}.vehicle-color-options{gap:4px}.settings-form .field-hint{font-size:.8125rem}.settings-form .form-actions>.button{width:100%}}
+	.settings-card { padding: 24px 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; }
+	.settings-card-heading h2 { margin-top: 0; font-size: 1.125rem; }
+	.settings-card-heading p:not(.section-label) { font-size: .875rem; }
+	.settings-icon { width: 24px; height: 24px; flex-basis: 24px; border-radius: 0; background: transparent; }
+	.settings-form { margin-top: 12px; }
+	.vehicle-personalization { grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 0 0 24px; padding: 0 0 24px; border-top: 0; border-bottom: 1px solid var(--line); }
+	.vehicle-color-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+	.vehicle-color-option { min-height: 48px; padding: 8px; border-color: transparent; border-radius: 8px; background: transparent; font-size: .8125rem; }
+	.vehicle-color-option.selected { border-color: var(--forest); }
+	.vehicle-color-option:hover { background: var(--surface-soft); }
+	.paint-swatch { border-color: var(--line-strong); }
+	.connection-status-card { padding: 14px 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; }
+	.pvpc-setting-note { border: 0; background: var(--forest-soft); color: var(--forest); }
+	.form-grid { gap: 20px 16px; }
+	.settings-current-rate { font-size: .8125rem; }
+	@media (max-width: 700px) { .vehicle-color-options { gap: 4px; } .settings-form .field-hint { font-size: .8125rem; } }
 	@media(max-width:359px){.vehicle-color-options{grid-template-columns:minmax(0,1fr)}}
+
+	.settings-intro { align-items: center; }
+	.settings-profile { display: grid; gap: 0; min-width: 0; }
+	.settings-section-switcher { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; }
+	.settings-section-switcher button { min-width: 0; overflow-wrap: anywhere; }
+	.settings-section-panel { display: grid; gap: 0; min-width: 0; padding: clamp(16px, 3vw, 28px); border: 1px solid var(--line); border-radius: 22px; background: var(--surface); box-shadow: var(--shadow); }
+	.settings-section-panel > .settings-card { min-width: 0; margin: 0; padding: 22px 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; }
+	.settings-section-panel > .settings-card:last-child { padding-bottom: 0; border-bottom: 0; }
+	.settings-section-panel .settings-card-heading h2 { margin-top: 0; }
+	.settings-section-panel .settings-card-heading p:not(.section-label) { font-size: .875rem; }
+	.settings-section-panel .settings-icon { width: 24px; height: 24px; flex-basis: 24px; border-radius: 0; background: transparent; }
+	.settings-section-panel .settings-form { margin-top: 16px; }
+	@media (max-width: 620px) {
+		.settings-section-switcher { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+		.settings-section-panel { padding: 16px; border-radius: 18px; }
+		.settings-section-panel > .settings-card { padding: 19px 0; }
+		.settings-section-panel .settings-form .form-actions { align-items: stretch; flex-direction: column; }
+		.settings-section-panel .settings-form .form-actions > .button { width: 100%; }
+	}
 
 </style>

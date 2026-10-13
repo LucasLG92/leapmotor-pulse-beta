@@ -19,13 +19,13 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 	const navigation: Array<{ route: Route; path: string; label: string; icon: string }> = [
 		{ route: 'overview', path: '/', label: 'Coche', icon: 'car' },
 		{ route: 'energy', path: '/energy', label: 'Energía', icon: 'energy' },
+		{ route: 'activity', path: '/activity', label: 'Diario', icon: 'activity' },
 		{ route: 'navigation', path: '/navigation', label: 'Mapa', icon: 'navigation' },
-		{ route: 'activity', path: '/activity', label: 'Actividad', icon: 'activity' },
 		{ route: 'protection', path: '/protection', label: 'Estados', icon: 'protection' },
-		{ route: 'settings', path: '/settings', label: 'Ajustes', icon: 'settings' }
+		{ route: 'settings', path: '/settings', label: 'Perfil', icon: 'settings' }
 	];
 	const titles: Record<Route, string> = {
-		overview: 'Coche', energy: 'Energía', navigation: 'Mapa', activity: 'Actividad', protection: 'Estados', settings: 'Ajustes'
+		overview: 'Coche', energy: 'Energía', navigation: 'Mapa', activity: 'Diario', protection: 'Estados', settings: 'Perfil'
 	};
 	const loaders: Record<Route, () => Promise<{ default: ViewComponent }>> = {
 		overview: () => import('./routes/Overview.svelte') as Promise<{ default: ViewComponent }>,
@@ -65,7 +65,6 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 	let navigationGeneration = 0;
 	let approvedReload = false;
 	let compactNavigationOpen = $state(false);
-	let moreNavigationOpen = $state(false);
 	let bootStatus = $state<BootStatus>('loading');
 	let pulseState = $state<PulseState | null>(null);
 	let session = $state<SessionState | null>(null);
@@ -695,7 +694,6 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 
 	function showRoute(path: string) {
 		compactNavigationOpen = false;
-		moreNavigationOpen = false;
 		const nextRoute = routeFromPath(new URL(path, window.location.origin).pathname);
 		if (route !== nextRoute || preparationSection(path)) routeFocusPending = true;
 		else pageTitle?.focus({ preventScroll: true });
@@ -1115,8 +1113,7 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 	<div class="app-shell">
 		<aside class="desktop-rail" aria-label="Navegación principal">
 			<a class="brand-lockup" href="/" onclick={(event) => navigate(event, '/')} aria-label={`${appName}, ir al resumen`}>
-				<span class="brand-mark" aria-hidden="true"><img src="/icon.svg" width="34" height="34" alt="" /></span>
-				<span><strong>{appName}</strong><small>Tu garaje personal</small></span>
+				<span class="brand-monogram" aria-hidden="true">p.</span><span><strong>PULSE</strong><small>Tu B10. A tu manera.</small></span>
 			</a>
 			<nav class="primary-nav" aria-label="Secciones de Pulse">
 				{#each navigation as item (item.route)}
@@ -1139,22 +1136,18 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 		<div class="workspace">
 			<header class="topbar">
 				<div class="topbar-context">
-					<h1 id="page-title" tabindex="-1" bind:this={pageTitle}>{titles[route]}</h1>
+					<a class="mobile-wordmark" href="/" onclick={(event) => navigate(event, '/')} aria-label="Pulse, ir a Coche">PULSE<span aria-hidden="true">.</span></a><h1 id="page-title" tabindex="-1" bind:this={pageTitle}>{titles[route]}</h1>
 				</div>
 				<div class="topbar-actions">
 					<a class="header-icon-link" href="/protection" aria-label="Ver historial de estados" onclick={(event) => navigate(event, '/protection')}><Glyph name="protection" size={20} /></a>
 					<a class="header-profile-link" href="/settings" aria-label="Abrir ajustes del vehículo" onclick={(event) => navigate(event, '/settings')}><span aria-hidden="true">B10</span><span class="header-profile-name">{pulseState.settings.vehicle_name}</span><Glyph name="chevron" size={16} /></a>
 					{#if !online}<span class="status-pill status-neutral mobile-network-status">Sin conexión</span>{/if}
-					<label class="theme-control"><span class="sr-only">Apariencia de Pulse</span><select value={theme} onchange={(event) => setTheme(event.currentTarget.value as ThemePreference)}><option value="system">Sistema</option><option value="light">Claro</option><option value="dark">Charcoal</option></select></label>
-				<div class="topbar-meta">
-					{#if isDemo}<span class="status-pill status-demo"><span class="status-dot"></span> Demo</span>{/if}
-					<span class="status-pill" class:status-good={online} class:status-neutral={!online}><span class="status-dot"></span>{online ? 'Red disponible' : 'Sin conexión'}</span>
-				</div>
+
 				</div>
 			</header>
 
 			{#if isDemo}
-				<div class="demo-ribbon" role="status"><span class="demo-symbol" aria-hidden="true">D</span><span><strong>Modo demostración.</strong> Todos los datos y controles de vehículo son simulados.</span></div>
+				<details class="demo-context"><summary><span class="demo-indicator" aria-hidden="true"></span>Demostración · vehículo simulado <Glyph name="chevron" size={13} /></summary><p>Los datos y controles del vehículo son ejemplos. Tus registros manuales se identifican por separado.</p></details>
 			{/if}
 
 			{@render updateNotice()}
@@ -1219,23 +1212,12 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 			</nav>
 		</details>
 		<nav class="mobile-nav" aria-label="Navegación principal">
-			{#each navigation.filter((item) => !['protection', 'settings'].includes(item.route)) as item (item.route)}
+			{#each navigation.filter((item) => item.route !== 'protection') as item (item.route)}
 				<a class:active={route === item.route} href={item.path} aria-current={route === item.route ? 'page' : undefined} onclick={(event) => navigate(event, item.path)}>
 					<Glyph name={item.icon} size={20} /><span>{item.route === 'navigation' ? 'Mapa' : item.label}</span>
 				</a>
 			{/each}
-			<details class="mobile-more" bind:open={moreNavigationOpen}>
-				<summary class:active={route === 'protection' || route === 'settings'} aria-expanded={moreNavigationOpen} aria-label={`Más secciones${route === 'protection' || route === 'settings' ? ` · ${titles[route]}` : ''}`}>
-					<Glyph name="more" size={20} /><span>Más</span>
-				</summary>
-				<nav aria-label="Más secciones">
-					{#each navigation.filter((item) => ['protection', 'settings'].includes(item.route)) as item (item.route)}
-						<a class:active={route === item.route} href={item.path} aria-current={route === item.route ? 'page' : undefined} onclick={(event) => navigate(event, item.path)}>
-							<Glyph name={item.icon} size={19} /><span>{item.label}</span>
-						</a>
-					{/each}
-				</nav>
-			</details>
+
 		</nav>
 		</div>
 	</div>
