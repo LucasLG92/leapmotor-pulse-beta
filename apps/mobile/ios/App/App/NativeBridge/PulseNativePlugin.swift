@@ -17,6 +17,7 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
         CAPPluginMethod(name: "login", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "logout", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "request", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "exportJourneyReport", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "linkWidget", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setWidgetCache", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "clearWidget", returnType: CAPPluginReturnPromise),
@@ -66,11 +67,14 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
 
     private let sessions = NativeSessionState()
     private let credentials = NativeWidgetCredentialStore()
+    private let journeyReportStore = NativeJourneyReportTemporaryStore()
     private var runtimeConfig: NativeRuntimeConfig?
     private var http: NativeHTTPClient?
     private var widgetCache: PulseWidgetCache?
     private var observers: [NSObjectProtocol] = []
     private var pendingAuthorization: PendingAuthorization?
+    private var activeJourneyReportExport: PendingJourneyReportExport?
+    private var journeyReportStoreReady = false
     private var activeEvents: NativeEventStream?
     private var latestSubscriptionNumber: Int64 = 0
     private var activeSubscriptionID: String?
@@ -82,6 +86,12 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
     private var lastWidgetLinked: Bool?
 
     public override func load() {
+        do {
+            try journeyReportStore.removeStaleExports()
+            journeyReportStoreReady = true
+        } catch {
+            journeyReportStoreReady = false
+        }
         runtimeConfig = Self.readRuntimeConfig()
         if let runtimeConfig {
             http = NativeHTTPClient(config: runtimeConfig)
@@ -106,6 +116,20 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
         activeEvents?.cancel()
         pendingAuthorization?.webSession?.cancel()
         pendingAuthorization?.request?.cancel()
+        if let export = activeJourneyReportExport {
+            export.request?.cancel()
+            export.pickerDelegate?.clearCallbacks()
+            if let fileURL = export.temporaryFileURL {
+                try? journeyReportStore.removeExport(at: fileURL)
+            }
+            let call = export.call
+            DispatchQueue.main.async {
+                export.picker?.delegate = nil
+                export.picker?.dismiss(animated: false)
+                call.reject("No se pudo confirmar el resultado de la exportación.",
+                            "NATIVE_REPORT_EXPORT_OUTCOME_UNKNOWN")
+            }
+        }
     }
 
     @objc public func status(_ call: CAPPluginCall) {
@@ -142,6 +166,10 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
 
     @objc public func request(_ call: CAPPluginCall) {
         onMain { [weak self] in self?.performRequest(call) }
+    }
+
+    @objc public func exportJourneyReport(_ call: CAPPluginCall) {
+        onMain { [weak self] in self?.performJourneyReportExport(call) }
     }
 
     @objc public func linkWidget(_ call: CAPPluginCall) {
@@ -345,6 +373,202 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
                 }
             }
         }
+    }
+
+    private func performJourneyReportExport(_ call: CAPPluginCall) {
+        guard let days = Self.journeyReportDays(from: call) else {
+            call.reject("Los datos de exportación no son válidos.", "NATIVE_REPORT_EXPORT_INVALID")
+            return
+        }
+        guard activeJourneyReportExport == nil else {
+            call.reject("Ya hay una exportación en curso.", "NATIVE_REPORT_EXPORT_BUSY")
+            return
+        }
+        guard let session = sessions.snapshot() else {
+            call.reject("La sesión ha caducado. Vuelve a iniciar sesión.",
+                        "NATIVE_REPORT_EXPORT_UNAUTHENTICATED")
+            return
+        }
+        guard journeyReportStoreReady, let http else {
+            call.reject("No se pudo preparar el informe para exportarlo.", "NATIVE_REPORT_EXPORT_UNAVAILABLE")
+            return
+        }
+
+        let export = PendingJourneyReportExport(call: call, days: days, session: session)
+        activeJourneyReportExport = export
+        let path = "/api/journeys/report?days=\(days)"
+        let request = http.sendAPI(method: "GET", path: path, body: nil, session: session,
+                                   limit: NativeJourneyReportPolicy.maximumBodyBytes) { [weak self, weak export] result in
+            guard let self, let export else { return }
+            self.onMain { [weak self, weak export] in
+                guard let self, let export, self.activeJourneyReportExport === export else { return }
+                export.request = nil
+                guard self.sessions.isCurrent(export.session.generation) else {
+                    self.failJourneyReportExport(export, code: "NATIVE_REPORT_EXPORT_UNAUTHENTICATED")
+                    return
+                }
+                switch result {
+                case .failure:
+                    self.failJourneyReportExport(export, code: "NATIVE_REPORT_EXPORT_UNAVAILABLE")
+                case .success(let response):
+                    guard response.status == 200 else {
+                        let code = [401, 403].contains(response.status)
+                            ? "NATIVE_REPORT_EXPORT_UNAUTHENTICATED"
+                            : "NATIVE_REPORT_EXPORT_UNAVAILABLE"
+                        self.failJourneyReportExport(export, code: code)
+                        return
+                    }
+                    guard response.contentType == "application/json",
+                          let safeJSON = try? NativeJourneyReportPolicy.sanitizedJSON(
+                            data: response.body, expectedDays: export.days
+                          ) else {
+                        self.failJourneyReportExport(export, code: "NATIVE_REPORT_EXPORT_INVALID")
+                        return
+                    }
+                    guard self.sessions.isCurrent(export.session.generation) else {
+                        self.failJourneyReportExport(export, code: "NATIVE_REPORT_EXPORT_UNAUTHENTICATED")
+                        return
+                    }
+                    self.presentJourneyReportPicker(export, safeJSON: safeJSON)
+                }
+            }
+        }
+        if activeJourneyReportExport === export {
+            guard let request else {
+                failJourneyReportExport(export, code: "NATIVE_REPORT_EXPORT_UNAVAILABLE")
+                return
+            }
+            export.request = request
+        }
+    }
+
+    private func presentJourneyReportPicker(_ export: PendingJourneyReportExport, safeJSON: Data) {
+        guard activeJourneyReportExport === export,
+              sessions.isCurrent(export.session.generation) else {
+            failJourneyReportExport(export, code: "NATIVE_REPORT_EXPORT_UNAUTHENTICATED")
+            return
+        }
+        do {
+            let fileURL = try journeyReportStore.createExport(data: safeJSON, days: export.days)
+            export.temporaryFileURL = fileURL
+            guard let viewController = bridge?.viewController,
+                  viewController.viewIfLoaded?.window != nil,
+                  viewController.presentedViewController == nil,
+                  !viewController.isBeingDismissed else {
+                failJourneyReportExport(export, code: "NATIVE_REPORT_EXPORT_UNAVAILABLE")
+                return
+            }
+
+            let pickerDelegate = NativeJourneyReportPickerDelegate()
+            pickerDelegate.onPicked = { [weak self, weak export] urls in
+                guard let self, let export else { return }
+                self.onMain { [weak self, weak export] in
+                    guard let self, let export else { return }
+                    self.finishJourneyReportPick(export, pickedURLs: urls)
+                }
+            }
+            pickerDelegate.onCancelled = { [weak self, weak export] in
+                guard let self, let export else { return }
+                self.onMain { [weak self, weak export] in
+                    guard let self, let export else { return }
+                    self.finishJourneyReportPick(export, pickedURLs: nil)
+                }
+            }
+            let picker = UIDocumentPickerViewController(forExporting: [fileURL], asCopy: true)
+            picker.delegate = pickerDelegate
+            export.pickerDelegate = pickerDelegate
+            export.picker = picker
+            viewController.present(picker, animated: true)
+        } catch {
+            failJourneyReportExport(export, code: "NATIVE_REPORT_EXPORT_UNAVAILABLE")
+        }
+    }
+
+    private func finishJourneyReportPick(_ export: PendingJourneyReportExport, pickedURLs: [URL]?) {
+        guard activeJourneyReportExport === export else { return }
+        guard let pickedURLs else {
+            resolveJourneyReportExport(export, status: "cancelled")
+            return
+        }
+        guard sessions.isCurrent(export.session.generation) else {
+            failJourneyReportExport(export, code: "NATIVE_REPORT_EXPORT_UNAUTHENTICATED")
+            return
+        }
+        guard !pickedURLs.isEmpty else {
+            failJourneyReportExport(export, code: "NATIVE_REPORT_EXPORT_OUTCOME_UNKNOWN")
+            return
+        }
+        resolveJourneyReportExport(export, status: "completed")
+    }
+
+    private func resolveJourneyReportExport(_ export: PendingJourneyReportExport, status: String) {
+        guard activeJourneyReportExport === export else { return }
+        let cleaned = retireJourneyReportExport(export, dismissPicker: false)
+        guard cleaned else {
+            journeyReportStoreReady = false
+            let code = status == "completed"
+                ? "NATIVE_REPORT_EXPORT_OUTCOME_UNKNOWN"
+                : "NATIVE_REPORT_EXPORT_UNAVAILABLE"
+            let message = code == "NATIVE_REPORT_EXPORT_OUTCOME_UNKNOWN"
+                ? "El resultado de la exportación no se pudo confirmar. Comprueba el destino antes de reintentar."
+                : "No se pudo preparar el informe para exportarlo."
+            export.call.reject(message, code)
+            return
+        }
+        export.call.resolve(["status": status])
+    }
+
+    private func failJourneyReportExport(_ export: PendingJourneyReportExport, code: String) {
+        guard activeJourneyReportExport === export else { return }
+        let resultCode = code == "NATIVE_REPORT_EXPORT_UNAUTHENTICATED" && export.picker != nil
+            ? "NATIVE_REPORT_EXPORT_OUTCOME_UNKNOWN" : code
+        if !retireJourneyReportExport(export) { journeyReportStoreReady = false }
+        switch resultCode {
+        case "NATIVE_REPORT_EXPORT_UNAUTHENTICATED":
+            export.call.reject("La sesión ha caducado. Vuelve a iniciar sesión.", resultCode)
+        case "NATIVE_REPORT_EXPORT_INVALID":
+            export.call.reject("Los datos de exportación no son válidos.", resultCode)
+        case "NATIVE_REPORT_EXPORT_BUSY":
+            export.call.reject("Ya hay una exportación en curso.", resultCode)
+        case "NATIVE_REPORT_EXPORT_OUTCOME_UNKNOWN":
+            export.call.reject("El resultado de la exportación no se pudo confirmar. Comprueba el destino antes de reintentar.", resultCode)
+        default:
+            export.call.reject("No se pudo preparar el informe para exportarlo.", "NATIVE_REPORT_EXPORT_UNAVAILABLE")
+        }
+    }
+
+    @discardableResult
+    private func retireJourneyReportExport(_ export: PendingJourneyReportExport,
+                                           dismissPicker: Bool = true) -> Bool {
+        guard activeJourneyReportExport === export else { return true }
+        activeJourneyReportExport = nil
+        export.request?.cancel()
+        export.request = nil
+        if let picker = export.picker {
+            picker.delegate = nil
+            if dismissPicker, picker.presentingViewController != nil {
+                picker.dismiss(animated: false)
+            }
+        }
+        export.picker = nil
+        export.pickerDelegate?.clearCallbacks()
+        export.pickerDelegate = nil
+        var cleaned = true
+        if let fileURL = export.temporaryFileURL {
+            do {
+                try journeyReportStore.removeExport(at: fileURL)
+            } catch {
+                cleaned = false
+            }
+        }
+        export.temporaryFileURL = nil
+        return cleaned
+    }
+
+    private static func journeyReportDays(from call: CAPPluginCall) -> Int? {
+        guard let options = call.options, Set(options.keys) == ["days"],
+              let days = options["days"] else { return nil }
+        return NativeJourneyReportPolicy.requestedDays(arguments: ["days": days])
     }
 
     private func deliver(_ response: NativeHTTPResponse, method: String, path: String,
@@ -639,6 +863,9 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
         let config = runtimeConfig
         let credential = config.flatMap { credentials.credential(apiOrigin: $0.apiOrigin) }
         sessions.invalidate()
+        if let export = activeJourneyReportExport {
+            failJourneyReportExport(export, code: "NATIVE_REPORT_EXPORT_UNAUTHENTICATED")
+        }
         cancelPendingAuthorization(message: "La autenticación se canceló.", code: "NATIVE_AUTH_CANCELLED")
         stopAllEvents()
         advanceWidgetGeneration()
@@ -1005,6 +1232,40 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
     private func onMain(_ work: @escaping () -> Void) {
         if Thread.isMainThread { work() }
         else { DispatchQueue.main.async(execute: work) }
+    }
+}
+
+private final class PendingJourneyReportExport {
+    let call: CAPPluginCall
+    let days: Int
+    let session: NativeSessionState.Snapshot
+    var request: NativeHTTPRequestHandle?
+    var temporaryFileURL: URL?
+    var picker: UIDocumentPickerViewController?
+    var pickerDelegate: NativeJourneyReportPickerDelegate?
+
+    init(call: CAPPluginCall, days: Int, session: NativeSessionState.Snapshot) {
+        self.call = call
+        self.days = days
+        self.session = session
+    }
+}
+
+private final class NativeJourneyReportPickerDelegate: NSObject, UIDocumentPickerDelegate {
+    var onPicked: (([URL]) -> Void)?
+    var onCancelled: (() -> Void)?
+
+    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        onPicked?(urls)
+    }
+
+    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+        onCancelled?()
+    }
+
+    func clearCallbacks() {
+        onPicked = nil
+        onCancelled = nil
     }
 }
 

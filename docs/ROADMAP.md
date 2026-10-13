@@ -153,3 +153,10 @@ Las rutinas y los horarios son ampliaciones propuestas, sujetas a capacidades re
 [Leapmotor Mate](https://github.com/ProtossBlaster/leapmotor-mate) y [LPB10](https://github.com/txurtxil/LPB10) orientan las posibilidades y los flujos; no acreditan capacidades del B10 objetivo ni autorizan copiar su implementación. Android Auto/CarPlay, otros modelos, varios vehículos e idiomas adicionales quedan fuera del cierre actual salvo decisión expresa.
 
 El diario manual es un incremento de software, no una recepción del vehículo. [Contrato](MANUAL-JOURNEYS.md) y [cualificación con límites](MANUAL-JOURNEY-QUALIFICATION.json).
+
+## Fase 5: entrega nativa del informe manual
+
+- [x] Añadir exportación de agregados30/90/365d mediante el selector Android/iOS, con sesión nativa, contrato cerrado, cancelación y errores sin datos privados. [Contrato y límites](NATIVE-REPORT-EXPORT.md).
+- [ ] Cualificar compilación y entrega física de este nuevo cliente según [NATIVE-REPORT-EXPORT-QUALIFICATION.json](NATIVE-REPORT-EXPORT-QUALIFICATION.json); firma, proveedores de archivos y recepción en teléfonos siguen separados.
+
+No cierra la ingestión automática de trayectos ni modifica nueve fases, siete puertas reales o A0–A12. Centinela/cámaras permanece al final.
