@@ -1430,7 +1430,7 @@
 	@media (max-width: 700px) { .vehicle-color-options { gap: 4px; } .settings-form .field-hint { font-size: .8125rem; } }
 	@media(max-width:359px){.vehicle-color-options{grid-template-columns:minmax(0,1fr)}}
 
-	.settings-intro { align-items: center; margin-bottom: 16px; }
+	.settings-intro { align-items: flex-start; margin-bottom: 16px; }
 	.settings-profile { display: grid; gap: 16px; min-width: 0; }
 	.settings-section-switcher { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; margin-bottom: 0; }
 	.settings-section-switcher button { min-width: 0; overflow-wrap: anywhere; }

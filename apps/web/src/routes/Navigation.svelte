@@ -688,7 +688,7 @@
 	@media(max-width:1000px){.navigation-layout,.navigation-layout.map-visible{grid-template-columns:minmax(0,1fr)}.navigation-main-column,.navigation-side-column{gap:24px}}
 	@media(max-width:560px){.destination-empty{min-height:200px}.station-facts{grid-template-columns:repeat(2,minmax(0,1fr))}.navigation-layout{gap:24px}}
 
-	.navigation-intro { align-items: flex-end; }
+	.navigation-intro { align-items: flex-start; }
 	.navigation-intro h2 { font-size: clamp(1.6rem, 3vw, 2.2rem); }
 	.navigation-layout, .navigation-layout.map-visible { grid-template-columns: minmax(0, 1.3fr) minmax(18rem, .7fr); align-items: start; gap: clamp(24px, 4vw, 42px); }
 	.navigation-main-column, .navigation-side-column { gap: 26px; min-width: 0; }
