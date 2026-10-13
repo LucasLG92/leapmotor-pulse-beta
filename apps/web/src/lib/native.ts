@@ -11,11 +11,17 @@ export interface NativeBridgeResponse {
 	body: string;
 }
 
+/** El selector informa su finalización; no verifica la copia externa. */
+export interface NativeJourneyReportExportResult {
+	status: 'completed' | 'cancelled';
+}
+
 export interface NativeBridge {
 	status(): Promise<NativeBridgeStatus>;
 	login(): Promise<void>;
 	logout(): Promise<void>;
 	request(input: { path: string; method: string; body?: string }): Promise<NativeBridgeResponse>;
+	exportJourneyReport?(input: { days: 30 | 90 | 365 }): Promise<NativeJourneyReportExportResult>;
 	subscribe(onRevision: (revision: number) => void, onError: () => void): Promise<() => void>;
 	linkWidget(input: { pairingCode: string; deviceName: string }): Promise<void>;
 	setWidgetCache(input: { enabled: boolean }): Promise<void>;

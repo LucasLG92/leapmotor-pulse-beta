@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-13",
+  "increment": "phase5-native-report-export",
+  "status": "android_software_verified_review_apple_publication_pending",
+  "goal_status": "active",
+  "phases": 9,
+  "real_gates_pending": 7,
+  "source": "manual",
+  "coverage": "unknown",
+  "storage_schema": 20,
+  "export_version": 16,
+  "bridge_arguments": [
+    "days"
+  ],
+  "periods": [
+    30,
+    90,
+    365
+  ],
+  "maximum_report_bytes": 65536,
+  "output_fields": [
+    "source",
+    "coverage",
+    "period",
+    "totals",
+    "months"
+  ],
+  "validation": {
+    "backend": 1319,
+    "subtests": 131,
+    "backend_skipped": 0,
+    "web": 63,
+    "mobile": 8,
+    "svelte_errors": 0,
+    "svelte_warnings": 0,
+    "contracts_types_builds": "passed_before_final_native_review_corrections"
+  },
+  "browser": {
+    "scope": "own_loopback_real_component_mock_native_result_no_files_no_real_selector",
+    "cancel_complete_error_legacy_invalid_expired": "passed",
+    "pending_controls_focus_external_draft_late_callback": "passed",
+    "viewport_width": 390,
+    "horizontal_overflow": false,
+    "main_targets_min_height": 48,
+    "theme": "dark",
+    "console_errors": 0,
+    "fixture_binding_warnings": 6,
+    "cleanup": "server_stopped_tab_closed_viewport_reset"
+  },
+  "android": {
+    "compiled": true,
+    "selector_physical": false,
+    "file_reception": false,
+    "signed": false,
+    "installed": false,
+    "path": "outputs/pulse-android-unsigned-phase5-report-export-20261013.apk",
+    "sha256": "9cdb37198330d94d294fe07c3f5adb26a586886cfe2bde0a96e740b14adee625",
+    "bytes": 6555788,
+    "unit_tests": 93,
+    "unit_skipped": 0,
+    "lint_errors": 0,
+    "lint_warnings": 16,
+    "dist_assets": 44,
+    "empty_bridges": 2,
+    "runtime_connection_fields_empty": 7
+  },
+  "ios": {
+    "compiled": false,
+    "swift_tests_executed": false,
+    "selector_physical": false,
+    "file_reception": false,
+    "signed": false,
+    "installed": false
+  },
+  "source_published": false,
+  "merged": false,
+  "runtime_deployed": false,
+  "limits": [
+    "Completion of a system picker is not physical file reception.",
+    "No phone, cloud provider, real network loss, signing, OAuth, widget, B10 or charger acceptance.",
+    "Nine phases, seven real gates and A0-A12 remain pending as applicable; sentry/cameras final."
+  ],
+  "evidence": "evidence/phase5-native-report-export-20261013",
+  "source_freeze_note": "Pre-publication source snapshot; subsequent CI and artifact qualification is recorded in PR metadata and the local final receipt."
+}

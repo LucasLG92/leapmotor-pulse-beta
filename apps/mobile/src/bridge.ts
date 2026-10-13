@@ -15,6 +15,9 @@ export function createNativeBridge(plugin: NativePlugin): NativeBridge {
     login: () => plugin.login(),
     logout: () => plugin.logout(),
     request: (request) => plugin.request(request),
+    ...(typeof plugin.exportJourneyReport === 'function'
+      ? { exportJourneyReport: (input: { days: 30 | 90 | 365 }) => plugin.exportJourneyReport!(input) }
+      : {}),
     linkWidget: (request) => plugin.linkWidget(request),
     setWidgetCache: (request) => plugin.setWidgetCache(request),
     clearWidget: () => plugin.clearWidget(),

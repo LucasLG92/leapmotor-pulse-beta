@@ -2,7 +2,8 @@
 	import { onMount, onDestroy, tick, untrack } from 'svelte';
 	import { ApiError, getManualJourneys, getManualJourneyReport } from './api';
 	import { count } from './format';
-	import { isNativeApp } from './native';
+	import { getNativeBridge, isNativeApp } from './native';
+	import { exportNativeJourneyReport, journeyReportExportError } from './journey-report-export';
 	import { convertJourneyBasis, emptyJourneyForm, journeyQuantityInput, localJourneyTime, validateJourneyForm, type JourneyForm } from './manual-journey-form';
 	import type { ManualJourney, ManualJourneyCreationRequest, ManualJourneyPage, ManualJourneyReport, PageProps } from './types';
 
@@ -17,7 +18,9 @@
 	let errors = $state<Record<string, string>>({}), saveError = $state(''), saving = $state(false);
 	let reservation = $state<ManualJourneyCreationRequest | null>(null);
 	let sent = $state(false), sentAttempt = '';
-	let exportMessage = $state('');
+	let exportMessage = $state(''), exportError = $state(false), exporting = $state(false);
+	let exportButton = $state<HTMLButtonElement | undefined>();
+	let reportHeading = $state<HTMLHeadingElement | undefined>();
 	let baseline = JSON.stringify(emptyJourneyForm());
 	let mounted = false, readGeneration = 0, editGeneration = 0, observedReadKey = '';
 	let reads: AbortController | null = null;
@@ -65,7 +68,7 @@
 		const currentOffset = offset, currentDays = days, currentRevision = revision;
 		reads?.abort(); reads = new AbortController();
 		const signal = reads.signal;
-		loading = true; readError = ''; page = null; report = null; exportMessage = '';
+		loading = true; readError = ''; page = null; report = null;
 		try {
 			const [newPage, newReport] = await Promise.all([
 				getManualJourneys(pageSize, currentOffset, signal), getManualJourneyReport(currentDays, signal)
@@ -178,15 +181,40 @@
 		} catch { if (mounted) actionError = 'No se pudo confirmar la eliminación. Actualiza el diario antes de volver a intentarlo.'; }
 		finally { if (mounted) saving = false; }
 	}
-	function exportReport() {
-		if (!report || loading || busy || !online || native) return;
+	async function exportReport() {
+		if (!report || loading || busy || saving || exporting || !online) return;
+		exportMessage = ''; exportError = false;
+		if (native) {
+			const currentDays = days, focused = document.activeElement === exportButton;
+			exporting = true;
+			try {
+				const result = await exportNativeJourneyReport(getNativeBridge(), currentDays);
+				if (!mounted) return;
+				exportMessage = result.status === 'cancelled' ? 'Guardado cancelado. El informe sigue disponible.'
+					: `Selector de archivos finalizado para el informe de ${currentDays} días. Comprueba la copia en la ubicación elegida.`;
+			} catch (error) {
+				if (!mounted) return;
+				const result = journeyReportExportError(error);
+				exportMessage = result.message; exportError = true;
+				if (result.sessionExpired) onSessionExpired();
+			} finally {
+				if (mounted) {
+					exporting = false; await tick();
+					if (mounted && focused && document.hasFocus() && document.activeElement === document.body) {
+						if (exportButton && !exportButton.disabled) exportButton.focus();
+						else reportHeading?.focus();
+					}
+				}
+			}
+			return;
+		}
 		let url = '';
 		try {
 			url = URL.createObjectURL(new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' }));
 			const link = document.createElement('a'); link.href = url; link.download = `pulse-trayectos-manuales-${days}dias.json`;
 			document.body.append(link); link.click(); link.remove();
 			exportMessage = 'Informe preparado. Comprueba la descarga en el navegador. La copia completa de los registros está en Ajustes.';
-		} catch { exportMessage = 'No se pudo preparar el archivo. Puedes volver a intentarlo.'; }
+		} catch { exportMessage = 'No se pudo preparar el archivo. Puedes volver a intentarlo.'; exportError = true; }
 		finally { if (url) window.setTimeout(() => URL.revokeObjectURL(url), 1000); }
 	}
 </script>
@@ -242,17 +270,17 @@
 		{/each}
 		{#if page.total > pageSize}<nav class="actions" aria-label="Páginas de trayectos manuales"><button class="button button-secondary" disabled={busy || saving || offset === 0} onclick={() => offset = Math.max(0, offset - pageSize)}>Anteriores</button><span>{offset + 1}–{Math.min(offset + pageSize, page.total)} de {count(page.total)}</span><button class="button button-secondary" disabled={busy || saving || offset + pageSize >= page.total} onclick={() => offset += pageSize}>Siguientes</button></nav>{/if}
 	{/if}
-	<div class="report-heading"><h3>Informe de tus registros</h3><div class="field"><label for="journey-period">Periodo</label><select id="journey-period" bind:value={days} disabled={busy || saving}><option value={30}>Últimos 30 días</option><option value={90}>Últimos 90 días</option><option value={365}>Últimos 365 días</option></select></div></div>
+	<div class="report-heading"><h3 bind:this={reportHeading} tabindex="-1">Informe de tus registros</h3><div class="field"><label for="journey-period">Periodo</label><select id="journey-period" bind:value={days} disabled={busy || saving || exporting}><option value={30}>Últimos 30 días</option><option value={90}>Últimos 90 días</option><option value={365}>Últimos 365 días</option></select></div></div>
 	{#if report && total}
 		<p class="muted">Se incluyen recorridos completos por su fecha de inicio. Meses en Europe/Madrid. El informe sólo reúne entradas manuales; no confirma que hayas registrado todos los viajes.</p>
 		<dl class="report-totals"><div><dt>Registros</dt><dd>{count(total.count)}</dd></div><div><dt>Distancia conocida</dt><dd>{total.known_distance_count ? `${number(total.distance_km)} km` : 'Sin dato'}</dd></div><div><dt>Energía declarada</dt><dd>{total.known_energy_count ? `${number(total.energy_kwh)} kWh` : 'Sin dato'}</dd></div></dl>
 		<p>{count(total.known_distance_count)} con distancia · {count(total.known_energy_count)} con energía. Consumo: {total.consumption_kwh_100km === null ? 'sin datos suficientes' : `${number(total.consumption_kwh_100km)} kWh/100 km`}.</p>
 		<p class="muted">El consumo usa sólo {count(total.paired_count)} {total.paired_count === 1 ? 'registro' : 'registros'} con ambos datos y distancia positiva ({number(total.paired_distance_km)} km / {number(total.paired_energy_kwh)} kWh). La energía sin distancia no entra en ese cálculo. Las cifras se muestran redondeadas.</p>
 		<details><summary>Detalle mensual</summary><div class="months">{#each report.months as month (month.month_key)}<div><strong>{month.month_key}</strong><span>{count(month.count)} registros</span><span>{month.known_distance_count ? `${number(month.distance_km)} km` : 'Sin distancia'}</span><span>{month.known_energy_count ? `${number(month.energy_kwh)} kWh` : 'Sin energía'}</span></div>{/each}</div></details>
-		<button class="button button-secondary" disabled={busy || saving || loading || !online || native} onclick={exportReport}>Exportar informe JSON</button>
-		{#if native}<p class="muted">La descarga de este informe está disponible al abrir Pulse en un navegador. La consulta del informe sigue disponible aquí.</p>{/if}
-		{#if exportMessage}<p role="status">{exportMessage}</p>{/if}
+		<button class="button button-secondary" bind:this={exportButton} disabled={busy || saving || exporting || loading || !online} onclick={exportReport}>{exporting ? 'Preparando archivo…' : native ? 'Guardar informe JSON' : 'Exportar informe JSON'}</button>
+		{#if native}<p class="muted">El selector de archivos te permite elegir dónde guardar una copia actual de los agregados. No incluye etiquetas de trayectos ni credenciales.</p>{/if}
 	{/if}
+	{#if exportMessage}<p role={exportError ? 'alert' : 'status'}>{exportMessage}</p>{/if}
 </section>
 
 <style>

@@ -1,8 +1,11 @@
 package com.lucas.pulse.nativebridge;
 
+import android.app.Activity;
 import android.appwidget.AppWidgetManager;
+import android.content.ContentResolver;
 import android.content.ComponentName;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
 import android.os.SystemClock;
 import android.util.Base64;
@@ -30,15 +33,21 @@ import net.openid.appauth.TokenRequest;
 import net.openid.appauth.TokenResponse;
 
 import org.json.JSONException;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Future;
@@ -58,13 +67,17 @@ public final class PulseNativePlugin extends Plugin {
 
     private final Object authLock = new Object();
     private final Object streamLock = new Object();
+    private final Object journeyReportLock = new Object();
     private final NativeSessionState sessions = new NativeSessionState();
+    private final NativeJourneyReportState journeyReportState = new NativeJourneyReportState();
     private ThreadPoolExecutor io;
     private NativeRuntimeConfig runtimeConfig;
     private NativeHttpClient http;
     private NativeWidgetCredentialVault widgetVault;
     private WidgetSnapshotCache widgetCache;
     private PendingAuth pendingAuth;
+    private PendingJourneyReport pendingJourneyReport;
+    private boolean journeyReportPluginDestroyed;
 
     private long latestSubscriptionNumber;
     private long streamGeneration;
@@ -202,6 +215,64 @@ public final class PulseNativePlugin extends Plugin {
 
     @PluginMethod public void logout(PluginCall call) {
         performLogout(call, false);
+    }
+
+    @PluginMethod public void exportJourneyReport(PluginCall call) {
+        Integer days = reportDaysArgument(call);
+        if (days == null) {
+            rejectJourneyReportCall(call, "El período del informe no es válido.", "NATIVE_REPORT_EXPORT_INVALID");
+            return;
+        }
+        NativeRuntimeConfig config = runtimeConfig;
+        if (config == null || !config.isConfigured() || http == null || io == null) {
+            rejectJourneyReportCall(call, "La exportación del informe no está disponible.",
+                    "NATIVE_REPORT_EXPORT_UNAVAILABLE");
+            return;
+        }
+        NativeSessionState.SessionSnapshot captured = sessions.snapshot(SystemClock.elapsedRealtime());
+        if (captured == null) {
+            rejectJourneyReportCall(call, "Inicia sesión para exportar el informe.",
+                    "NATIVE_REPORT_EXPORT_UNAUTHENTICATED");
+            return;
+        }
+
+        PendingJourneyReport pending = null;
+        String failureMessage = null;
+        String failureCode = null;
+        synchronized (journeyReportLock) {
+            if (journeyReportPluginDestroyed) {
+                failureMessage = "La exportación del informe no está disponible.";
+                failureCode = "NATIVE_REPORT_EXPORT_UNAVAILABLE";
+            } else if (pendingJourneyReport != null) {
+                failureMessage = "Ya hay una exportación en curso.";
+                failureCode = "NATIVE_REPORT_EXPORT_BUSY";
+            } else {
+                NativeJourneyReportState.Operation operation = journeyReportState.begin(days, captured.generation);
+                if (operation == null) {
+                    failureMessage = "La exportación del informe no está disponible.";
+                    failureCode = "NATIVE_REPORT_EXPORT_UNAVAILABLE";
+                } else {
+                    pending = new PendingJourneyReport(call, operation);
+                    pendingJourneyReport = pending;
+                }
+            }
+        }
+        if (failureCode != null) {
+            rejectJourneyReportCall(call, failureMessage, failureCode);
+            return;
+        }
+        PendingJourneyReport activePending = pending;
+        if (activePending == null) {
+            rejectJourneyReportCall(call, "La exportación del informe no está disponible.",
+                    "NATIVE_REPORT_EXPORT_UNAVAILABLE");
+            return;
+        }
+
+        try {
+            io.execute(() -> fetchJourneyReport(activePending, captured));
+        } catch (RejectedExecutionException ignored) {
+            rejectJourneyReport(activePending, "Hay demasiadas solicitudes. Reintenta.", "NATIVE_REPORT_EXPORT_BUSY");
+        }
     }
 
     @PluginMethod public void linkWidget(PluginCall call) {
@@ -403,6 +474,68 @@ public final class PulseNativePlugin extends Plugin {
         }
     }
 
+    @ActivityCallback public void journeyReportResult(PluginCall call, ActivityResult result) {
+        PendingJourneyReport pending;
+        Uri destination = null;
+        boolean cancelled = false;
+        boolean orphanedCallback = false;
+        String failureMessage = null;
+        String failureCode = null;
+        synchronized (journeyReportLock) {
+            pending = pendingJourneyReport;
+            if (pending == null) {
+                orphanedCallback = true;
+            } else {
+                if (call != null && (pending.call != call || !journeyReportState.isCurrent(pending.operation))) return;
+                if (call == null) {
+                    releaseJourneyReportLocked(pending);
+                    failureMessage = "No se pudo confirmar la exportación. Comprueba el destino antes de volver a intentarlo.";
+                    failureCode = "NATIVE_REPORT_EXPORT_OUTCOME_UNKNOWN";
+                } else if (result == null || result.getResultCode() != Activity.RESULT_OK) {
+                    cancelled = true;
+                } else {
+                    Intent data = result.getData();
+                    destination = data == null ? null : data.getData();
+                    if (destination == null || !ContentResolver.SCHEME_CONTENT.equals(destination.getScheme())
+                            || pending.canonicalJson == null) {
+                        releaseJourneyReportLocked(pending);
+                        failureMessage = "No se pudo confirmar la exportación. Comprueba el destino antes de volver a intentarlo.";
+                        failureCode = "NATIVE_REPORT_EXPORT_OUTCOME_UNKNOWN";
+                    } else if (!sessions.isCurrent(pending.operation.sessionGeneration,
+                            SystemClock.elapsedRealtime())) {
+                        releaseJourneyReportLocked(pending);
+                        failureMessage = "No se pudo confirmar la exportación. Comprueba el destino antes de volver a intentarlo.";
+                        failureCode = "NATIVE_REPORT_EXPORT_OUTCOME_UNKNOWN";
+                    } else {
+                        pending.stage = JourneyReportStage.WRITING;
+                    }
+                }
+            }
+        }
+        if (orphanedCallback) {
+            if (call != null) rejectJourneyReportCall(call,
+                    "No se pudo confirmar la exportación. Comprueba el destino antes de volver a intentarlo.",
+                    "NATIVE_REPORT_EXPORT_OUTCOME_UNKNOWN");
+            return;
+        }
+        if (failureCode != null) {
+            rejectJourneyReportCall(pending == null ? call : pending.call, failureMessage, failureCode);
+            return;
+        }
+        if (cancelled) {
+            resolveJourneyReport(pending, "cancelled");
+            return;
+        }
+        Uri selectedDestination = destination;
+        try {
+            io.execute(() -> writeJourneyReport(pending, selectedDestination));
+        } catch (RejectedExecutionException ignored) {
+            rejectJourneyReport(pending,
+                    "No se pudo confirmar la exportación. Comprueba el destino antes de volver a intentarlo.",
+                    "NATIVE_REPORT_EXPORT_OUTCOME_UNKNOWN");
+        }
+    }
+
     @Override protected void handleOnPause() {
         synchronized (streamLock) {
             if (eventsDesired && activeSubscriptionId != null) {
@@ -438,6 +571,24 @@ public final class PulseNativePlugin extends Plugin {
     }
 
     @Override protected void handleOnDestroy() {
+        PendingJourneyReport retiredReport;
+        synchronized (journeyReportLock) {
+            journeyReportPluginDestroyed = true;
+            retiredReport = pendingJourneyReport;
+            pendingJourneyReport = null;
+            if (retiredReport != null) retiredReport.canonicalJson = null;
+            journeyReportState.destroy();
+        }
+        if (retiredReport != null) {
+            if (retiredReport.stage == JourneyReportStage.WRITING) {
+                rejectJourneyReportCall(retiredReport.call,
+                        "No se pudo confirmar la exportación. Comprueba el destino antes de volver a intentarlo.",
+                        "NATIVE_REPORT_EXPORT_OUTCOME_UNKNOWN");
+            } else {
+                rejectJourneyReportCall(retiredReport.call, "La exportación del informe no está disponible.",
+                        "NATIVE_REPORT_EXPORT_UNAVAILABLE");
+            }
+        }
         synchronized (streamLock) {
             eventsDesired = false;
             activeSubscriptionId = null;
@@ -677,9 +828,308 @@ public final class PulseNativePlugin extends Plugin {
         else pending.call.reject(message, code);
     }
 
+    private void fetchJourneyReport(PendingJourneyReport pending,
+            NativeSessionState.SessionSnapshot capturedSession) {
+        if (!isJourneyReportCurrent(pending)) return;
+        if (!sessions.isCurrent(pending.operation.sessionGeneration, SystemClock.elapsedRealtime())) {
+            rejectJourneyReport(pending, "La sesión cambió durante la exportación del informe.",
+                    "NATIVE_REPORT_EXPORT_UNAUTHENTICATED");
+            return;
+        }
+        try {
+            NativeHttpClient.NativeResponse response = http.requestManualJourneyReport(
+                    pending.operation.days, capturedSession);
+            if (response.status == 401 || response.status == 403) {
+                rejectJourneyReport(pending, "La sesión cambió durante la exportación del informe.",
+                        "NATIVE_REPORT_EXPORT_UNAUTHENTICATED");
+                return;
+            }
+            if (response.status != 200) {
+                rejectJourneyReport(pending, "No se pudo obtener el informe para exportarlo.",
+                        "NATIVE_REPORT_EXPORT_UNAVAILABLE");
+                return;
+            }
+            if (!"application/json".equals(response.contentType)
+                    || !NativeJourneyReportPolicy.bodyWithinLimit(response.body)) {
+                rejectJourneyReport(pending, "Pulse devolvió un informe no válido.",
+                        "NATIVE_REPORT_EXPORT_INVALID");
+                return;
+            }
+            if (!NativeJourneyReportJson.isStrictObject(response.body)) {
+                rejectJourneyReport(pending, "Pulse devolvió un informe no válido.",
+                        "NATIVE_REPORT_EXPORT_INVALID");
+                return;
+            }
+            JSONObject parsed = new JSONObject(response.body);
+            String sanitized = NativeJourneyReportPolicy.validateAndSerialize(toPlainJson(parsed),
+                    pending.operation.days);
+            if (sanitized == null) {
+                rejectJourneyReport(pending, "Pulse devolvió un informe no válido.",
+                        "NATIVE_REPORT_EXPORT_INVALID");
+                return;
+            }
+            synchronized (journeyReportLock) {
+                if (pendingJourneyReport != pending || !journeyReportState.isCurrent(pending.operation)) return;
+                if (!sessions.isCurrent(pending.operation.sessionGeneration, SystemClock.elapsedRealtime())) {
+                    releaseJourneyReportLocked(pending);
+                } else {
+                    pending.canonicalJson = sanitized;
+                    pending.stage = JourneyReportStage.READY;
+                    sanitized = null;
+                }
+            }
+            if (sanitized != null) {
+                rejectJourneyReportCall(pending.call, "La sesión cambió durante la exportación del informe.",
+                        "NATIVE_REPORT_EXPORT_UNAUTHENTICATED");
+                return;
+            }
+            Activity activity = getActivity();
+            if (activity == null) {
+                rejectJourneyReport(pending, "La exportación del informe no está disponible.",
+                        "NATIVE_REPORT_EXPORT_UNAVAILABLE");
+                return;
+            }
+            activity.runOnUiThread(() -> launchJourneyReportPicker(pending));
+        } catch (NativeHttpClient.NativeTransportException error) {
+            if (error.status == 401 || error.status == 403) {
+                rejectJourneyReport(pending, "La sesión cambió durante la exportación del informe.",
+                        "NATIVE_REPORT_EXPORT_UNAUTHENTICATED");
+            } else if (error.status == 502) {
+                rejectJourneyReport(pending, "Pulse devolvió un informe no válido.",
+                        "NATIVE_REPORT_EXPORT_INVALID");
+            } else {
+                rejectJourneyReport(pending, "No se pudo obtener el informe para exportarlo.",
+                        "NATIVE_REPORT_EXPORT_UNAVAILABLE");
+            }
+        } catch (JSONException ignored) {
+            rejectJourneyReport(pending, "Pulse devolvió un informe no válido.",
+                    "NATIVE_REPORT_EXPORT_INVALID");
+        } catch (Exception ignored) {
+            rejectJourneyReport(pending, "No se pudo obtener el informe para exportarlo.",
+                    "NATIVE_REPORT_EXPORT_UNAVAILABLE");
+        }
+    }
+
+    private void launchJourneyReportPicker(PendingJourneyReport pending) {
+        String failureMessage = null;
+        String failureCode = null;
+        synchronized (journeyReportLock) {
+            if (pendingJourneyReport != pending || !journeyReportState.isCurrent(pending.operation)) return;
+            if (!sessions.isCurrent(pending.operation.sessionGeneration, SystemClock.elapsedRealtime())) {
+                releaseJourneyReportLocked(pending);
+                failureMessage = "La sesión cambió durante la exportación del informe.";
+                failureCode = "NATIVE_REPORT_EXPORT_UNAUTHENTICATED";
+            } else if (pending.canonicalJson == null || pending.stage != JourneyReportStage.READY) {
+                releaseJourneyReportLocked(pending);
+                failureMessage = "Pulse devolvió un informe no válido.";
+                failureCode = "NATIVE_REPORT_EXPORT_INVALID";
+            } else {
+                Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("application/json");
+                intent.putExtra(Intent.EXTRA_TITLE, journeyReportFileName(pending.operation.days));
+                pending.stage = JourneyReportStage.PICKER;
+                try {
+                    startActivityForResult(pending.call, intent, "journeyReportResult");
+                } catch (Exception ignored) {
+                    releaseJourneyReportLocked(pending);
+                    failureMessage = "La exportación del informe no está disponible.";
+                    failureCode = "NATIVE_REPORT_EXPORT_UNAVAILABLE";
+                }
+            }
+        }
+        if (failureCode != null) rejectJourneyReportCall(pending.call, failureMessage, failureCode);
+    }
+
+    private void writeJourneyReport(PendingJourneyReport pending, Uri destination) {
+        byte[] reportBytes = null;
+        OutputStream output = null;
+        boolean outputClosed = false;
+        boolean flushSucceeded = false;
+        boolean writeFailed = false;
+        boolean sessionExpired = false;
+        try {
+            synchronized (journeyReportLock) {
+                if (pendingJourneyReport != pending || !journeyReportState.isCurrent(pending.operation)) return;
+                if (!sessions.isCurrent(pending.operation.sessionGeneration, SystemClock.elapsedRealtime())) {
+                    sessionExpired = true;
+                } else if (pending.canonicalJson == null) {
+                    writeFailed = true;
+                } else {
+                    reportBytes = pending.canonicalJson.getBytes(StandardCharsets.UTF_8);
+                    pending.stage = JourneyReportStage.WRITING;
+                }
+            }
+            if (!sessionExpired && !writeFailed) {
+                ContentResolver resolver = getContext().getContentResolver();
+                output = resolver.openOutputStream(destination, "w");
+                if (output == null || reportBytes == null) throw new IOException();
+                for (int offset = 0; offset < reportBytes.length; offset += 4 * 1024) {
+                    JourneyReportWriteGate gate = journeyReportWriteGate(pending);
+                    if (gate == JourneyReportWriteGate.RETIRED) return;
+                    if (gate == JourneyReportWriteGate.SESSION_CHANGED) {
+                        sessionExpired = true;
+                        break;
+                    }
+                    int length = Math.min(4 * 1024, reportBytes.length - offset);
+                    output.write(reportBytes, offset, length);
+                }
+                if (!sessionExpired) {
+                    JourneyReportWriteGate gate = journeyReportWriteGate(pending);
+                    if (gate == JourneyReportWriteGate.RETIRED) return;
+                    if (gate == JourneyReportWriteGate.SESSION_CHANGED) {
+                        sessionExpired = true;
+                    } else {
+                        output.flush();
+                        flushSucceeded = true;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            writeFailed = true;
+        } finally {
+            if (output != null) {
+                try {
+                    output.close();
+                    outputClosed = true;
+                } catch (Exception ignored) {
+                    writeFailed = true;
+                }
+            }
+            if (reportBytes != null) Arrays.fill(reportBytes, (byte) 0);
+        }
+
+        if (sessionExpired || writeFailed || !flushSucceeded || !outputClosed) {
+            rejectJourneyReport(pending,
+                    "No se pudo confirmar la exportación. Comprueba el destino antes de volver a intentarlo.",
+                    "NATIVE_REPORT_EXPORT_OUTCOME_UNKNOWN");
+            return;
+        }
+
+        boolean expiredAfterClose = false;
+        boolean completed = false;
+        synchronized (journeyReportLock) {
+            if (pendingJourneyReport != pending || !journeyReportState.isCurrent(pending.operation)) return;
+            if (!sessions.isCurrent(pending.operation.sessionGeneration, SystemClock.elapsedRealtime())) {
+                expiredAfterClose = true;
+            } else {
+                completed = releaseJourneyReportLocked(pending);
+            }
+        }
+        if (expiredAfterClose) {
+            rejectJourneyReport(pending,
+                    "No se pudo confirmar la exportación. Comprueba el destino antes de volver a intentarlo.",
+                    "NATIVE_REPORT_EXPORT_OUTCOME_UNKNOWN");
+        } else if (completed) {
+            resolveJourneyReportCall(pending.call, "completed");
+        }
+    }
+
+    private JourneyReportWriteGate journeyReportWriteGate(PendingJourneyReport pending) {
+        synchronized (journeyReportLock) {
+            if (pendingJourneyReport != pending || !journeyReportState.isCurrent(pending.operation)) {
+                return JourneyReportWriteGate.RETIRED;
+            }
+            return sessions.isCurrent(pending.operation.sessionGeneration, SystemClock.elapsedRealtime())
+                    ? JourneyReportWriteGate.READY : JourneyReportWriteGate.SESSION_CHANGED;
+        }
+    }
+
+    private boolean isJourneyReportCurrent(PendingJourneyReport pending) {
+        synchronized (journeyReportLock) {
+            return pendingJourneyReport == pending && journeyReportState.isCurrent(pending.operation);
+        }
+    }
+
+    private void rejectJourneyReport(PendingJourneyReport pending, String message, String code) {
+        synchronized (journeyReportLock) {
+            if (!releaseJourneyReportLocked(pending)) return;
+        }
+        rejectJourneyReportCall(pending.call, message, code);
+    }
+
+    private void resolveJourneyReport(PendingJourneyReport pending, String status) {
+        synchronized (journeyReportLock) {
+            if (!releaseJourneyReportLocked(pending)) return;
+        }
+        resolveJourneyReportCall(pending.call, status);
+    }
+
+    private boolean releaseJourneyReportLocked(PendingJourneyReport pending) {
+        if (pendingJourneyReport != pending || !journeyReportState.finish(pending.operation)) return false;
+        pendingJourneyReport = null;
+        pending.canonicalJson = null;
+        return true;
+    }
+
+    private PendingJourneyReport retireJourneyReportLocked() {
+        PendingJourneyReport pending = pendingJourneyReport;
+        if (pending == null) return null;
+        releaseJourneyReportLocked(pending);
+        return pending;
+    }
+
+    private static Integer reportDaysArgument(PluginCall call) {
+        if (call == null || call.getData() == null) return null;
+        JSONObject arguments = call.getData();
+        java.util.Iterator<String> keys = arguments.keys();
+        String soleKey = keys.hasNext() ? keys.next() : null;
+        return NativeJourneyReportPolicy.requestedDays(arguments.length(), soleKey, arguments.opt("days"));
+    }
+
+    private static Object toPlainJson(Object value) throws JSONException {
+        if (value == JSONObject.NULL) return null;
+        if (value instanceof JSONObject) {
+            JSONObject object = (JSONObject) value;
+            Map<String, Object> values = new LinkedHashMap<>();
+            java.util.Iterator<String> keys = object.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                values.put(key, toPlainJson(object.get(key)));
+            }
+            return values;
+        }
+        if (value instanceof JSONArray) {
+            JSONArray array = (JSONArray) value;
+            List<Object> values = new ArrayList<>(array.length());
+            for (int index = 0; index < array.length(); index++) values.add(toPlainJson(array.get(index)));
+            return values;
+        }
+        return value;
+    }
+
+    private static String journeyReportFileName(int days) {
+        return "pulse-manual-journey-report-" + days + "d.json";
+    }
+
+    private static void rejectJourneyReportCall(PluginCall call, String message, String code) {
+        if (call != null) call.reject(message, code);
+    }
+
+    private static void resolveJourneyReportCall(PluginCall call, String status) {
+        JSObject result = new JSObject();
+        result.put("status", status);
+        call.resolve(result);
+    }
+
     private void performLogout(PluginCall call, boolean responseMode) {
-        NativeSessionState.SessionSnapshot session = sessions.snapshot(SystemClock.elapsedRealtime());
-        sessions.invalidate();
+        NativeSessionState.SessionSnapshot session;
+        PendingJourneyReport retiredReport;
+        synchronized (journeyReportLock) {
+            session = sessions.snapshot(SystemClock.elapsedRealtime());
+            sessions.invalidate();
+            retiredReport = retireJourneyReportLocked();
+        }
+        if (retiredReport != null) {
+            if (retiredReport.stage == JourneyReportStage.WRITING) {
+                rejectJourneyReportCall(retiredReport.call,
+                        "No se pudo confirmar la exportación. Comprueba el destino antes de volver a intentarlo.",
+                        "NATIVE_REPORT_EXPORT_OUTCOME_UNKNOWN");
+            } else {
+                rejectJourneyReportCall(retiredReport.call, "La sesión cambió durante la exportación del informe.",
+                        "NATIVE_REPORT_EXPORT_UNAUTHENTICATED");
+            }
+        }
         boolean localClearSucceeded = true;
         NativeWidgetCredentialVault.NativeWidgetCredential credential;
         synchronized (NativeWidgetOperations.LOCK) {
@@ -945,6 +1395,22 @@ public final class PulseNativePlugin extends Plugin {
             });
         } catch (RejectedExecutionException ignored) {
             // The next resume or periodic request will re-check the same state.
+        }
+    }
+
+    private enum JourneyReportStage { FETCHING, READY, PICKER, WRITING }
+
+    private enum JourneyReportWriteGate { READY, SESSION_CHANGED, RETIRED }
+
+    private static final class PendingJourneyReport {
+        final PluginCall call;
+        final NativeJourneyReportState.Operation operation;
+        JourneyReportStage stage = JourneyReportStage.FETCHING;
+        String canonicalJson;
+
+        PendingJourneyReport(PluginCall call, NativeJourneyReportState.Operation operation) {
+            this.call = call;
+            this.operation = operation;
         }
     }
 
