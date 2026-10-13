@@ -2,6 +2,7 @@
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { ApiError } from '../lib/api';
 	import MapCanvas from '../lib/MapCanvas.svelte';
+	import NavigationFavoritesPanel from '../lib/NavigationFavoritesPanel.svelte';
 	import {
 		connectorLabels,
 		distanceMeters,
@@ -19,7 +20,7 @@
 	} from '../lib/navigation';
 	import type { NavigationChargers, NavigationPlace, NavigationSearch, NavigationStation, NavigationStatus, PageProps } from '../lib/types';
 
-	let { online, navigation, theme }: Pick<PageProps, 'online' | 'navigation' | 'theme'> = $props();
+	let { online, navigation, theme, busy, revision, drafts, mutate, confirmAction, onSessionExpired }: Pick<PageProps, 'online' | 'navigation' | 'theme' | 'busy' | 'revision' | 'drafts' | 'mutate' | 'confirmAction' | 'onSessionExpired'> = $props();
 
 	const statusGate = new RequestGeneration();
 	const searchGate = new RequestGeneration();
@@ -568,6 +569,7 @@
 				<p>Selecciona un resultado o usa coordenadas públicas para mostrar opciones de mapa y consultar cargadores cercanos.</p>
 			</section>
 		{/if}
+		<NavigationFavoritesPanel {busy} {online} {revision} {drafts} {mutate} {confirmAction} {onSessionExpired} />
 		<div class="notice navigation-limit-note"><span>Los datos de lugares y cargadores vienen de OpenStreetMap. No se consulta la ubicación del vehículo y no se presenta una ruta ni disponibilidad en tiempo real.</span></div>
 	</aside>
 </div>
@@ -625,7 +627,7 @@
 	.center-notice, .selected-station-note { margin: 10px 0 0; padding: 9px 10px; border-radius: 9px; background: var(--accent-soft); color: var(--muted-strong); font-size: .75rem; line-height: 1.5; }
 	.selected-station-note > p { margin: 0; }
 	.selected-station-note .station-map-links { grid-template-columns: minmax(0, 1fr); margin-top: 8px; }
-	.selected-station-note .station-map-links .button { min-height: 44px; white-space: normal; }
+	.selected-station-note .station-map-links .button { min-height: 48px; white-space: normal; }
 	.selected-station-note .destination-sharing { margin-top: 7px; }
 	.station-card { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-raised); }
 	.station-card.station-selected { border-color: var(--forest); background: var(--forest-soft); }
@@ -645,6 +647,10 @@
 	.map-guidance { margin: 9px 2px 0; }
 	.map-feedback { margin: 9px 0 0; color: var(--muted-strong); font-size: .875rem; }
 	.navigation-limit-note { font-size: .875rem; }
+	.destination-card { display: grid; gap: 18px; }
+	.destination-heading h3 { font-size: clamp(1.25rem, 2vw, 1.65rem); letter-spacing: -.025em; }
+	.destination-coordinates { padding-top: 11px; border-top: 1px solid var(--line); }
+	:global(.navigation-side-column > .favorites-panel) { margin-top: 3px; padding-top: 22px; border-top: 1px solid var(--line); }
 	@media (max-width: 1000px) {
 		.navigation-layout, .navigation-layout.map-visible { grid-template-columns: minmax(0, 1fr); }
 		.navigation-side-column { grid-template-columns: minmax(0, 1fr); }

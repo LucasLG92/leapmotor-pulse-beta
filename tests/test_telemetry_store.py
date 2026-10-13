@@ -6,7 +6,11 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from pulse.domain import DomainError, Store
-from schema_helpers import downgrade_backup_alerts_to_v17, downgrade_telemetry_to_v15
+from schema_helpers import (
+    downgrade_backup_alerts_to_v17,
+    downgrade_export_to_v16,
+    downgrade_telemetry_to_v15,
+)
 
 
 SOURCE = "MATE-API B10ReadClient"
@@ -359,6 +363,7 @@ def test_v3_round_trip_and_legacy_restore_clear_v3_data_without_mixing(tmp_path)
     assert destination.list_widget_profiles("owner-b")["items"] == []
 
     legacy = copy.deepcopy(exported)
+    downgrade_export_to_v16(legacy)
     legacy["schema_version"] = 2
     legacy.pop("manual_journeys")
     legacy["settings"].pop("vehicle_color")
@@ -398,7 +403,7 @@ def test_v15_archive_restores_new_fields_and_v14_v13_add_nulls(tmp_path):
     source = make_store(tmp_path, filename="source.sqlite3")
     source_item = source.record_snapshot(snapshot())
     archive = source.export_data()
-    assert archive["schema_version"] == 16
+    assert archive["schema_version"] == 17
     assert len(archive["telemetry_snapshots"][0]["vehicle"]) == 14
     assert len(archive["telemetry_snapshots"][0]["field_sources"]) == 14
 
@@ -407,6 +412,7 @@ def test_v15_archive_restores_new_fields_and_v14_v13_add_nulls(tmp_path):
     assert destination.telemetry_latest() == source_item
 
     legacy_v14 = copy.deepcopy(archive)
+    downgrade_export_to_v16(legacy_v14)
     legacy_v14["schema_version"] = 14
     legacy_v14.pop("manual_journeys")
     for field in SECURITY_CODE_FIELDS:
@@ -421,6 +427,7 @@ def test_v15_archive_restores_new_fields_and_v14_v13_add_nulls(tmp_path):
     assert all(v14_latest["field_sources"][field] is None for field in SECURITY_CODE_FIELDS)
 
     legacy_v13 = copy.deepcopy(archive)
+    downgrade_export_to_v16(legacy_v13)
     legacy_v13["schema_version"] = 13
     legacy_v13.pop("manual_journeys")
     legacy_item = legacy_v13["telemetry_snapshots"][0]
@@ -503,7 +510,7 @@ def test_schema_15_migration_adds_nullable_metrics_and_preserves_snapshots(tmp_p
     ))
     assert all(migrated.telemetry_latest()["vehicle"][field] is None for field in SECURITY_CODE_FIELDS)
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 20
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 21
     assert all(migrated.telemetry_latest()["field_sources"][field] is None for field in (
         "interior_temperature_c", "battery_min_temperature_c", "front_left_pressure_kpa",
         "front_right_pressure_kpa", "rear_left_pressure_kpa", "rear_right_pressure_kpa",
@@ -568,7 +575,7 @@ def test_representative_schema16_fixture_migrates_additively_without_inference(t
     )
     assert migrated.list_widget_profiles("owner-migration")["items"] == [legacy["profile"]]
     with sqlite3.connect(migration_path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 20
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 21
         columns = {
             row[1] for row in connection.execute("PRAGMA table_info(telemetry_snapshots)")
         }

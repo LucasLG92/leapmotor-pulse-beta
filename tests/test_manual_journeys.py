@@ -11,6 +11,7 @@ import pytest
 from pulse import domain as domain_module
 from pulse.domain import DomainError, EXPORT_VERSION, SCHEMA_VERSION, Store
 from pulse import manual_journeys as manual_journeys_module
+from schema_helpers import downgrade_current_schema_to_v20, downgrade_export_to_v16
 
 
 NOW = datetime(2026, 10, 13, 12, 0, tzinfo=timezone.utc)
@@ -36,12 +37,13 @@ def create(store, owner="owner-a", data=None, request=None):
     return request, store.add_manual_journey(owner, request["id"], data)
 
 
-def test_schema_19_migrates_to_20_without_changing_existing_charge(tmp_path):
+def test_schema_19_migrates_to_current_without_changing_existing_charge(tmp_path):
     path = tmp_path / "pulse.sqlite3"
     store = Store(path, clock=lambda: NOW)
     charge = store.add_charge({"started_at": "2026-10-12T08:00:00Z", "kwh": 12})
 
     with sqlite3.connect(path) as connection:
+        downgrade_current_schema_to_v20(connection)
         connection.execute("DROP TABLE manual_journey_requests")
         connection.execute("DROP TABLE manual_journeys")
         connection.execute("PRAGMA user_version = 19")
@@ -49,14 +51,14 @@ def test_schema_19_migrates_to_20_without_changing_existing_charge(tmp_path):
     reopened = Store(path, clock=lambda: NOW)
     assert reopened.get_charge(charge["id"]) == charge
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 20
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 21
         names = {
             row[0] for row in connection.execute(
                 "SELECT name FROM sqlite_master WHERE type='table'"
             )
         }
     assert {"manual_journeys", "manual_journey_requests"} <= names
-    assert SCHEMA_VERSION == 20
+    assert SCHEMA_VERSION == 21
 
 
 def test_creation_normalizes_zones_calculates_stops_and_survives_restart(tmp_path):
@@ -421,7 +423,7 @@ def test_json16_export_restore_is_owner_scoped_and_invalidates_only_that_owner(t
         started_at="2026-10-11T09:00:00Z", ended_at="2026-10-11T10:00:00Z"
     ))
     archive = store.export_data(owner_id="owner-a")
-    assert archive["schema_version"] == EXPORT_VERSION == 16
+    assert archive["schema_version"] == EXPORT_VERSION == 17
     assert [item["id"] for item in archive["manual_journeys"]] == [journey_a["id"]]
     store.import_data(archive, owner_id="owner-a")
 
@@ -476,6 +478,7 @@ def test_json15_restore_clears_only_target_owner_manual_journeys(tmp_path):
     request_b, journey_b = create(store, "owner-b")
     create(store, "owner-a")
     legacy = store.export_data(owner_id="owner-a")
+    downgrade_export_to_v16(legacy)
     legacy["schema_version"] = 15
     legacy.pop("manual_journeys")
 
@@ -514,7 +517,7 @@ def test_invalid_restore_preserves_reservation_and_linked_journey(tmp_path):
     store = Store(tmp_path / "pulse.sqlite3", clock=lambda: NOW)
     request, journey = create(store)
     invalid = store.export_data(owner_id="owner-a")
-    invalid["schema_version"] = 17
+    invalid["schema_version"] = EXPORT_VERSION + 1
     with pytest.raises(DomainError):
         store.import_data(invalid, owner_id="owner-a")
     assert store.add_manual_journey("owner-a", request["id"], values()) == journey
@@ -559,7 +562,7 @@ def test_manual_journey_export_enforces_budget_incrementally_and_restores(tmp_pa
     item_bytes = len(json.dumps(
         sample, allow_nan=False, separators=(",", ":"), ensure_ascii=False
     ).encode("utf-8"))
-    monkeypatch.setattr(domain_module, "MAX_V16_IMPORT_BYTES", item_bytes + 3)
+    monkeypatch.setattr(domain_module, "MAX_V17_IMPORT_BYTES", item_bytes + 3)
     seen = []
     original_item = manual_journeys_module._journey_item
 
@@ -578,7 +581,7 @@ def test_manual_journey_export_enforces_budget_incrementally_and_restores(tmp_pa
     } == before
 
     monkeypatch.setattr(manual_journeys_module, "_journey_item", original_item)
-    monkeypatch.setattr(domain_module, "MAX_V16_IMPORT_BYTES", 5_000_000)
+    monkeypatch.setattr(domain_module, "MAX_V17_IMPORT_BYTES", 5_000_000)
     archive = store.export_data(owner_id="owner-a")
     assert {row["id"] for row in archive["manual_journeys"]} == set(before)
     store.import_data(archive, owner_id="owner-a")

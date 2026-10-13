@@ -168,6 +168,8 @@ class ManualJourney(BaseModel):
     ended_at: str
     from_label: str | None
     to_label: str | None
+    notes: str | None = Field(max_length=2000)
+    tags: list[str] = Field(max_length=8)
     distance_km: float | None = Field(ge=0, le=50_000, allow_inf_nan=False)
     energy_kwh: float | None = Field(ge=0, le=5_000, allow_inf_nan=False)
     stops: list[ManualJourneyStop] = Field(max_length=32)

@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-10-13",
+  "increment": "cockpit-and-manual-tools-20261013",
+  "status": "local_software_verified_native_physical_pending",
+  "candidate_snapshot": "prepublication_source_stage",
+  "publication_note": "Corte previo a cualquier publicación posterior; un recibo posterior debe registrar ese evento y no cambia por sí solo el estado global ni la aceptación física.",
+  "source_published": false,
+  "runtime_deployed": false,
+  "native_packaged": false,
+  "native_signed": false,
+  "physical_acceptance": false,
+  "objective_status": "blocked",
+  "storage_schema": 21,
+  "export_schema": 17,
+  "scope": [
+    "planes de mantenimiento con referencia manual, vencimientos, historial y coste opcional",
+    "trayectos manuales con notas, etiquetas, búsqueda, informes y exportación web",
+    "registros de energía comparables por mes y simulador informativo bajo demanda",
+    "favoritos de navegación introducidos manualmente y apertura explícita externa",
+    "rediseño de seis pantallas con diario, estados cronológicos y preferencias agrupadas"
+  ],
+  "checks": {
+    "pipeline_exit_code": 0,
+    "python_passed": 1370,
+    "python_subtests_passed": 131,
+    "python_skipped": 34,
+    "python_skip_reason": "SDK opcional no instalado; no se omiten pruebas de los módulos nuevos.",
+    "web_passed": 65,
+    "mobile_bridge_passed": 8,
+    "openapi_types_exact": true,
+    "svelte_errors": 0,
+    "svelte_warnings": 0,
+    "web_build": true,
+    "mobile_shared_build": true
+  },
+  "browser_qa": {
+    "viewport_css": [
+      1280,
+      720
+    ],
+    "themes": [
+      "Claro",
+      "Charcoal"
+    ],
+    "routes_each_theme": 6,
+    "horizontal_overflow": false,
+    "console_errors_or_warnings": 0,
+    "simulator_fold_preserves_draft": true,
+    "cancel_exit_guard_preserves_draft": true,
+    "existing_local_pwa_update_flow": true,
+    "physical_iphone": false,
+    "mobile_reflow_new_revision": false
+  },
+  "remaining": [
+    "aceptación física y accesibilidad en ambos teléfonos",
+    "lecturas B10 pasivas, unidades, vigencia y reposo contrastados con un vehículo",
+    "cargador, intervalos y gasto real contrastados con medidas suficientes",
+    "ingestión automática de trayectos y cobertura con datos reales",
+    "integraciones externas, permisos y reconexión aceptados con servicios reales",
+    "comandos físicos, rutinas, centinela y cámaras: capacidad y autorización por demostrar",
+    "firma, distribución, OAuth y widgets en dispositivos reales",
+    "siete puertas reales pendientes y nueve fases todavía vigentes"
+  ],
+  "evidence_boundary": "Los resultados de software y datos sintéticos no prueban integración física, despliegue, publicación ni aceptación completa."
+}

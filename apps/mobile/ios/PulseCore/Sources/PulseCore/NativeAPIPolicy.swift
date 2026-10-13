@@ -7,8 +7,7 @@ public enum NativeAPIPolicy {
     public static func allows(path rawPath: String, method: String) -> Bool {
         guard rawPath.utf16.count <= 2_048,
               method == method.uppercased(),
-              rawPath.hasPrefix("/api/"), !rawPath.hasPrefix("//"),
-              !rawPath.contains("#"), !rawPath.contains("\\"), !rawPath.contains("%"), !rawPath.contains(":"),
+              !rawPath.contains("#"), !rawPath.contains("\\"),
               !rawPath.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) })
         else { return false }
 
@@ -22,8 +21,9 @@ public enum NativeAPIPolicy {
             path = rawPath
             query = ""
         }
-        guard !path.isEmpty, !path.hasSuffix("/"), !path.contains("//"),
-              let parameters = parseQuery(query, pricingHistory: path == "/api/charger/pricing-history")
+        guard path.hasPrefix("/api/"), !path.hasPrefix("//"), !path.contains("%"), !path.contains(":"),
+              !path.isEmpty, !path.hasSuffix("/"), !path.contains("//"),
+              let parameters = parseQuery(query)
         else { return false }
 
         if method == "GET" {
@@ -35,7 +35,13 @@ public enum NativeAPIPolicy {
                 return boundedPageQuery(parameters)
             }
             if path == "/api/journeys" {
-                return boundedPageQuery(parameters)
+                return journeysQuery(parameters)
+            }
+            if path == "/api/maintenance-plans" {
+                return maintenancePlansQuery(parameters)
+            }
+            if path == "/api/navigation/favorites" {
+                return parameters.isEmpty
             }
             if ["/api/charger/sessions", "/api/protection/observations"].contains(path) {
                 guard boundedPageQuery(parameters) else { return false }
@@ -51,6 +57,9 @@ public enum NativeAPIPolicy {
                 guard parameters.count == 1, let days = parameters["days"], isDecimal(days) else { return false }
                 return ["30", "90", "365"].contains(days)
             }
+            if path == "/api/energy/comparison" {
+                return optionalDaysQuery(parameters)
+            }
             if path == "/api/charger/pricing-history" {
                 guard let session = parameters["session_id"], isID(session) else { return false }
                 var page = parameters
@@ -65,7 +74,11 @@ public enum NativeAPIPolicy {
         if method == "POST" {
             if ["/api/charges/quote", "/api/charges/requests", "/api/charges", "/api/journeys/requests", "/api/journeys", "/api/demo", "/api/commands",
                 "/api/protection/event", "/api/maintenance", "/api/import", "/api/widget-profiles",
-                "/api/auth/logout", "/api/navigation/places", "/api/navigation/chargers", "/api/navigation/tiles"].contains(path) {
+                "/api/auth/logout", "/api/navigation/places", "/api/navigation/chargers", "/api/navigation/tiles",
+                "/api/maintenance-plans", "/api/navigation/favorites", "/api/energy/plan"].contains(path) {
+                return parameters.isEmpty
+            }
+            if path.range(of: #"^/api/maintenance-plans/[a-f0-9]{32}/complete$"#, options: .regularExpression) != nil {
                 return parameters.isEmpty
             }
             if isProfileIDRoute(path, suffix: "/pairings") { return parameters.isEmpty }
@@ -79,15 +92,18 @@ public enum NativeAPIPolicy {
                 return parameters.isEmpty
             }
             if isSingleIDRoute(path, prefix: "/api/maintenance/") { return parameters.isEmpty }
+            if isSingleIDRoute(path, prefix: "/api/maintenance-plans/") { return parameters.isEmpty }
         }
 
         if method == "DELETE" {
             if isSingleIDRoute(path, prefix: "/api/charges/")
                 || isSingleIDRoute(path, prefix: "/api/journeys/")
                 || isSingleIDRoute(path, prefix: "/api/maintenance/")
+                || isSingleIDRoute(path, prefix: "/api/maintenance-plans/")
                 || isSingleIDRoute(path, prefix: "/api/widget-profiles/") {
                 return parameters.isEmpty
             }
+            if isSingleIDRoute(path, prefix: "/api/navigation/favorites/") { return parameters.isEmpty }
             if isWidgetGrantRoute(path) { return parameters.isEmpty }
         }
 
@@ -109,25 +125,58 @@ public enum NativeAPIPolicy {
         return true
     }
 
-    private static func parseQuery(_ query: String, pricingHistory: Bool) -> [String: String]? {
+    private static func journeysQuery(_ parameters: [String: String]) -> Bool {
+        guard Set(["limit", "offset", "search", "tag"]).isSuperset(of: parameters.keys) else { return false }
+        var page = parameters
+        let search = page.removeValue(forKey: "search")
+        let tag = page.removeValue(forKey: "tag")
+        return boundedPageQuery(page) && validOptionalText(search, maximumScalars: 100)
+            && validOptionalText(tag, maximumScalars: 32)
+    }
+
+    private static func maintenancePlansQuery(_ parameters: [String: String]) -> Bool {
+        guard Set(["limit", "offset", "odometer_km"]).isSuperset(of: parameters.keys) else { return false }
+        var page = parameters
+        let odometer = page.removeValue(forKey: "odometer_km")
+        guard boundedPageQuery(page) else { return false }
+        guard let odometer else { return true }
+        guard isDecimal(odometer), let value = Int(odometer) else { return false }
+        return (0...2_000_000).contains(value)
+    }
+
+    private static func optionalDaysQuery(_ parameters: [String: String]) -> Bool {
+        guard !parameters.isEmpty else { return true }
+        guard parameters.count == 1, let days = parameters["days"], isDecimal(days) else { return false }
+        return ["30", "90", "365"].contains(days)
+    }
+
+    private static func validOptionalText(_ value: String?, maximumScalars: Int) -> Bool {
+        guard let value else { return true }
+        return value.unicodeScalars.count <= maximumScalars
+            && !value.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) })
+    }
+
+    private static func parseQuery(_ query: String) -> [String: String]? {
         guard !query.isEmpty else { return [:] }
-        guard query.utf16.count <= 128, !query.hasPrefix("&"), !query.hasSuffix("&") else { return nil }
+        guard query.utf16.count <= 2_048, !query.hasPrefix("&"), !query.hasSuffix("&") else { return nil }
         var result: [String: String] = [:]
         for pair in query.split(separator: "&", omittingEmptySubsequences: false) {
             guard let equals = pair.firstIndex(of: "="),
                   equals != pair.startIndex,
-                  equals != pair.index(before: pair.endIndex),
                   pair[pair.index(after: equals)...].firstIndex(of: "=") == nil
             else { return nil }
-            let key = String(pair[..<equals])
-            let value = String(pair[pair.index(after: equals)...])
-            guard key.utf8.count <= 24, !key.isEmpty,
-                  key.utf8.allSatisfy({ (97...122).contains($0) || $0 == 95 }),
-                  (pricingHistory && key == "session_id" ? isID(value) : isDecimal(value)), result[key] == nil
-            else { return nil }
+            let rawKey = String(pair[..<equals])
+            let rawValue = String(pair[pair.index(after: equals)...])
+            guard let key = decodeQueryComponent(rawKey), let value = decodeQueryComponent(rawValue),
+                  !key.isEmpty, result[key] == nil else { return nil }
             result[key] = value
         }
         return result
+    }
+
+    /// Decodes one query component once; literal '+' follows form-query semantics.
+    private static func decodeQueryComponent(_ raw: String) -> String? {
+        raw.replacingOccurrences(of: "+", with: " ").removingPercentEncoding
     }
 
     private static func isDecimal(_ value: String) -> Bool {

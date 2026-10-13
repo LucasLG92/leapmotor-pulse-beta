@@ -115,6 +115,8 @@ class ManualJourneyFieldsPayload(Payload):
     distance_km: float | None = Field(ge=0, le=50_000, allow_inf_nan=False)
     energy_kwh: float | None = Field(ge=0, le=5_000, allow_inf_nan=False)
     stops: list[ManualJourneyStopPayload] = Field(max_length=32)
+    notes: str | None = Field(default=None, max_length=2000)
+    tags: list[str] = Field(default_factory=list, max_length=8)
 
 
 class ManualJourneyPayload(ManualJourneyFieldsPayload):
@@ -417,9 +419,12 @@ def create_app(db_path: str | Path | None = None, *, name: str | None = None,
         request: Request,
         limit: int = Query(default=20, ge=1, le=100),
         offset: int = Query(default=0, ge=0),
+        tag: str | None = Query(default=None, max_length=32),
+        search: str | None = Query(default=None, max_length=100),
     ):
         return await coordinator.call(
-            "list_manual_journeys", owner_id(request), limit, offset
+            "list_manual_journeys", owner_id(request), limit, offset,
+            tag=tag, search=search
         )
 
     @app.get("/api/journeys/report", response_model=ManualJourneyReport)
@@ -453,7 +458,7 @@ def create_app(db_path: str | Path | None = None, *, name: str | None = None,
             pattern=r"^[0-9a-f]{32}$", min_length=32, max_length=32
         ),
     ):
-        data = values.model_dump(exclude={"revision"})
+        data = values.model_dump(exclude={"revision"}, exclude_unset=True)
         return await coordinator.call(
             "update_manual_journey", owner_id(request), journey_id,
             values.revision, data, write=True,
@@ -588,6 +593,9 @@ def create_app(db_path: str | Path | None = None, *, name: str | None = None,
             raise DomainError("Recarga Pulse e inicia sesión para gestionar tus widgets.", 401)
         return record.user["id"]
 
+    from pulse.evolution_api import register_evolution
+    register_evolution(app, coordinator, owner_id)
+
     register_native(app, config, coordinator, native_gateway, owner_id, sessions)
     register_push(app, push, owner_id)
 
@@ -684,7 +692,7 @@ def create_app(db_path: str | Path | None = None, *, name: str | None = None,
     @app.head("/{path:path}", include_in_schema=False)
     @app.get("/{path:path}", include_in_schema=False)
     async def shell(path: str, request: Request):
-        if path in {"icon.svg", "icon-180.png", "icon-192.png", "icon-512.png", "apple-touch-icon.png"} and (dist / path).is_file():
+        if path in {"icon.svg", "icon-180.png", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "journey-report.css"} and (dist / path).is_file():
             return await public_files.get_response(path, request.scope)
         if path not in {"", "index.html", "energy", "navigation", "activity", "protection", "settings"}:
             raise DomainError("Página no encontrada.", 404)

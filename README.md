@@ -4,27 +4,26 @@ Aplicación independiente para explorar datos de movilidad y carga desde un serv
 
 ## Estado del candidato local
 
-El candidato identifica Android como versión **0.1.1 (versionCode 2)** e iOS como **0.1.1 (build 2)**. Ambos siguen siendo candidatos locales sin entregar. En el checkout limpio de publicación, la suite Python pasó en ambos stages: **1.174 pruebas y 87 subcasos**. La validación web pasó **43 pruebas**, la móvil compartida **7**, Svelte registró **0 errores y 0 avisos**, y TypeScript y los builds web/móvil terminaron correctamente. Son resultados locales, no una ejecución nueva de CI.
+El incremento de interfaz y herramientas manuales del 13 de octubre es un corte **prepublicación** de software local, todavía no entregado ni desplegado. El objetivo global sigue bloqueado: permanecen nueve fases y siete puertas reales pendientes. Un recibo posterior debe registrar cualquier publicación; este corte no predice ese estado. La aceptación física y el cierre del producto no se infieren de una compilación o de datos sintéticos.
 
-La primera ejecución limpia mostró que `test_navigation_http` suponía que `dist` existía antes de pytest. Se corrigió solo el fixture de prueba para crear ese directorio temporal; pasaron las pruebas focales y la suite completa posterior pasó en ambos stages. No se alteró el runtime para resolver esa dependencia del test.
+La interfaz presenta el coche y sus lecturas con procedencia visible; Energía muestra registros comparables y abre el simulador solo a petición; Actividad organiza trayectos y mantenimiento en un diario; Mapa guarda destinos introducidos manualmente; Estados prioriza la cronología; Ajustes agrupa preferencias por propósito. El simulador es informativo y no programa cargas ni controla el vehículo.
 
-Android se ensambló sin firma. Para iOS solo se completó la sincronización de Capacitor; no hay build Xcode ni verificación de firma o distribución para este candidato. No se incluyen APKs, archivos de configuración de una instalación concreta, logs externos ni recibos de servidor.
+En la cualificación local registrada para este incremento: 1.370 pruebas Python y 131 subcasos pasaron, se omitieron 34 pruebas por un SDK opcional no instalado, pasaron 65 pruebas web y 8 de puente móvil; Svelte informó 0 errores y 0 avisos, y los contratos/builds compartidos finalizaron correctamente. La revisión visual cubrió las seis pantallas a 1280×720 CSS en Claro y Charcoal, sin overflow horizontal ni errores de consola observados. También se comprobó la conservación del borrador del simulador al plegarlo y cancelar la salida, y la actualización desde una PWA local anterior. Estos recibos no acreditan dispositivos físicos, accesibilidad física, firma, distribución o servicios reales.
 
-El diagnóstico pasivo conserva esquema SQLite **17** y formato de exportación JSON **15**. Guarda códigos recibidos junto con su origen y momento de observación cuando están disponibles, sin asignarles significado físico. Las selecciones MQTT son optativas y comienzan desactivadas. Las pruebas de interfaz y de integraciones usan datos sintéticos.
-
-El proyecto mantiene **nueve fases** de trabajo y **siete puertas reales pendientes**. Builds, pruebas sintéticas y datos de simulador no acreditan por sí solos aceptación física ni el objetivo completo. Consulta [validación del candidato](docs/VALIDATION.md), [registro de aceptación](docs/ACCEPTANCE.md) y [estado estructurado](docs/DELIVERY-STATUS.json).
+Android e iOS siguen como candidatos locales sin entregar. Las órdenes físicas permanecen bloqueadas; no se atribuyen sensores, GPS, cámaras o recepción de señales que no estén verificados. Consulta [dirección visual](docs/VISUAL-DIRECTION.md), [incremento](docs/EVOLUTION-20261013.md), [cualificación](docs/EVOLUTION-QUALIFICATION.json), [roadmap](docs/ROADMAP.md) y [estado estructurado](docs/DELIVERY-STATUS.json).
 
 ## Qué ofrece
 
 | Capacidad | Estado |
 | --- | --- |
-| Interfaz web y PWA | La interfaz y el modo local están implementados; compatibilidad y aceptación se documentan por candidato y dispositivo. |
-| Registros de energía | Admite registros personales y estimaciones PVPC; los importes estimados no son facturas ni medidas certificadas. |
-| Sesiones de evcc | Integración optativa; necesita configuración y validación con el cargador correspondiente. |
-| Datos del vehículo | Adaptador de lectura preparado; el login, las señales del B10 y su frescura siguen pendientes de cualificación. |
-| Home Assistant/MQTT, ABRP y mapas | Integraciones optativas; no se activan sin elección y configuración explícitas. |
-| Apps y widgets | Hay código Android/iOS; la firma, distribución, autenticación y aceptación nativa siguen pendientes para este candidato. |
-| Órdenes físicas, cámaras y centinela | Las órdenes permanecen bloqueadas; cámaras y centinela requieren demostrar primero capacidad y acceso autorizados. |
+| Interfaz web y PWA | Candidato de software con Claro/Charcoal, reflujo y estados de borrador/error; compatibilidad y aceptación física siguen pendientes. |
+| Energía y carga | Registros manuales comparables por mes; simulador informativo bajo demanda, con huecos y supuestos explícitos. |
+| Actividad y mantenimiento | Diario de trayectos manuales con notas/etiquetas e historial de planes por fecha/odómetro; no implica ingestión del coche. |
+| Mapa | Favoritos de coordenadas aportadas por la persona y apertura explícita de aplicaciones externas; sin GPS ni ruta automática. |
+| Estados y Ajustes | Historial cronológico y preferencias agrupadas por propósito. |
+| Integraciones y datos del vehículo | Requieren configuración y cualificación específica; sus estados de demo, caducidad, procedencia y errores se mantienen diferenciados. |
+| Apps y widgets | El código compartido no acredita firma, distribución, autenticación ni aceptación nativa. |
+| Órdenes físicas, cámaras y centinela | Permanecen bloqueados o pendientes de demostrar capacidad y acceso autorizados. |
 
 ## Instalación local
 

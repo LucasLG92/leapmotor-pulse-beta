@@ -4,6 +4,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Locale;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import org.junit.Test;
 
@@ -70,9 +72,10 @@ public final class NativeApiPolicyTest {
                 "&offset=-1", "&extra=1", "&session_id=" + ID, "&limit=10&limit=20"}) {
             assertFalse(NativeApiPolicy.allows(route + suffix, "GET"));
         }
-        for (String value : new String[]{ID.substring(1), ID.toUpperCase(), "%30" + ID.substring(1), "../" + ID}) {
+        for (String value : new String[]{ID.substring(1), ID.toUpperCase(), "%2530" + ID.substring(1), "../" + ID}) {
             assertFalse(NativeApiPolicy.allows("/api/charger/pricing-history?session_id=" + value, "GET"));
         }
+        assertTrue(NativeApiPolicy.allows("/api/charger/pricing-history?session_id=%30" + ID.substring(1), "GET"));
         assertFalse(NativeApiPolicy.allows("/api/charger/pricing-history", "GET"));
         assertFalse(NativeApiPolicy.allows("/api/charger/sessions?session_id=" + ID, "GET"));
         for (String method : new String[]{"POST", "PUT", "DELETE"}) {
@@ -139,6 +142,101 @@ public final class NativeApiPolicyTest {
         assertFalse(NativeApiPolicy.allows("/api/journeys/" + ID, "POST"));
         assertFalse(NativeApiPolicy.allows("/api/journeys", "get"));
         assertFalse(NativeApiPolicy.allows("/api/journeys", "post"));
+    }
+
+    @Test public void manualJourneyFiltersDecodeOnceAndEnforceUnicodeAndControlBounds() {
+        String longSearch = URLEncoder.encode("🚙".repeat(100), StandardCharsets.UTF_8);
+        String longTag = URLEncoder.encode("🛠".repeat(32), StandardCharsets.UTF_8);
+        assertTrue(NativeApiPolicy.allows("/api/journeys?search=" + longSearch + "&tag=" + longTag
+                + "&limit=100&offset=1000000", "GET"));
+        assertTrue(NativeApiPolicy.allows("/api/journeys?search=viaje+interurbano&tag=%C3%A9", "GET"));
+        assertTrue(NativeApiPolicy.allows("/api/journeys?search=%23ruta", "GET"));
+        assertTrue(NativeApiPolicy.allows("/api/journeys?search=%2526literal", "GET"));
+        assertTrue(NativeApiPolicy.allows("/api/journeys?search=", "GET"));
+        assertTrue(NativeApiPolicy.allows("/api/journeys?%6cimit=%31", "GET"));
+
+        for (String path : new String[]{
+                "/api/journeys?search=" + URLEncoder.encode("🚙".repeat(101), StandardCharsets.UTF_8),
+                "/api/journeys?tag=" + URLEncoder.encode("🛠".repeat(33), StandardCharsets.UTF_8),
+                "/api/journeys?search=%00", "/api/journeys?search=%7f", "/api/journeys?tag=%C2%80",
+                "/api/journeys?search=%E2%28%A1", "/api/journeys?search=%ZZ", "/api/journeys?search=%",
+                "/api/journeys?limit=1&%6cimit=2", "/api/journeys?%78=1",
+                "/api/journeys?offset=2147483648", "/api/journeys?search=bad#fragment",
+                "/api/journeys?search=%2526&search=again"}) {
+            assertFalse(path, NativeApiPolicy.allows(path, "GET"));
+        }
+        assertFalse(NativeApiPolicy.allows("/api/journeys?limit=%2531", "GET"));
+        assertFalse(NativeApiPolicy.allows("/api/journeys/document", "GET"));
+        assertFalse(NativeApiPolicy.allows("/api/journeys/document?format=csv", "GET"));
+    }
+
+    @Test public void maintenancePlansHaveExactRoutesAndBoundedReadFilters() {
+        String route = "/api/maintenance-plans";
+        assertTrue(NativeApiPolicy.allows(route, "GET"));
+        assertTrue(NativeApiPolicy.allows(route + "?limit=1&offset=1000000&odometer_km=0", "GET"));
+        assertTrue(NativeApiPolicy.allows(route + "?limit=100&odometer_km=2000000", "GET"));
+        assertTrue(NativeApiPolicy.allows(route + "?%6fdometer_km=%32%30%30%30%30%30%30", "GET"));
+        assertTrue(NativeApiPolicy.allows(route, "POST"));
+        assertTrue(NativeApiPolicy.allows(route + "/" + ID, "PUT"));
+        assertTrue(NativeApiPolicy.allows(route + "/" + ID, "DELETE"));
+        assertTrue(NativeApiPolicy.allows(route + "/" + ID + "/complete", "POST"));
+
+        for (String path : new String[]{route + "?limit=0", route + "?limit=101", route + "?offset=1000001",
+                route + "?odometer_km=-1", route + "?odometer_km=2000001", route + "?odometer_km=2147483648",
+                route + "?odometer_km=1.5", route + "?odometer_km=1&odometer_km=2",
+                route + "?odometer_km=1&%6fdometer_km=2", route + "?refresh=1",
+                route + "/" + ID.toUpperCase(Locale.ROOT), route + "/../" + ID,
+                route + "/" + ID + "/complete/extra", route + "/%30" + ID.substring(1)}) {
+            assertFalse(path, NativeApiPolicy.allows(path, path.equals(route + "/" + ID + "/complete/extra")
+                    ? "POST" : path.equals(route + "/../" + ID) || path.contains("?") ? "GET" : "PUT"));
+        }
+        for (String method : new String[]{"PUT", "DELETE", "PATCH"}) {
+            assertFalse(NativeApiPolicy.allows(route, method));
+        }
+        for (String method : new String[]{"GET", "POST", "PATCH"}) {
+            assertFalse(NativeApiPolicy.allows(route + "/" + ID, method));
+        }
+        for (String method : new String[]{"GET", "PUT", "DELETE", "PATCH"}) {
+            assertFalse(NativeApiPolicy.allows(route + "/" + ID + "/complete", method));
+        }
+        assertFalse(NativeApiPolicy.allows(route + "?limit=1", "POST"));
+        assertFalse(NativeApiPolicy.allows(route + "/" + ID + "?x=1", "DELETE"));
+    }
+
+    @Test public void navigationFavoritesAndEnergyRoutesHaveExactMethods() {
+        String favorites = "/api/navigation/favorites";
+        assertTrue(NativeApiPolicy.allows(favorites, "GET"));
+        assertTrue(NativeApiPolicy.allows(favorites, "POST"));
+        assertTrue(NativeApiPolicy.allows(favorites + "/" + ID, "DELETE"));
+        assertFalse(NativeApiPolicy.allows(favorites + "/" + ID, "GET"));
+        assertFalse(NativeApiPolicy.allows(favorites + "/" + ID.toUpperCase(Locale.ROOT), "DELETE"));
+        for (String path : new String[]{favorites + "?x=1", favorites + "/" + ID + "?x=1"}) {
+            for (String method : new String[]{"GET", "POST", "PUT", "DELETE"}) {
+                assertFalse(path + " " + method, NativeApiPolicy.allows(path, method));
+            }
+        }
+        for (String method : new String[]{"PUT", "DELETE", "PATCH"}) {
+            assertFalse(NativeApiPolicy.allows(favorites, method));
+        }
+
+        String comparison = "/api/energy/comparison";
+        assertTrue(NativeApiPolicy.allows(comparison, "GET"));
+        for (String days : new String[]{"30", "90", "365"}) {
+            assertTrue(NativeApiPolicy.allows(comparison + "?days=" + days, "GET"));
+        }
+        assertTrue(NativeApiPolicy.allows(comparison + "?days=%39%30", "GET"));
+        for (String path : new String[]{comparison + "?days=7", comparison + "?days=90&days=30",
+                comparison + "?days=%2533%2530", comparison + "?days=30&unknown=1"}) {
+            assertFalse(path, NativeApiPolicy.allows(path, "GET"));
+        }
+        for (String method : new String[]{"POST", "PUT", "DELETE", "PATCH"}) {
+            assertFalse(NativeApiPolicy.allows(comparison, method));
+        }
+        assertTrue(NativeApiPolicy.allows("/api/energy/plan", "POST"));
+        for (String method : new String[]{"GET", "PUT", "DELETE", "PATCH"}) {
+            assertFalse(NativeApiPolicy.allows("/api/energy/plan", method));
+        }
+        assertFalse(NativeApiPolicy.allows("/api/energy/plan?days=90", "POST"));
     }
 
     @Test public void rejectsRoutesAndInputsOutsideExplicitAllowlist() {

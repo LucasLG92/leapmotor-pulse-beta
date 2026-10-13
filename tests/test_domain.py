@@ -8,7 +8,11 @@ import pytest
 
 from pulse import domain
 from pulse.domain import DomainError, EXPORT_VERSION, SCHEMA_VERSION, Store
-from schema_helpers import downgrade_backup_alerts_to_v17, downgrade_telemetry_to_v15
+from schema_helpers import (
+    downgrade_backup_alerts_to_v17,
+    downgrade_export_to_v16,
+    downgrade_telemetry_to_v15,
+)
 
 
 def make_store(tmp_path):
@@ -491,8 +495,8 @@ def test_json_archive_v6_and_import_preserves_private_push_rows(tmp_path):
         expiry.isoformat(),
     )
     archive = store.export_data()
-    assert SCHEMA_VERSION == 20
-    assert archive["schema_version"] == EXPORT_VERSION == 16
+    assert SCHEMA_VERSION == 21
+    assert archive["schema_version"] == EXPORT_VERSION == 17
     assert archive["charger_energy"] == {"epochs": [], "intervals": []}
     assert "push_subscriptions" not in archive
     assert row["ciphertext"] not in json.dumps(archive, ensure_ascii=False)
@@ -524,7 +528,7 @@ def test_schema_v11_migration_preserves_existing_charge_costs(tmp_path):
         connection.execute("PRAGMA user_version = 11")
 
     migrated = Store(path)
-    assert SCHEMA_VERSION == 20
+    assert SCHEMA_VERSION == 21
     restored = migrated.get_charge(charge["id"])
     assert restored["cost_eur"] == 1.61
     assert restored["tariff_eur_kwh"] == 0.23
@@ -539,6 +543,7 @@ def test_json_v9_import_preserves_charge_cost_and_exports_current(tmp_path):
     source.update_settings({"tariff_eur_kwh": 0.23})
     charge = source.add_charge({"started_at": "2026-10-08T08:00:00Z", "kwh": 7})
     legacy = source.export_data()
+    downgrade_export_to_v16(legacy)
     legacy["schema_version"] = 9
     legacy.pop("manual_journeys")
     legacy["settings"].pop("vehicle_color")
@@ -551,13 +556,14 @@ def test_json_v9_import_preserves_charge_cost_and_exports_current(tmp_path):
     assert restored["cost_eur"] == 1.61
     assert restored["tariff_eur_kwh"] == 0.23
     current = destination.export_data()
-    assert current["schema_version"] == 16
+    assert current["schema_version"] == 17
     assert current["charger_energy"] == {"epochs": [], "intervals": []}
 
 def test_schema_v3_archive_import_remains_compatible(tmp_path):
     source = make_store(tmp_path)
     source.set_demo(True)
     v3 = copy.deepcopy(source.export_data())
+    downgrade_export_to_v16(v3)
     v3["schema_version"] = 3
     v3.pop("manual_journeys")
     v3.pop("charger")
@@ -575,7 +581,7 @@ def test_schema_v3_archive_import_remains_compatible(tmp_path):
     destination = Store(tmp_path / "restore-v3.sqlite3")
     assert destination.import_data(v3) == {"ok": True, "mode": "demo"}
     restored = destination.export_data()
-    assert restored["schema_version"] == 16
+    assert restored["schema_version"] == 17
     assert restored["settings"]["pricing_method"] == "manual"
     assert len(restored["charges"]) == len(v3["charges"])
     assert all(charge["pricing_method"] is None for charge in restored["charges"] if charge["source"] == "demo")
@@ -736,6 +742,7 @@ def test_import_accepts_version_one_export_and_reexports_version_four(tmp_path):
     source.set_demo(True)
     source.add_charge({"started_at": "2026-10-07T08:00:00Z", "kwh": 6})
     document = source.export_data()
+    downgrade_export_to_v16(document)
     document["schema_version"] = 1
     document.pop("manual_journeys")
     document.pop("charger")
@@ -758,7 +765,7 @@ def test_import_accepts_version_one_export_and_reexports_version_four(tmp_path):
     destination = Store(tmp_path / "second.sqlite3")
     assert destination.import_data(document) == {"ok": True, "mode": "demo"}
     restored = destination.export_data()
-    assert restored["schema_version"] == 16
+    assert restored["schema_version"] == 17
     assert restored["mode"] == "demo"
     assert len(restored["charges"]) == len(document["charges"])
     assert all(item["tariff_eur_kwh"] is None for item in restored["charges"])
@@ -774,6 +781,7 @@ def test_v2_import_rejects_physical_or_inconsistent_demo_data_atomically(tmp_pat
     store.command("lock", confirmed=True)
     before = store.state("Pulse", "0.1")
     exported = store.export_data()
+    downgrade_export_to_v16(exported)
     exported["schema_version"] = 2
     exported.pop("manual_journeys")
     exported.pop("charger")
@@ -827,6 +835,7 @@ def test_v3_demo_restore_requires_the_persisted_demo_vehicle_snapshot(tmp_path):
     store.command("unlock", confirmed=True)
     before = store.export_data()
     incomplete = copy.deepcopy(before)
+    downgrade_export_to_v16(incomplete)
     incomplete["schema_version"] = 3
     incomplete.pop("manual_journeys")
     incomplete.pop("charger")

@@ -604,6 +604,145 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/maintenance-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Maintenance Plans */
+        get: operations["maintenance_plans_api_maintenance_plans_get"];
+        put?: never;
+        /** Create Plan */
+        post: operations["create_plan_api_maintenance_plans_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/maintenance-plans/{plan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Edit Plan */
+        put: operations["edit_plan_api_maintenance_plans__plan_id__put"];
+        post?: never;
+        /** Delete Plan */
+        delete: operations["delete_plan_api_maintenance_plans__plan_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/maintenance-plans/{plan_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete Plan */
+        post: operations["complete_plan_api_maintenance_plans__plan_id__complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/navigation/favorites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Favorites */
+        get: operations["favorites_api_navigation_favorites_get"];
+        put?: never;
+        /** Save Favorite */
+        post: operations["save_favorite_api_navigation_favorites_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/navigation/favorites/{favorite_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Favorite */
+        delete: operations["remove_favorite_api_navigation_favorites__favorite_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/energy/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Charging Plan */
+        post: operations["charging_plan_api_energy_plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/energy/comparison": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Comparison */
+        get: operations["comparison_api_energy_comparison_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/journeys/document": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Journey Document */
+        get: operations["journey_document_api_journeys_document_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/native-capabilities": {
         parameters: {
             query?: never;
@@ -1028,6 +1167,106 @@ export interface components {
             /** Effective Tariff Eur Kwh */
             effective_tariff_eur_kwh: number | null;
         };
+        /** ChargeComparisonLocation */
+        ChargeComparisonLocation: {
+            /** Charge Count */
+            charge_count: number;
+            /** Kwh */
+            kwh: number | null;
+            /** Cost Eur */
+            cost_eur: number | null;
+            /** Known Kwh Count */
+            known_kwh_count: number;
+            /** Known Cost Count */
+            known_cost_count: number;
+            /** Paired Count */
+            paired_count: number;
+            /** Paired Kwh */
+            paired_kwh: number | null;
+            /** Paired Cost Eur */
+            paired_cost_eur: number | null;
+            /** Effective Cost Eur Kwh */
+            effective_cost_eur_kwh: number | null;
+            /** Missing Kwh Count */
+            missing_kwh_count: number;
+            /** Missing Cost Count */
+            missing_cost_count: number;
+            /** Location */
+            location: string | null;
+        };
+        /** ChargeComparisonMonth */
+        ChargeComparisonMonth: {
+            /** Charge Count */
+            charge_count: number;
+            /** Kwh */
+            kwh: number | null;
+            /** Cost Eur */
+            cost_eur: number | null;
+            /** Known Kwh Count */
+            known_kwh_count: number;
+            /** Known Cost Count */
+            known_cost_count: number;
+            /** Paired Count */
+            paired_count: number;
+            /** Paired Kwh */
+            paired_kwh: number | null;
+            /** Paired Cost Eur */
+            paired_cost_eur: number | null;
+            /** Effective Cost Eur Kwh */
+            effective_cost_eur_kwh: number | null;
+            /** Missing Kwh Count */
+            missing_kwh_count: number;
+            /** Missing Cost Count */
+            missing_cost_count: number;
+            /** Month */
+            month: string;
+            /** Locations */
+            locations: components["schemas"]["ChargeComparisonLocation"][];
+        };
+        /** ChargeComparisonResult */
+        ChargeComparisonResult: {
+            /**
+             * Basis
+             * @constant
+             */
+            basis: "manual_entries_only";
+            /** Days */
+            days: number;
+            /** Window Start */
+            window_start: string;
+            /** Window End */
+            window_end: string;
+            totals: components["schemas"]["ChargeComparisonTotals"];
+            /** Months */
+            months: components["schemas"]["ChargeComparisonMonth"][];
+            /** Excluded Non Manual Count */
+            excluded_non_manual_count: number;
+        };
+        /** ChargeComparisonTotals */
+        ChargeComparisonTotals: {
+            /** Charge Count */
+            charge_count: number;
+            /** Kwh */
+            kwh: number | null;
+            /** Cost Eur */
+            cost_eur: number | null;
+            /** Known Kwh Count */
+            known_kwh_count: number;
+            /** Known Cost Count */
+            known_cost_count: number;
+            /** Paired Count */
+            paired_count: number;
+            /** Paired Kwh */
+            paired_kwh: number | null;
+            /** Paired Cost Eur */
+            paired_cost_eur: number | null;
+            /** Effective Cost Eur Kwh */
+            effective_cost_eur_kwh: number | null;
+            /** Missing Kwh Count */
+            missing_kwh_count: number;
+            /** Missing Cost Count */
+            missing_cost_count: number;
+        };
         /** ChargeCreationRequest */
         ChargeCreationRequest: {
             /** Id */
@@ -1243,6 +1482,90 @@ export interface components {
             history_months: number;
             energy_history: components["schemas"]["ChargerEnergyStatus"];
         };
+        /** ChargingPlanBaseline */
+        ChargingPlanBaseline: {
+            /** Intervals */
+            intervals: components["schemas"]["ChargingPlanInterval"][];
+            /** Grid Energy Kwh */
+            grid_energy_kwh: number;
+            /** Estimated Cost Eur */
+            estimated_cost_eur: number;
+        };
+        /** ChargingPlanCoverage */
+        ChargingPlanCoverage: {
+            /** Window Seconds */
+            window_seconds: number;
+            /** Priced Seconds */
+            priced_seconds: number;
+            /** Complete */
+            complete: boolean;
+        };
+        /** ChargingPlanInterval */
+        ChargingPlanInterval: {
+            /** Started At */
+            started_at: string;
+            /** Ended At */
+            ended_at: string;
+            /** Tariff Ended At */
+            tariff_ended_at: string;
+            /** Duration Seconds */
+            duration_seconds: number;
+            /** Price Eur Kwh */
+            price_eur_kwh: number;
+            /** Grid Energy Kwh */
+            grid_energy_kwh: number;
+            /** Battery Energy Kwh */
+            battery_energy_kwh: number;
+            /** Estimated Cost Eur */
+            estimated_cost_eur: number;
+            /** Partial */
+            partial: boolean;
+        };
+        /** ChargingPlanPayload */
+        ChargingPlanPayload: {
+            /** Energy Kwh */
+            energy_kwh: number;
+            /** Power Kw */
+            power_kw: number;
+            /** Efficiency Pct */
+            efficiency_pct: number;
+            /** Earliest At */
+            earliest_at: string;
+            /** Deadline At */
+            deadline_at: string;
+            /** Tariffs */
+            tariffs: components["schemas"]["PlanningTariff"][];
+        };
+        /** ChargingPlanResult */
+        ChargingPlanResult: {
+            /**
+             * Purpose
+             * @constant
+             */
+            purpose: "informational_estimate";
+            /** Requested Energy Kwh */
+            requested_energy_kwh: number;
+            /** Efficiency Pct */
+            efficiency_pct: number;
+            coverage: components["schemas"]["ChargingPlanCoverage"];
+            /** Intervals */
+            intervals: components["schemas"]["ChargingPlanInterval"][];
+            /** Grid Energy Kwh */
+            grid_energy_kwh: number;
+            /** Battery Energy Kwh */
+            battery_energy_kwh: number;
+            /** Estimated Cost Eur */
+            estimated_cost_eur: number;
+            /** Satisfied Energy Kwh */
+            satisfied_energy_kwh: number;
+            /** Unsatisfied Energy Kwh */
+            unsatisfied_energy_kwh: number;
+            earliest_feasible: components["schemas"]["ChargingPlanBaseline"];
+            /** Estimated Savings Eur */
+            estimated_savings_eur: number | null;
+            /** Warnings */
+            warnings: string[];
+        };
         /** Command */
         Command: {
             /** Id */
@@ -1387,6 +1710,33 @@ export interface components {
             /** Message */
             message: string;
         };
+        /** FavoritePage */
+        FavoritePage: {
+            /** Items */
+            items: components["schemas"]["FavoriteResult"][];
+        };
+        /** FavoritePayload */
+        FavoritePayload: {
+            /** Name */
+            name: string;
+            /** Latitude */
+            latitude: number;
+            /** Longitude */
+            longitude: number;
+        };
+        /** FavoriteResult */
+        FavoriteResult: {
+            /** Name */
+            name: string;
+            /** Latitude */
+            latitude: number;
+            /** Longitude */
+            longitude: number;
+            /** Id */
+            id: string;
+            /** Created At */
+            created_at: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1434,6 +1784,17 @@ export interface components {
             /** Completed */
             completed: boolean;
         };
+        /** MaintenanceCompletionPayload */
+        MaintenanceCompletionPayload: {
+            /** Revision */
+            revision: number;
+            /** Performed Date */
+            performed_date: string;
+            /** Odometer Km */
+            odometer_km?: number | null;
+            /** Cost Eur */
+            cost_eur?: number | null;
+        };
         /** MaintenanceEditPayload */
         MaintenanceEditPayload: {
             /** Title */
@@ -1443,12 +1804,117 @@ export interface components {
             /** Completed */
             completed?: boolean | null;
         };
+        /** MaintenanceHistoryResult */
+        MaintenanceHistoryResult: {
+            /** Id */
+            id: string;
+            /** Performed Date */
+            performed_date: string;
+            /** Odometer Km */
+            odometer_km: number | null;
+            /** Cost Eur */
+            cost_eur: number | null;
+            /** Recorded At */
+            recorded_at: string;
+        };
         /** MaintenancePayload */
         MaintenancePayload: {
             /** Title */
             title: string;
             /** Due Date */
             due_date: string;
+        };
+        /** MaintenancePlanEditPayload */
+        MaintenancePlanEditPayload: {
+            /** Title */
+            title: string;
+            /** Interval Months */
+            interval_months?: number | null;
+            /** Interval Km */
+            interval_km?: number | null;
+            /** Last Date */
+            last_date?: string | null;
+            /** Last Odometer Km */
+            last_odometer_km?: number | null;
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+            /** Revision */
+            revision: number;
+        };
+        /** MaintenancePlanPage */
+        MaintenancePlanPage: {
+            /** Items */
+            items: components["schemas"]["MaintenancePlanResult"][];
+            /** Total */
+            total: number;
+        };
+        /** MaintenancePlanPayload */
+        MaintenancePlanPayload: {
+            /** Title */
+            title: string;
+            /** Interval Months */
+            interval_months?: number | null;
+            /** Interval Km */
+            interval_km?: number | null;
+            /** Last Date */
+            last_date?: string | null;
+            /** Last Odometer Km */
+            last_odometer_km?: number | null;
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+            /** Request Id */
+            request_id?: string | null;
+        };
+        /** MaintenancePlanResult */
+        MaintenancePlanResult: {
+            /** Id */
+            id: string;
+            /** Revision */
+            revision: number;
+            /**
+             * Source
+             * @constant
+             */
+            source: "manual";
+            /** Title */
+            title: string;
+            /** Interval Months */
+            interval_months: number | null;
+            /** Interval Km */
+            interval_km: number | null;
+            /** Last Date */
+            last_date: string | null;
+            /** Last Odometer Km */
+            last_odometer_km: number | null;
+            /** Notes */
+            notes: string;
+            /** Created At */
+            created_at: string;
+            /** Updated At */
+            updated_at: string;
+            /** Due Date */
+            due_date: string | null;
+            /** Due Odometer Km */
+            due_odometer_km: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "due" | "upcoming" | "unknown";
+            /** Due Reasons */
+            due_reasons: string[];
+            /** Coverage */
+            coverage: {
+                [key: string]: "due" | "upcoming" | "unknown" | "not_configured";
+            };
+            /** History */
+            history: components["schemas"]["MaintenanceHistoryResult"][];
         };
         /** ManualJourney */
         ManualJourney: {
@@ -1474,6 +1940,10 @@ export interface components {
             from_label: string | null;
             /** To Label */
             to_label: string | null;
+            /** Notes */
+            notes: string | null;
+            /** Tags */
+            tags: string[];
             /** Distance Km */
             distance_km: number | null;
             /** Energy Kwh */
@@ -1521,6 +1991,10 @@ export interface components {
             energy_kwh: number | null;
             /** Stops */
             stops: components["schemas"]["ManualJourneyStopPayload"][];
+            /** Notes */
+            notes?: string | null;
+            /** Tags */
+            tags?: string[];
             /** Revision */
             revision: number;
         };
@@ -1570,6 +2044,10 @@ export interface components {
             energy_kwh: number | null;
             /** Stops */
             stops: components["schemas"]["ManualJourneyStopPayload"][];
+            /** Notes */
+            notes?: string | null;
+            /** Tags */
+            tags?: string[];
             /** Request Id */
             request_id: string;
         };
@@ -1913,6 +2391,15 @@ export interface components {
         };
         /** Payload */
         Payload: Record<string, never>;
+        /** PlanningTariff */
+        PlanningTariff: {
+            /** Start At */
+            start_at: string;
+            /** End At */
+            end_at: string;
+            /** Price Eur Kwh */
+            price_eur_kwh: number;
+        };
         /** PriceInterval */
         PriceInterval: {
             /** Started At */
@@ -2087,6 +2574,11 @@ export interface components {
             /** Detail */
             detail: string;
         };
+        /** RevisionPayload */
+        RevisionPayload: {
+            /** Revision */
+            revision: number;
+        };
         /** SessionResponse */
         SessionResponse: {
             /** Csrf Token */
@@ -2201,6 +2693,8 @@ export interface components {
             integrations: components["schemas"]["IntegrationsStatus"];
             setup: components["schemas"]["SetupStatus"];
         };
+        /** StrictPayload */
+        StrictPayload: Record<string, never>;
         /** TelemetryPage */
         TelemetryPage: {
             /** Items */
@@ -3163,6 +3657,8 @@ export interface operations {
             query?: {
                 limit?: number;
                 offset?: number;
+                tag?: string | null;
+                search?: string | null;
             };
             header?: never;
             path?: never;
@@ -3756,6 +4252,361 @@ export interface operations {
                 "application/json": components["schemas"]["Payload"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    maintenance_plans_api_maintenance_plans_get: {
+        parameters: {
+            query?: {
+                odometer_km?: number | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenancePlanPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_plan_api_maintenance_plans_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaintenancePlanPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenancePlanResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_plan_api_maintenance_plans__plan_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaintenancePlanEditPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenancePlanResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_plan_api_maintenance_plans__plan_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevisionPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    complete_plan_api_maintenance_plans__plan_id__complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaintenanceCompletionPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenancePlanResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    favorites_api_navigation_favorites_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FavoritePage"];
+                };
+            };
+        };
+    };
+    save_favorite_api_navigation_favorites_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FavoritePayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FavoriteResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_favorite_api_navigation_favorites__favorite_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                favorite_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StrictPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    charging_plan_api_energy_plan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChargingPlanPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChargingPlanResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    comparison_api_energy_comparison_get: {
+        parameters: {
+            query?: {
+                days?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChargeComparisonResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    journey_document_api_journeys_document_get: {
+        parameters: {
+            query?: {
+                days?: string;
+                format?: "csv" | "print";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

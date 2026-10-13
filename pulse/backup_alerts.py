@@ -1,4 +1,4 @@
-"""Bounded, read-only consumer contract for protected backup-monitor metadata."""
+"""Bounded, read-only consumer contract for private backup-monitor metadata."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -37,7 +37,7 @@ class BackupAlertsConfig:
     enabled: bool = False
     state_directory: str = field(default="", repr=False)
     owner_id: str = field(default="", repr=False)
-    host_profile: str = field(default="archive", repr=False)
+    host_profile: str = field(default="host", repr=False)
     poll_seconds: int = 60
     stale_after_seconds: int = 7200
 
@@ -72,7 +72,7 @@ class BackupAlertsConfig:
         try:
             return cls(enabled=True, state_directory=os.environ.get("PULSE_BACKUP_ALERTS_STATE_DIRECTORY", ""),
                        owner_id=os.environ.get("PULSE_BACKUP_ALERTS_OWNER_ID", ""),
-                       host_profile=os.environ.get("PULSE_BACKUP_ALERTS_HOST_PROFILE", "archive"),
+                       host_profile=os.environ.get("PULSE_BACKUP_ALERTS_HOST_PROFILE", "host"),
                        poll_seconds=int(os.environ.get("PULSE_BACKUP_ALERTS_POLL_SECONDS", "60")),
                        stale_after_seconds=int(os.environ.get("PULSE_BACKUP_ALERTS_STALE_AFTER_SECONDS", "7200")))
         except (ValueError, TypeError):

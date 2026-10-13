@@ -1,123 +1,38 @@
 {
   "schema_version": 1,
   "updated_at": "2026-10-13",
-  "objective_status": "active",
-  "objective_acceptance": "A0-A12, las siete puertas reales y la aceptación final siguen vigentes. Un registro estructuralmente válido o una fase de software completada no cierra por sí mismo el objetivo.",
-  "latest_delivered": {
-    "web": {
-      "increment": "startup-recovery-20261011",
-      "delivered_at": "2026-10-11",
-      "status": "delivered",
-      "scope": "Historical web increment for startup read recovery; details and receipts are summarized without deployment identifiers.",
-      "evidence": "docs/DELIVERY-EVIDENCE.json: web; resumen histórico y límites en docs/ACCEPTANCE.md."
-    },
-    "android": {
-      "increment": "brand-continuity-r14-20261011",
-      "delivered_at": "2026-10-11",
-      "status": "delivered",
-      "revision": "historical candidate",
-      "version_name": "0.1.0",
-      "version_code": 1,
-      "evidence": "docs/DELIVERY-EVIDENCE.json: android; resumen histórico y límites en docs/ACCEPTANCE.md."
-    },
-    "ios": {
-      "increment": "brand-continuity-ios-20261011",
-      "delivered_at": "2026-10-11",
-      "status": "compiled_and_simulator_startup_verified",
-      "app_and_widgetkit_compiled": true,
-      "simulator_startup_verified": true,
-      "signed_distribution": false,
-      "phone_acceptance": false,
-      "evidence": "Historical simulator build and startup record; no new iOS build is claimed for the current candidate."
-    },
-    "operations": {
-      "increment": "metadata-monitor-community-20261012",
-      "delivered_at": "2026-10-12",
-      "status": "local_metadata_monitor_qualified",
-      "scope": "Generic metadata-only monitor and community guidance. Focused checks cover absent, stale, failed and recovery states; they do not establish content integrity, restore success, external installation state or alert delivery.",
-      "evidence": "docs/SECURITY-QUALIFICATION.json:backup_monitor; deploy/community/README.md"
-    }
-  },
+  "record_scope": "prepublication_candidate_snapshot",
+  "objective_status": "blocked",
+  "objective_acceptance": "A0-A12, las siete puertas reales y la aceptación final siguen vigentes; una fase de software o un registro estructuralmente válido no las cierra.",
   "candidates": {
     "android": {
       "status": "local_candidate_not_delivered",
-      "version_name": "0.1.1",
       "version_code": 2,
-      "evidence": "docs/VALIDATION.md#candidato-y-suite-python",
-      "phase8_native_artifact_alignment": {
-        "date": "2026-10-13",
-        "sha256": "8618a4bc87530214bb3e44d14c50f6a46224480c00557bc7ac70cdf791c6eff4",
-        "size_bytes": 6535400,
-        "verified_native_asset_count": 44,
-        "empty_placeholder_count": 2,
-        "canonical_ui_asset_alignment_verified": true,
-        "source_stage_byte_identity_verified": false,
-        "signed_or_distributed": false,
-        "qualification_reference": "docs/CANDIDATE-QUALIFICATION.json#phase8_native_artifact_alignment"
-      }
+      "version_name": "0.1.1"
     },
     "ios": {
       "status": "local_candidate_not_delivered",
       "marketing_version": "0.1.1",
-      "build_number": 2,
-      "evidence": "docs/VALIDATION.md#candidato-y-suite-python",
-      "phase8_previous_pr9_ipa_status": {
-        "date": "2026-10-13",
-        "previous_pr9_ipa_includes_phase8_canonical_ui": false,
-        "phase8_ipa_build_qualified": false,
-        "signed_distribution_verified": false,
-        "qualification_reference": "docs/CANDIDATE-QUALIFICATION.json#phase8_native_artifact_alignment"
-      }
-    },
-    "web": {
-      "status": "local_candidate_not_delivered",
-      "scope": "Local candidate: accessibility and persistent-error UX, synthetic QA, six opt-in MQTT sensor fields, and passive raw-code diagnostics with source and observation time; SQLite18/JSON15. Meanings and physical behavior remain unqualified.",
-      "evidence": "docs/VALIDATION.md#candidato-y-suite-python"
-    },
-    "backup_alerts": {
-      "status": "local_candidate_not_delivered",
-      "qualification": "docs/BACKUP-ALERTS-QUALIFICATION.json",
-      "source_published": false,
-      "runtime_deployed": false,
-      "physical_acceptance": false
+      "build_number": 2
     }
+  },
+  "current_local_increment": {
+    "id": "manual-tools-visual-evolution-20261013",
+    "status": "local_software_verified_native_physical_pending",
+    "source_published": false,
+    "runtime_deployed": false,
+    "native_packaged": false,
+    "native_signed": false,
+    "storage_schema": 21,
+    "export_schema": 17
   },
   "acceptance": {
     "status": "pending",
     "physical_acceptance": false,
     "full_objective_complete": false,
-    "preserved_criteria": [
-      "A0-A12",
-      "seven-original-real-gates"
-    ],
-    "note": "La aceptación del producto requiere evidencia software y real aplicable; no se infiere de builds, CI, fixtures, simulador o resultados del checker."
+    "preserved_criteria": "A0-A12 y las siete puertas reales.",
+    "note": "Este registro es el corte previo a una eventual publicación. Builds, CI, fixtures, simuladores y resultados del checker no acreditan por sí solos publicación, aceptación física ni cierre del objetivo."
   },
-  "historical_evidence": [
-    {
-      "record": "startup-recovery-20261011",
-      "date": "2026-10-11",
-      "increment": "startup-recovery-20261011",
-      "public_source_commit": null,
-      "image_short_id": null,
-      "web_delivered": true,
-      "physical_acceptance": false,
-      "evidence_reference": "docs/ACCEPTANCE.md#aceptacion-humana-historica"
-    },
-    {
-      "record": "brand-continuity-20261011",
-      "date": "2026-10-11",
-      "increment": "brand-continuity-20261011",
-      "public_source_commit": null,
-      "android_revision": "r14",
-      "android_version_name": "0.1.0",
-      "android_version_code": 1,
-      "ios_app_widgetkit_compiled": true,
-      "ios_simulator_startup_verified": true,
-      "ios_signed_distribution": false,
-      "ios_phone_acceptance": false,
-      "evidence_reference": "docs/ACCEPTANCE.md#aceptacion-humana-historica"
-    }
-  ],
   "seven_original_real_gates": [
     {
       "id": "gate-1-negative-login-and-another-user",
@@ -168,9 +83,6 @@
       "real_criteria": [
         "Mantener abierta la aceptación física y de accesibilidad aplicable.",
         "Conservar criterios A0-A12 y las siete puertas reales."
-      ],
-      "remaining_software_checks": [
-        "Recepción de copia descargada y restauración en navegador (permisos denegados), activación/renovación Push y enlace real, conexión intermitente, lectores de pantalla y aceptación en teléfonos pendientes."
       ]
     },
     {
@@ -184,10 +96,6 @@
       "real_criteria": [
         "Firma/distribución y pruebas de OAuth, actualización, privacidad, caducidad, widgets, PWA y push en ambos teléfonos.",
         "Un emulador no acredita un teléfono."
-      ],
-      "remaining_software_checks": [
-        "APK configurado y firma de piloto autorizada; actualización/OAuth/widget físicos.",
-        "Compilación final App/WidgetKit iOS, firma y distribución."
       ]
     },
     {
@@ -200,12 +108,6 @@
       "real_criteria": [
         "Lectura pasiva contrastada con el coche, incluyendo reposo y fechas.",
         "No habilitar lecturas ni usar material privado sin autorización aplicable."
-      ],
-      "local_increment": "The current diagnostic candidate stores raw values, source and observation time where available; SQLite17/JSON15 are recorded in the current qualification. Real vehicle meaning and availability remain pending.",
-      "qualification": "docs/PHASE9-QUALIFICATION.json",
-      "remaining_software_checks": [
-        "Cualificar configuración/login/renovación y disponibilidad de cada señal con B10 real autorizado.",
-        "Mapear otros estados solo con semántica y unidades demostradas."
       ]
     },
     {
@@ -217,14 +119,6 @@
       ],
       "real_criteria": [
         "Validar con cargador y medidas reales; separar coste estimado de gasto real, red y autoconsumo."
-      ],
-      "source_contract_review": "docs/SOURCE-QUALIFICATION.md",
-      "local_increment": "Altas manuales reservadas por propietario, intención/carga atómicas y reintentos sin duplicar en UI compartida. SQLite19/JSON15; errores de respuesta/reserva, caducidad, conflictos, restore y guardas de borrador comprobados localmente. No acredita cargador, red móvil, precios físicos ni B10.",
-      "qualification": "docs/CHARGE-SAVE-QUALIFICATION.json",
-      "remaining_software_checks": [
-        "Adaptador de intervalos ligado inequívocamente a sesiones y cualificado con el cargador/origen autorizado.",
-        "Reconciliación y revisiones PVPC histórico en servicio real; red/autoconsumo sólo con mediciones suficientes.",
-        "Instalación y transporte de nuevas solicitudes en ambos clientes físicos; reintento real bajo pérdidas de red y restauración operativa."
       ]
     },
     {
@@ -237,14 +131,6 @@
       "real_criteria": [
         "Validar trayectos y cobertura con datos reales.",
         "Notas, unión reversible, informes ampliados y salud estimada son mejoras opcionales, no evidencia de datos disponibles."
-      ],
-      "source_contract_review": "docs/SOURCE-QUALIFICATION.md",
-      "qualification": "docs/MANUAL-JOURNEY-QUALIFICATION.json",
-      "local_increment": "Diario manual privado y paginado con fechas/paradas y magnitudes nullable; reserva/replay, edición revision e informe30/90/365d por propietario, SQLite20/JSON16.1285backend/131subcasos/34SDKskip,57web/7mobile y QA loopback sintética. APK genérico auditado77JUnit/Lint0errores17avisos. Publicación y Apple nuevos pendientes al congelar fuentes; sin despliegue, firma o aceptación B10.",
-      "remaining_software_checks": [
-        "Contrato B10 con identidad, unidades, fechas/frescura y cobertura antes de ingestión automática.",
-        "Validación con recorridos y energía reales; no deducir energía por SoC.",
-        "Recepción de exportación/restauración en navegador, firma/instalación y pruebas reales en ambos teléfonos."
       ]
     },
     {
@@ -256,12 +142,6 @@
       ],
       "real_criteria": [
         "Validar servicios reales y completar rutas/autonomía solo con datos y modelos cualificados."
-      ],
-      "local_increment": "Six additional sensor fields are explicitly selectable through MQTT; the integration and all fields are disabled by default. No real broker or Home Assistant receipt is claimed.",
-      "qualification": "docs/MQTT-QUALIFICATION.json",
-      "remaining_software_checks": [
-        "Recepción y cualificación HA/MQTT, ABRP, mapas/navegación en servicios y teléfonos reales.",
-        "Rutas/autonomía condicionales a decisión y modelo/datos cualificados; no añadir proveedor por implicación."
       ]
     },
     {
@@ -285,16 +165,7 @@
       "real_criteria": [
         "Probar recuperación operativa, otra cuenta, rendimiento/consumo y uso habitual reales.",
         "Mantener seguridad y recuperación como criterios continuos."
-      ],
-      "local_increment": "Local metadata-only producer journal format 2 (up to 64 transitions per profile) and a separate opt-in Push consumer with explicit per-device consent. Community host input is archive while its logical backend label remains host. The monitor itself never sends notifications; protected UID-aware metadata transfer and real receipt remain unverified.",
-      "qualification": "docs/SECURITY-QUALIFICATION.json",
-      "remaining_software_checks": [
-        "Transfer metadata to the consumer UID through a protected channel and verify the authorized deployment configuration without adding installer/Compose automation.",
-        "Verify real alert/recovery receipt, checker absence/staleness and consumer/host monitoring with current consent and session.",
-        "Complete off-host copy and whole-host/proxy/auth recovery; security, mobile performance and habitual/physical acceptance remain open.",
-        "Identify the actual pre-change deployed schema and preserve it with the compatible artifact; the local 17-to-18 migration does not establish deployed state."
-      ],
-      "backup_alerts_qualification": "docs/BACKUP-ALERTS-QUALIFICATION.json"
+      ]
     },
     {
       "id": "sentinel9final",
@@ -308,85 +179,8 @@
         "Validar reglas pasivas/avisos y capacidad física de vigilancia/cámaras.",
         "Un comando aceptado o un diario de estados no acredita cámaras ni centinela.",
         "Si falta acceso, conservar el requisito pendiente; no cerrar el objetivo por cambiarlo."
-      ],
-      "local_increment": "A passive diagnostic candidate preserves raw codes, source and observation time where available, with SQLite16→17, JSON14→15 and legacy import formats 1–14. Meaning, target availability and media access are unqualified; no camera, command or alert capability is activated.",
-      "qualification": "docs/PHASE9-QUALIFICATION.json",
-      "remaining_software_checks": [
-        "Firmware/build and actual camera/sentry options on target; no availability inference from silence.",
-        "Authorised passive source, signal meaning/observation time/coverage in target B10; native-control effect/permissions/preconditions qualified individually if supported.",
-        "Remote media transport/authentication/session operations or chosen USB clip format must be demonstrated before implementing viewer/recording/retention. Keep remote requirement pending without its interface.",
-        "Real delivered alerts, access by user, stopped/restarted/disconnected coverage, consumption and physical acceptance; earlier phase gates remain pending."
       ]
     }
   ],
-  "local_references": [
-    {
-      "path": "docs/ROADMAP.md",
-      "kind": "local"
-    },
-    {
-      "path": "docs/ACCEPTANCE.md",
-      "kind": "local"
-    },
-    {
-      "path": "docs/DELIVERY-EVIDENCE.json",
-      "kind": "local"
-    },
-    {
-      "path": "docs/CANDIDATE-QUALIFICATION.json",
-      "kind": "local"
-    },
-    {
-      "path": "docs/PHASE3-QUALIFICATION.json",
-      "kind": "local"
-    },
-    {
-      "path": "docs/SOURCE-QUALIFICATION.md",
-      "kind": "local"
-    },
-    {
-      "path": "docs/MQTT-QUALIFICATION.json",
-      "kind": "local"
-    },
-    {
-      "path": "docs/SECURITY-QUALIFICATION.json",
-      "kind": "local"
-    },
-    {
-      "path": "docs/SENTINEL-CAMERAS.md",
-      "kind": "local"
-    },
-    {
-      "path": "docs/PHASE9-QUALIFICATION.json",
-      "kind": "local"
-    },
-    {
-      "path": "docs/VALIDATION.md",
-      "kind": "local"
-    }
-  ],
-  "manual_charge_save_review": {
-    "status": "local_software_verified_delivery_pending",
-    "storage_schema": 19,
-    "export_version": 15,
-    "source_only": true,
-    "source_published": false,
-    "native_full_build_current_source": false,
-    "apple_ci_current_source": false,
-    "runtime_deployed": false,
-    "physical_acceptance": false,
-    "evidence": "evidence/phase4-charge-save-20261013",
-    "qualification": "docs/CHARGE-SAVE-QUALIFICATION.json"
-  },
-  "manual_journeys_review": {
-    "status": "local_software_verified_native_android_unsigned_apple_pending",
-    "storage_schema": 20,
-    "export_version": 16,
-    "source_published": false,
-    "native_full_build_platform": "Android",
-    "runtime_deployed": false,
-    "physical_acceptance": false,
-    "qualification": "docs/MANUAL-JOURNEY-QUALIFICATION.json",
-    "evidence": "evidence/phase5-manual-journeys-20261013"
-  }
+  "local_references": []
 }

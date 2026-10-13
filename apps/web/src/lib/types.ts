@@ -36,6 +36,15 @@ export type ObservationCoverage = components['schemas']['ObservationCoverage'];
 export type EnergyEstimates = components['schemas']['EnergyEstimates'];
 export type Journey = components['schemas']['Journey'];
 export type ManualJourney = components['schemas']['ManualJourney'];
+export type MaintenancePlan = components['schemas']['MaintenancePlanResult'];
+export type MaintenancePlanPage = components['schemas']['MaintenancePlanPage'];
+export type MaintenancePlanInput = components['schemas']['MaintenancePlanPayload'];
+export type ChargingPlanInput = components['schemas']['ChargingPlanPayload'];
+export type ChargingPlan = components['schemas']['ChargingPlanResult'];
+export type ChargingComparison = components['schemas']['ChargeComparisonResult'];
+export type NavigationFavorite = components['schemas']['FavoriteResult'];
+export type NavigationFavoritePage = components['schemas']['FavoritePage'];
+
 export type ManualJourneyPage = components['schemas']['ManualJourneyPage'];
 export type ManualJourneyReport = components['schemas']['ManualJourneyReport'];
 export type ManualJourneyCreationRequest = components['schemas']['ManualJourneyCreationRequest'];
@@ -84,6 +93,11 @@ export type MutationPayload =
 	| components['schemas']['ManualJourneyPayload']
 	| components['schemas']['ManualJourneyEditPayload']
 	| components['schemas']['ManualJourneyDeletePayload']
+	| components['schemas']['MaintenancePlanPayload']
+	| components['schemas']['MaintenancePlanEditPayload']
+	| components['schemas']['MaintenanceCompletionPayload']
+	| components['schemas']['RevisionPayload']
+	| components['schemas']['FavoritePayload']
 	| components['schemas']['MaintenancePayload']
 	| components['schemas']['MaintenanceEditPayload']
 	| components['schemas']['ImportPayload']

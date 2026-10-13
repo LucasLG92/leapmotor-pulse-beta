@@ -2,16 +2,42 @@
 export type JourneyForm = {
 	timeBasis: 'local' | 'utc';
 	started: string; ended: string; from: string; to: string;
-	distance: string; energy: string; stops: Array<{ started: string; ended: string }>;
+	distance: string; energy: string; notes: string; tags: string[];
+	stops: Array<{ started: string; ended: string }>;
 };
 export type JourneyValues = {
 	started_at: string; ended_at: string; from_label: string | null; to_label: string | null;
-	distance_km: number | null; energy_kwh: number | null;
+	distance_km: number | null; energy_kwh: number | null; notes: string | null; tags: string[];
 	stops: Array<{ started_at: string; ended_at: string }>;
 };
 
 export function emptyJourneyForm(): JourneyForm {
-	return { timeBasis: 'local', started: '', ended: '', from: '', to: '', distance: '', energy: '', stops: [] };
+	return { timeBasis: 'local', started: '', ended: '', from: '', to: '', distance: '', energy: '', notes: '', tags: [], stops: [] };
+}
+
+function hasControlCharacters(value: string): boolean {
+	return /[\u0000-\u001f\u007f-\u009f]/u.test(value);
+}
+
+function hasUnpairedSurrogate(value: string): boolean {
+	for (let index = 0; index < value.length; index += 1) {
+		const code = value.charCodeAt(index);
+		if (code >= 0xd800 && code <= 0xdbff) {
+			const next = value.charCodeAt(index + 1);
+			if (index + 1 >= value.length || next < 0xdc00 || next > 0xdfff) return true;
+			index += 1;
+		} else if (code >= 0xdc00 && code <= 0xdfff) return true;
+	}
+	return false;
+}
+
+/** JavaScript has lowercase, not Python's full Unicode casefold; cover the common expansions too. */
+function journeyTagKey(tag: string): string {
+	return tag.normalize('NFC').trim().toLowerCase().replace(/ß/g, 'ss').replace(/ς/g, 'σ');
+}
+
+function codePointLength(value: string): number {
+	return [...value].length;
 }
 
 /** Expand a finite number's shortest representation without rounding its value. */
@@ -81,6 +107,21 @@ export function validateJourneyForm(form: JourneyForm, now = Date.now(), origina
 	if (start && end && end <= start) errors.ended = 'El fin debe ser posterior al inicio.';
 	if (form.from.trim().length > 120) errors.from = 'Usa un origen de hasta 120 caracteres.';
 	if (form.to.trim().length > 120) errors.to = 'Usa un destino de hasta 120 caracteres.';
+	if (codePointLength(form.notes) > 2000) errors.notes = 'La nota admite hasta 2.000 caracteres.';
+	else if (hasControlCharacters(form.notes) || hasUnpairedSurrogate(form.notes)) errors.notes = 'La nota no puede contener saltos de línea, caracteres de control ni texto Unicode incompleto.';
+	if (form.tags.length > 8) errors.tags = 'Puedes añadir hasta 8 etiquetas.';
+	const seenTags = new Set<string>();
+	form.tags.forEach((raw, index) => {
+		const normalized = raw.normalize('NFC').trim();
+		if (!normalized) errors.tags ??= `La etiqueta ${index + 1} no puede estar vacía.`;
+		else if (codePointLength(normalized) > 32 || codePointLength(journeyTagKey(normalized)) > 32) errors.tags ??= 'Cada etiqueta admite hasta 32 caracteres.';
+		else if (hasControlCharacters(normalized) || hasUnpairedSurrogate(normalized)) errors.tags ??= 'Las etiquetas no pueden contener caracteres de control ni texto Unicode incompleto.';
+		else {
+			const key = journeyTagKey(normalized);
+			if (seenTags.has(key)) errors.tags ??= 'No repitas una etiqueta con distinta combinación de mayúsculas.';
+			seenTags.add(key);
+		}
+	});
 	function quantity(key: 'distance' | 'energy', maximum: number): number | null {
 		const text = form[key].trim();
 		if (!text) return null;
@@ -113,5 +154,7 @@ export function validateJourneyForm(form: JourneyForm, now = Date.now(), origina
 	if (Object.keys(errors).length || !start || !end) return { errors, values: null };
 	return { errors, values: { started_at: startIso ?? start.toISOString(), ended_at: endIso ?? end.toISOString(),
 		from_label: form.from.trim() || null, to_label: form.to.trim() || null,
-		distance_km: distance, energy_kwh: energy, stops } };
+		distance_km: distance, energy_kwh: energy, stops,
+		notes: form.notes.trim() || null,
+		tags: form.tags.map(tag => tag.normalize('NFC').trim()) } };
 }

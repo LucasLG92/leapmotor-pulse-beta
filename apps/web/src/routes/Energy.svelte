@@ -2,6 +2,7 @@
 	import { onMount, tick, untrack } from 'svelte';
 	import { ApiError, getCharges, getEnergyAnalytics } from '../lib/api';
 	import ChargerPanel from '../lib/ChargerPanel.svelte';
+	import EnergyPlanningPanel from '../lib/EnergyPlanningPanel.svelte';
 	import Glyph from '../lib/Glyph.svelte';
 	import { count, dateTime, euros, localDateTimeValue, number } from '../lib/format';
 	import type { ChargeCreationRequest, ChargeQuote, ChargeQuotePayload, ChargeSession, EnergyAnalytics, PageProps, PricingMethod } from '../lib/types';
@@ -766,6 +767,8 @@
 	{/if}
 </section>
 
+<EnergyPlanningPanel {busy} {online} {revision} {drafts} {confirmAction} {onSessionExpired} />
+
 <section class="personal-records" aria-labelledby="personal-records-title">
 	<div class="personal-records-heading">
 		<div>
@@ -788,7 +791,7 @@
 		{:else if charges.length === 0}
 			<div class="empty-state"><span class="empty-mark"><Glyph name="energy" /></span><h3>Todavía no hay cargas registradas</h3><p>Puedes añadir una carga manual en cualquier momento. No es necesario conectar un vehículo.</p></div>
 		{:else}
-			<article class="card chart-card">
+			<article class="card chart-card evolution-chart">
 				<div class="chart-heading"><div><h3>Comparación por sesión</h3><p>kWh por carga en esta página del historial</p></div><div class="chart-legend" role="group" aria-label="Leyenda del gráfico"><span><i class="source-dot"></i>Manual</span><span><i class="source-dot source-demo"></i>Demo</span></div></div>
 				<svg class="charge-chart" viewBox="0 0 640 136" role="img" aria-label={`Gráfico de ${count(chartSessions.length)} sesiones de carga, comparadas por kilovatios hora`}>
 					<line class="chart-axis" x1="10" y1="130" x2="630" y2="130" />
@@ -1003,7 +1006,7 @@
 	.analytics-heading h2 { margin: 5px 0 0; font-size: 1.125rem; font-weight: 640; letter-spacing: -.03em; }
 	.analytics-heading > div:first-child > p:last-child { max-width: 580px; margin: 7px 0 0; color: var(--muted); font-size: 1rem; line-height: 1.55; }
 	.analytics-range-control { display: flex; flex: 0 0 auto; gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-soft); }
-	.analytics-range-button { min-width: 67px; min-height: 44px; padding: 0 9px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--muted-strong); cursor: pointer; font: inherit; font-size: .875rem; font-weight: 650; }
+	.analytics-range-button { min-width: 67px; min-height: 48px; padding: 0 9px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--muted-strong); cursor: pointer; font: inherit; font-size: .875rem; font-weight: 650; }
 	.analytics-range-button:hover:not(:disabled) { background: var(--surface-raised); }
 	.analytics-range-button:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
 	.analytics-range-button:disabled { cursor: not-allowed; opacity: .55; }
@@ -1078,7 +1081,7 @@
 	.personal-records-heading h2 { margin: 5px 0 0; font-size: 1.25rem; font-weight: 650; letter-spacing: -.025em; overflow-wrap: anywhere; }
 	.personal-records-heading > div:first-child > p:last-child { max-width: 600px; margin: 6px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
 	.personal-records-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
-	.personal-records-actions .button { min-height: 46px; }
+	.personal-records-actions .button { min-height: 48px; }
 	.energy-personal-content { display: grid; gap: 16px; min-width: 0; }
 	.energy-personal-content[hidden] { display: none; }
 	.form-icon { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 11px; background: var(--forest-soft); color: var(--forest); }
@@ -1137,7 +1140,7 @@
 	.charge-row-main i { font-style: normal; }
 	.saved-pricing-details { grid-column: 2 / -1; min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-soft); }
 	.saved-charge-details { grid-column: 2 / -1; min-width: 0; padding: 0 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-soft); }
-	.saved-charge-details summary { display: flex; min-height: 44px; align-items: center; color: var(--forest); cursor: pointer; font-size: .875rem; font-weight: 650; }
+	.saved-charge-details summary { display: flex; min-height: 48px; align-items: center; color: var(--forest); cursor: pointer; font-size: .875rem; font-weight: 650; }
 	.saved-charge-details summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 5px; }
 	.saved-charge-details dl, .analytics-technical-details dl { display: grid; gap: 0; margin: 0 0 8px; }
 	.saved-charge-details dl > div, .analytics-technical-details dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid var(--line); }
@@ -1146,7 +1149,7 @@
 	.analytics-technical-details { display: grid; gap: 5px; padding-top: 10px; border-top: 1px solid var(--line); }
 	.analytics-technical-details > strong { font-size: .8125rem; }
 	.analytics-technical-details p { margin: 0; color: var(--muted); font-size: .75rem; line-height: 1.45; }
-	.saved-pricing-details summary { display: flex; min-height: 44px; align-items: center; color: var(--forest); cursor: pointer; font-size: .875rem; font-weight: 650; }
+	.saved-pricing-details summary { display: flex; min-height: 48px; align-items: center; color: var(--forest); cursor: pointer; font-size: .875rem; font-weight: 650; }
 	.saved-pricing-details > p { margin: 2px 0 8px; color: var(--muted); font-size: .875rem; line-height: 1.5; }
 	.pricing-intervals { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
 	.pricing-intervals li { display: flex; justify-content: space-between; gap: 10px; padding-top: 7px; border-top: 1px solid var(--line); }
@@ -1155,7 +1158,7 @@
 	.pricing-intervals li small { color: var(--muted); font-size: .75rem; line-height: 1.4; overflow-wrap: anywhere; }
 	.pricing-intervals li b { flex: 0 0 auto; font-size: .875rem; font-variant-numeric: tabular-nums; }
 	.charge-actions { grid-column: 2 / -1; display: flex; gap: 12px; margin-top: -6px; }
-	.charge-actions .text-button { min-height: 44px; font-size: .875rem; }
+	.charge-actions .text-button { min-height: 48px; font-size: .875rem; }
 	.danger-text { color: var(--danger); }
 	.pagination { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: .875rem; }
 	.pagination > div { display: flex; gap: 6px; }
@@ -1170,14 +1173,14 @@
 	.rate-note { display: grid; grid-template-columns: 1fr auto; gap: 5px; padding: 12px; border-radius: 9px; background: var(--surface-soft); }
 	.rate-note span { grid-column: 1 / -1; color: var(--muted); font-size: .875rem; }
 	.rate-note strong { font-size: .875rem; }
-	.rate-note a { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; color: var(--forest); font-size: .875rem; font-weight: 650; text-decoration: underline; text-underline-offset: 2px; }
+	.rate-note a { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; color: var(--forest); font-size: .875rem; font-weight: 650; text-decoration: underline; text-underline-offset: 2px; }
 	.pvpc-form-note { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
 	.pvpc-form-note strong { font-size: .875rem; }
 	.pvpc-form-note span { color: var(--muted); font-size: .875rem; line-height: 1.5; }
-	.quote-button { min-height: 45px; }
+	.quote-button { min-height: 48px; }
 	.quote-error { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--danger) 25%, var(--line)); border-radius: 9px; background: var(--surface-soft); }
 	.quote-error p { margin: 0; color: var(--danger); font-size: .875rem; line-height: 1.5; }
-	.quote-error .text-button { flex: 0 0 auto; min-height: 44px; font-size: .875rem; }
+	.quote-error .text-button { flex: 0 0 auto; min-height: 48px; font-size: .875rem; }
 	.quote-preview { display: grid; grid-column: 1 / -1; gap: 9px; padding: 13px; border: 1px solid var(--line-strong); border-radius: 11px; background: var(--surface-soft); }
 	.quote-total { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 3px 10px; }
 	.quote-total > span { color: var(--muted); font-size: .875rem; }
@@ -1240,7 +1243,7 @@
 	.energy-cost-facts > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
 	.energy-cost-facts dt { color: var(--muted); font-size: .875rem; line-height: 1.45; }
 	.energy-cost-facts dd { margin: 0; color: var(--ink); font-size: .875rem; font-weight: 650; text-align: right; font-variant-numeric: tabular-nums; }
-	.energy-settings-link { display: inline-flex; min-height: 44px; align-items: center; color: var(--forest); font-size: .875rem; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
+	.energy-settings-link { display: inline-flex; min-height: 48px; align-items: center; color: var(--forest); font-size: .875rem; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
 	.energy-section-copy { margin: 5px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
 	.energy-history-column > .section-heading { align-items: flex-end; }
 	.energy-history-column > .section-heading h2 { margin: 0; }

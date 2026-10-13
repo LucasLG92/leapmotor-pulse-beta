@@ -70,12 +70,16 @@ from pulse.manual_charge_requests import (
 from pulse.manual_journeys import (
     ManualJourneyStoreMixin,
     create_manual_journey_schema,
+    migrate_manual_journey_annotations,
     insert_manual_journey_archive_item,
     validate_manual_journey_archive,
 )
 
-SCHEMA_VERSION = 20
-EXPORT_VERSION = 16
+from pulse.maintenance_plans import (MaintenancePlanStoreMixin, create_maintenance_plan_schema, validate_maintenance_plan_archive)
+from pulse.navigation_favorites import (NavigationFavoriteStoreMixin, create_navigation_favorite_schema, validate_navigation_favorite_archive)
+
+SCHEMA_VERSION = 21
+EXPORT_VERSION = 17
 MAX_IMPORT_BYTES = 1_000_000
 MAX_V3_IMPORT_BYTES = 5_000_000
 MAX_V4_IMPORT_BYTES = 5_000_000
@@ -91,6 +95,7 @@ MAX_V13_IMPORT_BYTES = 5_000_000
 MAX_V14_IMPORT_BYTES = 5_000_000
 MAX_V15_IMPORT_BYTES = 5_000_000
 MAX_V16_IMPORT_BYTES = 5_000_000
+MAX_V17_IMPORT_BYTES = 5_000_000
 MAX_ROWS_PER_COLLECTION = 100_000
 MAX_TEXT_LENGTH = 240
 MAX_STATE_CHARGES = 100
@@ -197,7 +202,7 @@ class DomainError(Exception):
 class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin,
             ChargerPricingHistoryStoreMixin,
             PushStoreMixin, BackupAlertStoreMixin, ObservedEventsStoreMixin,
-            ManualJourneyStoreMixin):
+            ManualJourneyStoreMixin, MaintenancePlanStoreMixin, NavigationFavoriteStoreMixin):
     """A per-call SQLite store with explicit initialization and short transactions."""
 
     def __init__(
@@ -404,6 +409,12 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
         if version == 19:
             self._migrate_v19_to_v20(connection)
             connection.execute("PRAGMA user_version = 20")
+            version = 20
+        if version == 20:
+            migrate_manual_journey_annotations(connection)
+            create_maintenance_plan_schema(connection)
+            create_navigation_favorite_schema(connection)
+            connection.execute("PRAGMA user_version = 21")
 
     def _migrate_v17_to_v18(self, connection: sqlite3.Connection) -> None:
         """Add opt-in backup notices and bounded operational state, outside exports."""
@@ -2123,6 +2134,22 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
         result = self.update_maintenance(id, {"completed": completed})
         return {"ok": True, "id": result["id"], "completed": result["completed"]}
 
+    def manual_charge_comparison(self, days: int = 90) -> dict[str, Any]:
+        from pulse.energy_planning import compare_manual_charges
+        if type(days) is not int or days not in {30, 90, 365}:
+            raise DomainError("El periodo debe ser 30, 90 o 365 días.")
+        now = self._clock_now()
+        start = _format_datetime(now - timedelta(days=days))
+        end = _format_datetime(now)
+        with self._read_transaction() as connection:
+            rows = connection.execute(
+                "SELECT started_at,kwh,cost_eur FROM manual_charges WHERE started_at >= ? AND started_at < ? ORDER BY started_at,id LIMIT 10001",
+                (start,end),
+            ).fetchall()
+            if len(rows) > 10000:
+                raise DomainError("El periodo supera 10000 cargas; reduce el intervalo.", 413)
+            return compare_manual_charges([dict(row) for row in rows], days, now)
+
     def export_data(self, *, owner_id: str | None = None) -> dict[str, Any]:
         owner = None if owner_id is None else _validate_profile_owner(owner_id)
         with self._read_transaction() as connection:
@@ -2166,8 +2193,10 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
             charger_pricing_history = self._export_charger_pricing_history(connection)
             observed_events = self._export_observed_events(connection)
             manual_journeys = self.export_manual_journeys(
-                connection, owner, byte_limit=MAX_V16_IMPORT_BYTES
+                connection, owner, byte_limit=MAX_V17_IMPORT_BYTES
             )
+            maintenance_plans = self.export_maintenance_plans(connection, owner)
+            navigation_favorites = self.export_navigation_favorites(connection, owner)
             result = {
                 "schema_version": EXPORT_VERSION,
                 "exported_at": self._now(),
@@ -2191,6 +2220,8 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                 "charger_pricing_history": charger_pricing_history,
                 "observed_events": observed_events,
                 "manual_journeys": manual_journeys,
+                "maintenance_plans": maintenance_plans,
+                "navigation_favorites": navigation_favorites,
             }
             if demo:
                 result["demo_vehicle"] = _read_demo_vehicle(connection)
@@ -2200,7 +2231,7 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                 ).encode("utf-8")
             except (TypeError, ValueError, UnicodeEncodeError):
                 raise DomainError("No se pudo validar el documento de exportación.", 500) from None
-            if len(encoded) > MAX_V16_IMPORT_BYTES:
+            if len(encoded) > MAX_V17_IMPORT_BYTES:
                 raise DomainError(
                     "La exportación supera el tamaño máximo admitido para una restauración.", 413
                 )
@@ -2304,6 +2335,8 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                     # Keep a second ownership guard next to the pre-transaction validation.
                     raise DomainError("La importación contiene trayectos de otro usuario.")
                 insert_manual_journey_archive_item(connection, item)
+            self.replace_maintenance_plans(connection, owner, document["maintenance_plans"])
+            self.replace_navigation_favorites(connection, owner, document["navigation_favorites"])
             for item in document["maintenance"]:
                 table = "demo_maintenance" if item["source"] == "demo" else "manual_maintenance"
                 connection.execute(
@@ -2407,11 +2440,22 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
             item["owner_id"] != owner for item in document["manual_journeys"]
         ):
             raise DomainError("La importación contiene trayectos de otro usuario.")
-        if owner is not None and document["manual_journeys"]:
-            with self._read_transaction() as connection:
+        for collection in ("maintenance_plans", "navigation_favorites"):
+            if owner is not None and any(item["owner_id"] != owner for item in document[collection]):
+                raise DomainError("La copia contiene datos privados de otro usuario.")
+        # Check state-dependent conflicts and quotas before Coordinator makes a
+        # recovery copy. The mutating restore repeats these checks atomically.
+        with self._read_transaction() as connection:
+            if owner is not None and document["manual_journeys"]:
                 self._assert_manual_journey_ids_available(
                     connection, owner, document["manual_journeys"]
                 )
+            self.validate_maintenance_plan_replacement(
+                connection, owner, document["maintenance_plans"]
+            )
+            self.validate_navigation_favorite_replacement(
+                connection, owner, document["navigation_favorites"]
+            )
         if document["telemetry_snapshots"]:
             future_limit = self._clock_now() + timedelta(seconds=60)
             for item in document["telemetry_snapshots"]:
@@ -3788,6 +3832,8 @@ def _validate_import(
         raise DomainError("La importación supera el tamaño permitido para la versión 15.")
     if version == 16 and encoded_size > MAX_V16_IMPORT_BYTES:
         raise DomainError("La importación supera el tamaño permitido para la versión 16.")
+    if version >= 17 and encoded_size > MAX_V17_IMPORT_BYTES:
+        raise DomainError("La importación supera el tamaño permitido para la versión actual.")
     mode = decoded.get("mode")
     if mode not in ("demo", "unconfigured"):
         raise DomainError("El modo del documento no es válido.")
@@ -3811,6 +3857,8 @@ def _validate_import(
         fields.add("charger_pricing_history")
     if version >= 16:
         fields.add("manual_journeys")
+    if version >= 17:
+        fields.update({"maintenance_plans", "navigation_favorites"})
     root = _exact_object(decoded, fields, "documento")
     _parse_datetime(root["exported_at"], "exported_at")
 
@@ -4127,8 +4175,11 @@ def _validate_import(
 
     if version >= 16:
         manual_journeys = validate_manual_journey_archive(
-            root["manual_journeys"], now=now or datetime.now(timezone.utc)
+            root["manual_journeys"], now=now or datetime.now(timezone.utc), schema_version=version
         )
+
+    maintenance_plans = validate_maintenance_plan_archive(root["maintenance_plans"], now=now or datetime.now(timezone.utc)) if version >= 17 else []
+    navigation_favorites = validate_navigation_favorite_archive(root["navigation_favorites"], now=now or datetime.now(timezone.utc)) if version >= 17 else []
 
     if version < 12 and any(
         item["quote"]["pricing"]["accuracy"] != "estimated_uniform"
@@ -4171,6 +4222,8 @@ def _validate_import(
         "charger_pricing_history": charger_pricing_history,
         "observed_events": observed_events,
         "manual_journeys": manual_journeys,
+        "maintenance_plans": maintenance_plans,
+        "navigation_favorites": navigation_favorites,
     }
 
 

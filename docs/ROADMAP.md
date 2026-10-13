@@ -160,3 +160,24 @@ El diario manual es un incremento de software, no una recepción del vehículo. 
 - [ ] Cualificar compilación y entrega física de este nuevo cliente según [NATIVE-REPORT-EXPORT-QUALIFICATION.json](NATIVE-REPORT-EXPORT-QUALIFICATION.json); firma, proveedores de archivos y recepción en teléfonos siguen separados.
 
 No cierra la ingestión automática de trayectos ni modifica nueve fases, siete puertas reales o A0–A12. Centinela/cámaras permanece al final.
+
+## Incremento candidato de interfaz y herramientas manuales — 13 de octubre de 2026
+
+El candidato local incorpora la composición cuadro de instrumentos/cuaderno de viaje, registros y simulación informativa de energía, trayectos y planes manuales, favoritos explícitos y ajustes agrupados. La cualificación de software y el QA visual constan en [EVOLUTION-QUALIFICATION.json](EVOLUTION-QUALIFICATION.json). Estos hitos describen código candidato, no una entrega.
+
+### Fase 1: experiencia de usuario
+
+- [x] Aplicar jerarquía del coche y sus lecturas, cronología de Actividad/Estados y filas abiertas para tareas manuales; conservar Claro/Charcoal y estados de borrador/error.
+- [x] Revisar las seis rutas a 1280×720 CSS en ambos temas, borrador del simulador y actualización local de PWA.
+- [ ] Cualificar reflujo de esta revisión en teléfonos, VoiceOver, escala del sistema y uso físico.
+
+### Incrementos candidatos relacionados
+
+- [x] Comparar registros manuales por mes y mantener el simulador como herramienta informativa bajo demanda.
+- [x] Añadir historial de trayectos manuales y planes de mantenimiento con referencias introducidas por la persona.
+- [x] Añadir favoritos con coordenadas manuales y enlaces externos explícitos, sin GPS.
+- [ ] Recibir y validar datos reales de B10, cargador, trayectos e integraciones; aceptar servicios y dispositivos reales.
+- [ ] Completar firma/distribución nativa, autenticación, widgets, accesibilidad y las siete puertas reales pendientes.
+
+El estado global permanece bloqueado, con nueve fases y siete puertas reales abiertas. Consultar [estado de entrega](DELIVERY-STATUS.json); no inferir finalización del producto a partir de pruebas sintéticas o builds.
+

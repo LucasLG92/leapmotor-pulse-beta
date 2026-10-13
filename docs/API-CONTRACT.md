@@ -1,5 +1,7 @@
 # Contrato HTTP Pulse 0.1
 
+El incremento13oct usa SQLite21/JSON17 y admite importar formatos históricos1–16. Añade notas/etiquetas, filtros, planes, favoritos, comparación manual y simulación informativa; CSV/HTML imprimible son funciones web. Las cifras de cualificación anteriores mantienen su revisión histórica. Véase EVOLUTION-QUALIFICATION.json.
+
 La fuente actual usa SQLite 20 y exporta JSON 16. La migración19→20 añade el diario manual privado y su ledger; JSON16 conserva registros sin operaciones pendientes. [Contrato de trayectos manuales](MANUAL-JOURNEYS.md). La migración histórica18→19 añade únicamente el ledger operativo de solicitudes de cargas manuales, excluido del JSON. Los recibos de fases anteriores conservan sus versiones históricas. El incremento de telemetría de fase 3 utilizó SQLite 16/JSON 14. `Vehicle` y `TelemetryValues` incorporan temperaturas interior/mínima de batería (°C) y cuatro presiones de neumáticos (kPa), nullable y con fuentes permitidas. Se conserva la separación de fechas y la caducidad del estado actual. JSON 1–13 restaura las magnitudes nuevas a `null`. [Contrato y recuperación](TELEMETRY.md). Las notas de apariencia y V42 siguientes describen incrementos anteriores.
 
 Actualización de apariencia: SQLite15 y JSON13 añaden `settings.vehicle_color`, nullable y limitado a seis colores del B10. Importar JSON1–12 asigna el color a `null`; actualizar ajustes sin ese campo conserva la elección. [Guía](VEHICLE-APPEARANCE.md). Las referencias V42 siguientes documentan el incremento previo.

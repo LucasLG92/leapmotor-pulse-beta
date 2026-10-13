@@ -45,7 +45,7 @@ def main() -> int:
     try:
         data = json.loads(STATUS_PATH.read_text(encoding="utf-8"))
         require(data.get("schema_version") == 1, "schema_version debe ser 1.")
-        require(data.get("objective_status") in {"active", "complete"}, "objective_status inválido.")
+        require(data.get("objective_status") in {"active", "blocked", "complete"}, "objective_status inválido.")
         require(data.get("objective_status") != "complete", "El objetivo no puede cerrarse por este checker.")
 
         phases = data.get("phases")

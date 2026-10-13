@@ -3,6 +3,7 @@
 	import { ApiError, getCommandHistory } from '../lib/api';
 	import Glyph from '../lib/Glyph.svelte';
 	import ManualJourneysPanel from '../lib/ManualJourneysPanel.svelte';
+	import MaintenancePlansPanel from '../lib/MaintenancePlansPanel.svelte';
 	import { count, dateOnly, dateTime, number } from '../lib/format';
 	import type { CommandHistoryEntry, MaintenanceItem, PageProps } from '../lib/types';
 
@@ -206,9 +207,9 @@
 			{#if journeys.length === 0}
 				<div class="empty-state"><span class="empty-mark"><Glyph name="activity" /></span><h3>No hay trayectos recibidos</h3><p>{pulseState.mode === 'demo' ? 'El servidor no entrega recorridos en este momento.' : 'Pulse aún no tiene una integración que reciba recorridos del vehículo.'}</p>{#if pulseState.mode !== 'demo'}<a class="button button-secondary" href="/settings#preparation">Revisar preparación</a>{/if}</div>
 			{:else}
-				<div class="journey-list card">
+				<div class="journey-list card evolution-list">
 					{#each journeys as journey (journey.id)}
-						<article class="journey-row">
+						<article class="journey-row evolution-item">
 							<div class="journey-route-mark" aria-hidden="true"><span></span><i></i><span></span></div>
 							<div class="journey-main"><strong>{journey.from_label} <Glyph name="arrow" size={14} /> {journey.to_label}</strong><span>{dateTime(journey.started_at)}</span><small>{number(journey.distance_km)} km <i aria-hidden="true">·</i> {number(journey.duration_min)} min</small></div>
 							<div class="journey-energy"><strong>{number(journey.energy_kwh)} <small>kWh</small></strong><span>Energía</span></div>
@@ -227,9 +228,9 @@
 			{:else if commandHistory.length === 0}
 				<div class="empty-state"><span class="empty-mark"><Glyph name="settings" /></span><h3>No hay acciones registradas</h3><p>Cuando se active una acción de demostración, aparecerá aquí con su resultado.</p></div>
 			{:else}
-				<div class="command-history card">
+				<div class="command-history card evolution-list">
 					{#each commandHistory as item (item.id)}
-						<article class="history-row">
+						<article class="history-row evolution-item">
 							<span class="history-icon"><Glyph name="check" size={16} /></span>
 							<div><strong>{commandLabel(item.command)}</strong><p>{item.message}</p></div>
 							<div class="history-meta"><span class="badge badge-demo">{item.status === 'simulated' ? 'Simulada' : item.status}</span><time datetime={item.created_at}>{dateTime(item.created_at)}</time></div>
@@ -242,37 +243,40 @@
 	</div>
 
 	<aside class="activity-side-column">
-		<section aria-labelledby="maintenance-heading">
-			<div class="section-heading"><div><h2 id="maintenance-heading">Mantenimiento</h2><p class="activity-section-copy">Recordatorios personales, separados de las órdenes del vehículo.</p></div><span class="badge">{count(maintenance.length)}</span></div>
-			{#if maintenance.length === 0}
-				<div class="empty-state maintenance-empty"><span class="empty-mark"><Glyph name="check" /></span><h3>Sin tareas pendientes</h3><p>Añade recordatorios personales para tenerlos a mano.</p></div>
-			{:else}
-				<div class="maintenance-list">
-					{#each maintenance as item (item.id)}
-						<article class="maintenance-card card" class:maintenance-complete={item.completed}>
-							<div class="maintenance-card-top"><span class="maintenance-date">{dateOnly(item.due_date)}</span><span class="badge" class:badge-success={item.completed}>{item.completed ? 'Hecho' : 'Pendiente'}</span></div>
-							<h3>{item.title}</h3>
-							<div class="maintenance-actions">
-								<button class="text-button" type="button" disabled={busy} onclick={() => toggleMaintenance(item)}>{item.completed ? 'Reabrir' : 'Marcar hecho'}</button>
-								<button class="text-button" type="button" disabled={busy} onclick={() => beginEdit(item)}>Editar</button>
-								<button class="text-button danger-text" type="button" disabled={busy} onclick={() => deleteMaintenance(item)}>Eliminar</button>
-							</div>
-						</article>
-					{/each}
-				</div>
-			{/if}
-		</section>
-
-		<section class="maintenance-form-card card" aria-labelledby="maintenance-form-heading">
-			<div class="section-heading"><div><h2 id="maintenance-form-heading">{editing ? 'Editar tarea' : 'Añadir tarea'}</h2><p class="activity-section-copy">El formulario modifica únicamente tu registro en Pulse.</p></div><span class="form-icon"><Glyph name={editing ? 'settings' : 'plus'} size={18} /></span></div>
-			<form class="maintenance-form" onsubmit={saveMaintenance}>
-				<div class="field"><label for="maintenance-title">Tarea</label><input id="maintenance-title" maxlength="120" bind:value={title} oninput={() => clearMaintenanceError('title')} placeholder="Por ejemplo, revisar neumáticos" required aria-invalid={formErrorField === 'title' ? 'true' : undefined} aria-describedby={formErrorField === 'title' ? 'maintenance-title-error' : undefined} />{#if formError && formErrorField === 'title'}<p id="maintenance-title-error" class="form-error" role="alert">{formError}</p>{/if}</div>
-				<div class="field"><label for="maintenance-date">Fecha prevista</label><input id="maintenance-date" type="date" bind:value={dueDate} oninput={() => clearMaintenanceError('date')} required aria-invalid={formErrorField === 'date' ? 'true' : undefined} aria-describedby={formErrorField === 'date' ? 'maintenance-date-error' : undefined} />{#if formError && formErrorField === 'date'}<p id="maintenance-date-error" class="form-error" role="alert">{formError}</p>{/if}</div>
-				{#if formError && formErrorField === null}<p id="maintenance-general-error" class="form-error" role="alert">{formError}</p>{/if}
-				<div class="form-actions"><button class="button button-primary button-block" type="submit" disabled={busy || maintenanceSaving}>{busy || maintenanceSaving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Añadir tarea'}</button>{#if editing}<button class="button button-quiet button-block" type="button" onclick={cancelEdit}>Cancelar edición</button>{/if}</div>
-			</form>
-			<p class="fine-print">Los recordatorios son datos de Pulse. No se envían al fabricante ni activan una revisión.</p>
-		</section>
+		<MaintenancePlansPanel {busy} {online} {revision} {drafts} {mutate} {confirmAction} {onSessionExpired} />
+		<details class="maintenance-legacy" aria-labelledby="maintenance-heading">
+			<summary><span class="legacy-summary-copy"><strong id="maintenance-heading">Recordatorios por fecha</strong><small>Registro anterior de mantenimiento personal</small></span><span class="badge">{count(maintenance.length)}</span></summary>
+			<div class="legacy-maintenance-content">
+				<p class="activity-section-copy">Conservamos aquí los recordatorios guardados con fecha prevista. Tus planes de mantenimiento actuales aparecen en la sección principal.</p>
+				{#if maintenance.length === 0}
+					<div class="empty-state maintenance-empty"><span class="empty-mark"><Glyph name="check" /></span><h3>Sin recordatorios por fecha</h3><p>Los nuevos planes se añaden desde la sección principal.</p></div>
+				{:else}
+					<div class="maintenance-list">
+						{#each maintenance as item (item.id)}
+							<article class="maintenance-card card" class:maintenance-complete={item.completed}>
+								<div class="maintenance-card-top"><span class="maintenance-date">{dateOnly(item.due_date)}</span><span class="badge" class:badge-success={item.completed}>{item.completed ? 'Hecho' : 'Pendiente'}</span></div>
+								<h3>{item.title}</h3>
+								<div class="maintenance-actions">
+									<button class="text-button" type="button" disabled={busy} onclick={() => toggleMaintenance(item)}>{item.completed ? 'Reabrir' : 'Marcar hecho'}</button>
+									<button class="text-button" type="button" disabled={busy} onclick={() => beginEdit(item)}>Editar</button>
+									<button class="text-button danger-text" type="button" disabled={busy} onclick={() => deleteMaintenance(item)}>Eliminar</button>
+								</div>
+							</article>
+						{/each}
+					</div>
+				{/if}
+				<section class="maintenance-form-card card" aria-labelledby="maintenance-form-heading">
+					<div class="section-heading"><div><h2 id="maintenance-form-heading">{editing ? 'Editar tarea anterior' : 'Añadir recordatorio por fecha'}</h2><p class="activity-section-copy">El formulario modifica únicamente tu registro en Pulse.</p></div><span class="form-icon"><Glyph name={editing ? 'settings' : 'plus'} size={18} /></span></div>
+					<form class="maintenance-form" onsubmit={saveMaintenance}>
+						<div class="field"><label for="maintenance-title">Tarea</label><input id="maintenance-title" maxlength="120" bind:value={title} oninput={() => clearMaintenanceError('title')} placeholder="Por ejemplo, revisar neumáticos" required aria-invalid={formErrorField === 'title' ? 'true' : undefined} aria-describedby={formErrorField === 'title' ? 'maintenance-title-error' : undefined} />{#if formError && formErrorField === 'title'}<p id="maintenance-title-error" class="form-error" role="alert">{formError}</p>{/if}</div>
+						<div class="field"><label for="maintenance-date">Fecha prevista</label><input id="maintenance-date" type="date" bind:value={dueDate} oninput={() => clearMaintenanceError('date')} required aria-invalid={formErrorField === 'date' ? 'true' : undefined} aria-describedby={formErrorField === 'date' ? 'maintenance-date-error' : undefined} />{#if formError && formErrorField === 'date'}<p id="maintenance-date-error" class="form-error" role="alert">{formError}</p>{/if}</div>
+						{#if formError && formErrorField === null}<p id="maintenance-general-error" class="form-error" role="alert">{formError}</p>{/if}
+						<div class="form-actions"><button class="button button-secondary button-block" type="submit" disabled={busy || maintenanceSaving}>{busy || maintenanceSaving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Añadir recordatorio'}</button>{#if editing}<button class="button button-quiet button-block" type="button" onclick={cancelEdit}>Cancelar edición</button>{/if}</div>
+					</form>
+					<p class="fine-print">Los recordatorios son datos de Pulse. No se envían al fabricante ni activan una revisión.</p>
+				</section>
+			</div>
+		</details>
 
 		<div class="notice"><Glyph name="protection" size={17} /><span>Actividad muestra únicamente los registros recibidos o añadidos en Pulse. Los datos ficticios se marcan como simulaciones.</span></div>
 	</aside>
@@ -281,12 +285,12 @@
 <style>
 	.page-intro h2 { margin: 0; font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing: -.035em; }
 	.activity-section-copy { max-width: 58ch; margin: 6px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
-	.activity-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(270px, .8fr); align-items: start; gap: 22px; }
-	.activity-main-column, .activity-side-column { display: grid; min-width: 0; gap: 28px; }
+	.activity-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: clamp(28px, 4vw, 48px); }
+	.activity-main-column, .activity-side-column { display: grid; min-width: 0; gap: clamp(28px, 4vw, 48px); }
 	.activity-grid .section-heading { margin-top: 0; }
 	.journey-list.card, .command-history.card { overflow: visible; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 	.journey-list, .command-history { overflow: hidden; }
-	.journey-row { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 79px; padding: 13px 4px; border-bottom: 1px solid var(--line); }
+	.journey-row.evolution-item { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 79px; padding: 15px 4px; border-bottom: 1px solid var(--line); }
 	.journey-row:first-child, .history-row:first-child { border-top: 1px solid var(--line); }
 	.journey-row:last-child, .history-row:last-child { border-bottom: 0; }
 	.journey-route-mark { display: grid; justify-items: center; gap: 3px; }
@@ -302,7 +306,7 @@
 	.journey-energy strong { font-size: 0.875rem; font-variant-numeric: tabular-nums; }
 	.journey-energy strong small { color: var(--muted); font-size: .75rem; font-weight: 500; }
 	.journey-energy span { color: var(--muted); font-size: .75rem; }
-	.command-history .history-row { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: start; gap: 10px; padding: 13px 4px; border-bottom: 1px solid var(--line); }
+	.command-history .history-row.evolution-item { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: start; gap: 10px; padding: 15px 4px; border-bottom: 1px solid var(--line); }
 	.history-icon { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 9px; background: var(--accent-soft); color: var(--accent); }
 	.history-row > div:nth-child(2) { min-width: 0; }
 	.history-row > div:nth-child(2) strong { font-size: .875rem; }
@@ -317,31 +321,39 @@
 	.maintenance-date { color: var(--muted); font-size: .75rem; }
 	.maintenance-card h3 { margin: 13px 0; font-size: .875rem; font-weight: 640; }
 	.maintenance-actions { display: flex; flex-wrap: wrap; gap: 5px 10px; border-top: 1px solid var(--line); }
-	.maintenance-actions .text-button { min-height: 44px; font-size: .875rem; }
+	.maintenance-actions .text-button { min-height: 48px; font-size: .875rem; }
 	.maintenance-empty { margin-bottom: 10px; }
 	.maintenance-form-card { padding: 19px; }
 	.maintenance-form-card .section-heading { align-items: center; }
 	.maintenance-form-card .section-heading h2 { font-size: 1.0625rem; }
 	.maintenance-form { display: grid; gap: 13px; margin-top: 16px; }
 	.maintenance-form-card .fine-print { margin: 12px 0 0; }
+	.maintenance-legacy { min-width: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+	.maintenance-legacy > summary { display: flex; min-height: 56px; justify-content: space-between; align-items: center; gap: 12px; list-style: none; color: var(--ink); }
+	.maintenance-legacy > summary::-webkit-details-marker { display: none; }
+	.legacy-summary-copy { display: grid; gap: 3px; }
+	.legacy-summary-copy strong { font-size: .9375rem; }
+	.legacy-summary-copy small { color: var(--muted); font-size: .75rem; font-weight: 450; }
+	.legacy-maintenance-content { display: grid; gap: 14px; padding: 10px 0 18px; }
+	.maintenance-legacy[open] > summary { border-bottom: 1px solid var(--line); }
 	.activity-side-column > .notice { font-size: .875rem; }
 	.activity-side-column > .notice :global(svg) { flex: 0 0 17px; color: var(--forest); }
 	@media (max-width: 940px) {
 		.activity-grid { grid-template-columns: minmax(0, 1fr); }
-		.activity-side-column { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
-		.activity-side-column > section { grid-row: span 2; }
+		.activity-side-column { grid-template-columns: minmax(0, 1fr); align-items: start; }
+		.activity-side-column > :first-child { grid-row: auto; }
 	}
 	@media (max-width: 700px) {
 		.activity-side-column { grid-template-columns: 1fr; }
-		.activity-side-column > section { grid-row: auto; }
-		.journey-row { padding-inline: 11px; }
-		.command-history .history-row { grid-template-columns: 29px minmax(0, 1fr); }
+		.activity-side-column > :first-child { grid-row: auto; }
+		.journey-row.evolution-item { padding-inline: 11px; }
+		.command-history .history-row.evolution-item { grid-template-columns: 29px minmax(0, 1fr); }
 		.history-meta { grid-column: 2; display: flex; align-items: center; justify-items: start; }
 	}
 
 
 	@media (max-width: 360px) {
-		.journey-row { grid-template-columns: 16px minmax(0, 1fr); }
+		.journey-row.evolution-item { grid-template-columns: 16px minmax(0, 1fr); }
 		.journey-energy { grid-column: 2; grid-template-columns: auto 1fr; align-items: baseline; text-align: left; }
 		.journey-energy span { text-align: right; }
 		.history-meta { flex-wrap: wrap; }

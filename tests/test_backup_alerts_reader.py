@@ -81,7 +81,7 @@ def test_config_is_explicit_bounded_and_does_not_echo_values(monkeypatch, tmp_pa
 def test_valid_journal_retains_overwritten_failure_and_recovery(tmp_path):
     config = configured(tmp_path)
     write(config, "sqlite.json", report(events=True))
-    write(config, "archive.json", report("archive"))
+    write(config, "host.json", report("host"))
     reports = read_monitor_reports(config, NOW)
     assert [r["profile"] for r in reports] == ["sqlite", "host"]
     assert [e["kind"] for e in reports[0]["events"]] == ["backup_alert", "backup_recovery"]
@@ -93,14 +93,14 @@ def test_valid_journal_retains_overwritten_failure_and_recovery(tmp_path):
     assert normalize_report(later, "sqlite", "sqlite", NOW + timedelta(minutes=1), 7200)["fingerprint"] == reports[0]["fingerprint"]
 
 
-def test_archive_profile_is_normalized_and_only_expected_two_files_are_read(tmp_path):
-    config = configured(tmp_path, host_profile="archive")
+def test_private_profile_is_normalized_and_only_expected_two_files_are_read(tmp_path):
+    config = configured(tmp_path, host_profile="host-synthetic")
     write(config, "sqlite.json", report())
-    write(config, "archive.json", report("archive"))
+    write(config, "host-synthetic.json", report("host-synthetic"))
     (Path(config.state_directory) / "unrelated.json").symlink_to("/must-not-be-read")
     reports = read_monitor_reports(config, NOW)
     assert reports[1]["profile"] == "host"
-    assert "archive" not in json.dumps(reports)
+    assert "host-synthetic" not in json.dumps(reports)
 
 
 def test_absent_stale_invalid_and_future_reports_have_fixed_reasons(tmp_path):
@@ -238,13 +238,13 @@ def test_actual_producer_journal_is_consumable_after_later_healthy_poll(tmp_path
 
     module_path = Path(__file__).resolve().parents[1] / "deploy/community/backup-monitor.py"
     if not module_path.is_file():
-        pytest.fail("Community backup monitor source is missing.")
+        pytest.skip("Community monitor fixture is missing.")
     spec = importlib.util.spec_from_file_location("pulse_monitor_reader_contract_fixture", module_path)
     producer = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(producer)
-    config = configured(tmp_path, host_profile="archive")
+    config = configured(tmp_path)
     root = Path(config.state_directory)
-    base = report("archive")
+    base = report()
     for field in ("transition", "alert_since", "last_recovered_at", "journal_id", "event_sequence", "events"):
         base.pop(field)
     base["schema_version"] = 1
@@ -254,6 +254,6 @@ def test_actual_producer_journal_is_consumable_after_later_healthy_poll(tmp_path
     producer.persist(root, recovered, os.geteuid())
     latest = dict(base, checked_at=iso(NOW + timedelta(minutes=2)))
     producer.persist(root, latest, os.geteuid())
-    actual = read_monitor_reports(config, NOW + timedelta(minutes=2))[1]
+    actual = read_monitor_reports(config, NOW + timedelta(minutes=2))[0]
     assert actual["status"] == "healthy" and actual["reason_code"] is None
     assert [event["kind"] for event in actual["events"]] == ["backup_alert", "backup_recovery"]

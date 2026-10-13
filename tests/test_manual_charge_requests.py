@@ -7,6 +7,7 @@ import sqlite3
 import pytest
 
 from pulse.domain import DomainError, EXPORT_VERSION, SCHEMA_VERSION, Store
+from schema_helpers import downgrade_current_schema_to_v20
 
 
 START = "2026-10-01T10:00:00+02:00"
@@ -48,11 +49,11 @@ def test_reservation_replay_is_atomic_and_returns_the_current_charge(tmp_path):
     replay = _add(reopened, reservation)
     assert replay == edited
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 20
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 21
         assert connection.execute("SELECT COUNT(*) FROM manual_charge_requests").fetchone()[0] == 1
-    assert SCHEMA_VERSION == 20
+    assert SCHEMA_VERSION == 21
     archive = reopened.export_data()
-    assert archive["schema_version"] == EXPORT_VERSION == 16
+    assert archive["schema_version"] == EXPORT_VERSION == 17
     assert "manual_charge_requests" not in str(archive)
 
 
@@ -297,11 +298,12 @@ def test_raw_sqlite_backup_keeps_successful_request_ledger(tmp_path):
     assert restored.preflight_charge_creation("owner-a", reservation["id"], ATTEMPT)["charge"] == charge
 
 
-def test_schema_18_migrates_to_19_without_changing_existing_charges(tmp_path):
+def test_schema_18_migrates_to_current_without_changing_existing_charges(tmp_path):
     path = tmp_path / "pulse.sqlite3"
     store = Store(path)
     charge = store.add_charge(ATTEMPT)
     with sqlite3.connect(path) as connection:
+        downgrade_current_schema_to_v20(connection)
         connection.execute("DROP TABLE manual_charge_requests")
         connection.execute("DROP TABLE IF EXISTS manual_journey_requests")
         connection.execute("DROP TABLE IF EXISTS manual_journeys")
@@ -310,7 +312,7 @@ def test_schema_18_migrates_to_19_without_changing_existing_charges(tmp_path):
     migrated = Store(path)
     assert migrated.get_charge(charge["id"]) == charge
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 20
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 21
         assert connection.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='manual_charge_requests'"
         ).fetchone() is not None

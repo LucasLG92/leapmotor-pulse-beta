@@ -10,6 +10,7 @@ import math
 import re
 import sqlite3
 from typing import Any
+import unicodedata
 import uuid
 from zoneinfo import ZoneInfo
 
@@ -26,19 +27,27 @@ from pulse.widget_profiles import WidgetProfileValidationError, validate_owner_i
 MAX_MANUAL_JOURNEYS_PER_OWNER = 100_000
 MAX_MANUAL_JOURNEY_STOPS = 32
 MAX_MANUAL_JOURNEY_LABEL_LENGTH = 120
+MAX_MANUAL_JOURNEY_NOTES_LENGTH = 2_000
+MAX_MANUAL_JOURNEY_TAGS = 8
+MAX_MANUAL_JOURNEY_TAG_LENGTH = 32
+MAX_MANUAL_JOURNEY_SEARCH_LENGTH = 100
+MAX_MANUAL_JOURNEY_DOCUMENT_ROWS = 10_000
+MAX_MANUAL_JOURNEY_DOCUMENT_BYTES = 4 * 1024 * 1024
 MAX_MANUAL_JOURNEY_REVISION = 2_147_483_647
 MAX_MANUAL_JOURNEY_ID_RE = re.compile(r"[0-9a-f]{32}\Z")
 _MONTH_ZONE = ZoneInfo("Europe/Madrid")
 # 100,000 rows × bounded binary64 inputs can require fewer than 1,100
 # significant decimal digits when an integer total is aligned with a subnormal.
 _REPORT_DECIMAL_PRECISION = 1_200
-_MANUAL_FIELDS = frozenset({
+_LEGACY_MANUAL_FIELDS = frozenset({
     "started_at", "ended_at", "from_label", "to_label", "distance_km",
     "energy_kwh", "stops",
 })
+_ANNOTATION_FIELDS = frozenset({"notes", "tags"})
+_MANUAL_FIELDS = _LEGACY_MANUAL_FIELDS | _ANNOTATION_FIELDS
 _STORED_FIELDS = (
     "started_at", "ended_at", "from_label", "to_label", "distance_km",
-    "energy_kwh", "stops",
+    "energy_kwh", "stops", "notes", "tags",
 )
 
 
@@ -117,11 +126,83 @@ def _label(value: Any, name: str) -> str | None:
     return normalized
 
 
+def _text_without_controls(value: Any, name: str, maximum: int) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ManualJourneyValidationError(f"{name} debe ser texto o null.")
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        raise ManualJourneyValidationError(f"{name} contiene texto no válido.") from None
+    if any(unicodedata.category(character) == "Cc" for character in value):
+        raise ManualJourneyValidationError(f"{name} contiene caracteres de control.")
+    if len(value) > maximum:
+        raise ManualJourneyValidationError(f"{name} supera {maximum} caracteres.")
+    normalized = value.strip()
+    return normalized or None
+
+
+def _tags(value: Any) -> list[str]:
+    if not isinstance(value, list) or len(value) > MAX_MANUAL_JOURNEY_TAGS:
+        raise ManualJourneyValidationError("tags debe contener como máximo 8 etiquetas.")
+    result: list[str] = []
+    seen: set[str] = set()
+    for raw in value:
+        if not isinstance(raw, str):
+            raise ManualJourneyValidationError("Cada etiqueta debe ser texto.")
+        if len(raw) > MAX_MANUAL_JOURNEY_TAG_LENGTH:
+            raise ManualJourneyValidationError("Cada etiqueta supera 32 caracteres.")
+        try:
+            raw.encode("utf-8")
+        except UnicodeEncodeError:
+            raise ManualJourneyValidationError("Una etiqueta contiene texto no válido.") from None
+        if any(unicodedata.category(character) == "Cc" for character in raw):
+            raise ManualJourneyValidationError("Una etiqueta contiene caracteres de control.")
+        normalized = unicodedata.normalize("NFC", raw.strip()).casefold()
+        if not normalized:
+            raise ManualJourneyValidationError("Las etiquetas no pueden estar vacías.")
+        if len(normalized) > MAX_MANUAL_JOURNEY_TAG_LENGTH:
+            raise ManualJourneyValidationError("Cada etiqueta supera 32 caracteres.")
+        if normalized not in seen:
+            seen.add(normalized)
+            result.append(normalized)
+    return result
+
+
+def _casefold_text(value: str | None) -> str:
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        raise ValueError("searchable journey text must be a string")
+    return unicodedata.normalize("NFC", value).casefold()
+
+
+def _search_term(value: Any) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        _domain_error("search debe ser texto.")
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        _domain_error("search contiene texto no válido.")
+    if len(value) > MAX_MANUAL_JOURNEY_SEARCH_LENGTH:
+        _domain_error("search supera 100 caracteres.")
+    if any(unicodedata.category(character) == "Cc" for character in value):
+        _domain_error("search contiene caracteres de control.")
+    return _casefold_text(value.strip()) or None
+
+
 def canonicalize_manual_journey(
     values: Any, *, now: datetime | None = None
 ) -> dict[str, Any]:
     """Validate user intent, normalize times to UTC, and calculate derived durations."""
-    if not isinstance(values, Mapping) or set(values) != _MANUAL_FIELDS:
+    if (
+        not isinstance(values, Mapping)
+        or not _LEGACY_MANUAL_FIELDS <= set(values)
+        or set(values) - _MANUAL_FIELDS
+    ):
         raise ManualJourneyValidationError(
             "El trayecto debe incluir todos sus campos y no admitir campos adicionales."
         )
@@ -186,6 +267,10 @@ def canonicalize_manual_journey(
         "distance_km": distance,
         "energy_kwh": energy,
         "stops": stops,
+        "notes": _text_without_controls(
+            values.get("notes"), "notes", MAX_MANUAL_JOURNEY_NOTES_LENGTH
+        ),
+        "tags": _tags(values.get("tags", [])),
         "duration_min": duration_min,
         "paused_min": paused_min,
         "active_min": active_min,
@@ -208,6 +293,7 @@ def _same_journey_data(left: Mapping[str, Any], right: Mapping[str, Any]) -> boo
 def _journey_item(row: sqlite3.Row) -> dict[str, Any]:
     try:
         stops = json.loads(row["stops_json"])
+        tags = json.loads(row["tags_json"])
         canonical = canonicalize_manual_journey({
             "started_at": row["started_at"],
             "ended_at": row["ended_at"],
@@ -216,9 +302,13 @@ def _journey_item(row: sqlite3.Row) -> dict[str, Any]:
             "distance_km": row["distance_km"],
             "energy_kwh": row["energy_kwh"],
             "stops": stops,
+            "notes": row["notes"],
+            "tags": tags,
         })
         if canonical["started_at"] != row["started_at"] or canonical["ended_at"] != row["ended_at"]:
             raise ValueError("noncanonical timestamps")
+        if canonical["tags"] != tags or canonical["notes"] != row["notes"]:
+            raise ValueError("noncanonical annotations")
         if type(row["revision"]) is not int or row["revision"] < 1:
             raise ValueError("invalid revision")
         if MAX_MANUAL_JOURNEY_ID_RE.fullmatch(row["id"]) is None:
@@ -249,13 +339,15 @@ def _insert_journey(
     connection.execute(
         """INSERT INTO manual_journeys
            (id, owner_id, revision, started_at, ended_at, from_label, to_label,
-            distance_km, energy_kwh, stops_json, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            distance_km, energy_kwh, stops_json, notes, tags_json, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             journey_id, owner, revision, data["started_at"], data["ended_at"],
             data["from_label"], data["to_label"], data["distance_km"],
             data["energy_kwh"], json.dumps(
                 data["stops"], ensure_ascii=False, allow_nan=False, separators=(",", ":")
+            ), data["notes"], json.dumps(
+                data["tags"], ensure_ascii=False, allow_nan=False, separators=(",", ":")
             ), created_at, updated_at,
         ),
     )
@@ -316,22 +408,48 @@ def create_manual_journey_schema(connection: sqlite3.Connection) -> None:
     )
 
 
-def validate_manual_journey_archive(value: Any, *, now: datetime) -> list[dict[str, Any]]:
-    """Strictly validate schema-16 archive rows and recompute derived metrics."""
+def migrate_manual_journey_annotations(connection: sqlite3.Connection) -> None:
+    """Add notes and tags to an existing manual journey table, once per column."""
+    columns = {
+        row[1] for row in connection.execute("PRAGMA table_info(manual_journeys)")
+    }
+    if not columns:
+        raise sqlite3.OperationalError("manual_journeys table is missing")
+    if "notes" not in columns:
+        connection.execute(
+            """ALTER TABLE manual_journeys ADD COLUMN notes TEXT
+               CHECK (notes IS NULL OR length(notes) <= 2000)"""
+        )
+    if "tags_json" not in columns:
+        connection.execute(
+            """ALTER TABLE manual_journeys ADD COLUMN tags_json TEXT NOT NULL DEFAULT '[]'
+               CHECK (json_valid(tags_json) AND json_type(tags_json) = 'array')"""
+        )
+
+
+def validate_manual_journey_archive(
+    value: Any, *, now: datetime, schema_version: int = 17
+) -> list[dict[str, Any]]:
+    """Validate legacy schema-16 or current schema-17 journey rows."""
     from pulse.domain import DomainError
 
+    if type(schema_version) is not int or schema_version not in {16, 17}:
+        raise DomainError("La versión del archivo de trayectos manuales no es válida.")
     if not isinstance(value, list) or len(value) > 100_000:
         raise DomainError("manual_journeys debe ser una lista dentro del límite permitido.")
     rows: list[dict[str, Any]] = []
     ids: set[str] = set()
     expected = {
-        "id", "owner_id", "revision", "source", "coverage", *_MANUAL_FIELDS,
+        "id", "owner_id", "revision", "source", "coverage",
+        *(_MANUAL_FIELDS if schema_version == 17 else _LEGACY_MANUAL_FIELDS),
         "duration_min", "paused_min", "active_min", "consumption_kwh_100km",
         "created_at", "updated_at",
     }
     for raw in value:
         if not isinstance(raw, Mapping) or set(raw) != expected:
-            raise DomainError("Cada trayecto manual debe cumplir el esquema de exportación 16.")
+            raise DomainError(
+                f"Cada trayecto manual debe cumplir el esquema de exportación {schema_version}."
+            )
         journey_id = raw["id"]
         if not isinstance(journey_id, str) or MAX_MANUAL_JOURNEY_ID_RE.fullmatch(journey_id) is None:
             raise DomainError("El identificador de trayecto manual no es válido.")
@@ -350,13 +468,18 @@ def validate_manual_journey_archive(value: Any, *, now: datetime) -> list[dict[s
         except WidgetProfileValidationError as exc:
             raise DomainError(str(exc)) from None
         try:
-            data = canonicalize_manual_journey(
-                {field: raw[field] for field in _MANUAL_FIELDS}, now=now
-            )
+            manual_values = {field: raw[field] for field in _LEGACY_MANUAL_FIELDS}
+            if schema_version == 17:
+                manual_values.update({field: raw[field] for field in _ANNOTATION_FIELDS})
+            data = canonicalize_manual_journey(manual_values, now=now)
             created = _datetime(raw["created_at"], "created_at")
             updated = _datetime(raw["updated_at"], "updated_at")
         except ManualJourneyValidationError as exc:
             raise DomainError(str(exc), exc.status) from None
+        if schema_version == 17 and (
+            data["notes"] != raw["notes"] or data["tags"] != raw["tags"]
+        ):
+            raise DomainError("Las anotaciones del trayecto no están normalizadas.")
         if updated < created or updated > now.astimezone(timezone.utc) + timedelta(minutes=5):
             raise DomainError("updated_at no puede preceder a created_at ni ser futuro.")
         if created > now.astimezone(timezone.utc) + timedelta(minutes=5):
@@ -393,7 +516,7 @@ def validate_manual_journey_archive(value: Any, *, now: datetime) -> list[dict[s
 def insert_manual_journey_archive_item(
     connection: sqlite3.Connection, item: Mapping[str, Any]
 ) -> None:
-    """Insert a prevalidated schema-16 item while a restore transaction is held."""
+    """Insert a prevalidated archive item while a restore transaction is held."""
     data = {key: item[key] for key in _MANUAL_FIELDS}
     _insert_journey(
         connection,
@@ -487,6 +610,59 @@ class _JourneyTotalsAccumulator:
         }
 
 
+def _manual_journey_report(
+    connection: sqlite3.Connection,
+    owner: str,
+    days: int,
+    ended: datetime,
+) -> dict[str, Any]:
+    started = ended - timedelta(days=days)
+    start_text, end_text = _format_datetime(started), _format_datetime(ended)
+    month_keys: list[str] = []
+    local_start = started.astimezone(_MONTH_ZONE)
+    local_last = (ended - timedelta(microseconds=1)).astimezone(_MONTH_ZONE)
+    year, month = local_start.year, local_start.month
+    while (year, month) <= (local_last.year, local_last.month):
+        month_keys.append(f"{year:04d}-{month:02d}")
+        year, month = (year + 1, 1) if month == 12 else (year, month + 1)
+
+    total = _JourneyTotalsAccumulator()
+    grouped = {key: _JourneyTotalsAccumulator() for key in month_keys}
+    rows = connection.execute(
+        """SELECT * FROM manual_journeys
+           WHERE owner_id = ? AND started_at >= ? AND started_at < ?
+           ORDER BY started_at, id""",
+        (owner, start_text, end_text),
+    )
+    for row in rows:
+        validated = _journey_item(row)
+        month_key = _datetime(
+            validated["started_at"], "started_at"
+        ).astimezone(_MONTH_ZONE).strftime("%Y-%m")
+        distance = validated["distance_km"]
+        energy = validated["energy_kwh"]
+        total.add(distance, energy)
+        bucket = grouped.get(month_key)
+        if bucket is None:
+            bucket = grouped[month_key] = _JourneyTotalsAccumulator()
+        bucket.add(distance, energy)
+    return {
+        "source": "manual",
+        "coverage": "unknown",
+        "period": {
+            "started_at": start_text,
+            "ended_at": end_text,
+            "days": days,
+            "timezone": "UTC",
+        },
+        "totals": total.result(),
+        "months": [
+            {"month_key": key, **grouped[key].result()}
+            for key in month_keys
+        ],
+    }
+
+
 class ManualJourneyStoreMixin:
     """SQLite operations for private, user-entered journey history."""
 
@@ -525,21 +701,60 @@ class ManualJourneyStoreMixin:
         return result
 
     def list_manual_journeys(
-        self, owner_id: str, limit: int = 20, offset: int = 0
+        self,
+        owner_id: str,
+        limit: int = 20,
+        offset: int = 0,
+        *,
+        tag: str | None = None,
+        search: str | None = None,
     ) -> dict[str, Any]:
+        """Page owner rows; tags match exactly after NFC/casefold and search is a
+        Unicode casefolded substring over origin, destination, notes, and tags.
+        """
         owner = _owner_id(owner_id)
         if type(limit) is not int or not 1 <= limit <= 100:
             _domain_error("limit debe estar entre 1 y 100.")
-        if type(offset) is not int or offset < 0:
-            _domain_error("offset debe ser un entero no negativo.")
+        if type(offset) is not int or not 0 <= offset <= 2_147_483_647:
+            _domain_error("offset debe ser un entero entre 0 y 2147483647.")
+        if tag is not None:
+            try:
+                normalized_tags = _tags([tag])
+            except ManualJourneyValidationError as exc:
+                _domain_error(str(exc), exc.status)
+            normalized_tag = normalized_tags[0]
+        else:
+            normalized_tag = None
+        normalized_search = _search_term(search)
+        where = ["owner_id = ?"]
+        parameters: list[Any] = [owner]
+        if normalized_tag is not None:
+            where.append(
+                "EXISTS (SELECT 1 FROM json_each(manual_journeys.tags_json) AS journey_tag "
+                "WHERE journey_tag.value = ?)"
+            )
+            parameters.append(normalized_tag)
+        if normalized_search is not None:
+            where.append(
+                "(instr(pulse_casefold(from_label), ?) > 0 "
+                "OR instr(pulse_casefold(to_label), ?) > 0 "
+                "OR instr(pulse_casefold(notes), ?) > 0 "
+                "OR EXISTS (SELECT 1 FROM json_each(manual_journeys.tags_json) AS journey_tag "
+                "WHERE instr(journey_tag.value, ?) > 0))"
+            )
+            parameters.extend([normalized_search] * 4)
+        where_sql = " AND ".join(where)
         with self._read_transaction() as connection:
+            connection.create_function(
+                "pulse_casefold", 1, _casefold_text, deterministic=True
+            )
             total = int(connection.execute(
-                "SELECT COUNT(*) FROM manual_journeys WHERE owner_id = ?", (owner,)
+                f"SELECT COUNT(*) FROM manual_journeys WHERE {where_sql}", parameters
             ).fetchone()[0])
             rows = connection.execute(
-                """SELECT * FROM manual_journeys WHERE owner_id = ?
-                   ORDER BY started_at DESC, id DESC LIMIT ? OFFSET ?""",
-                (owner, limit, offset),
+                f"""SELECT * FROM manual_journeys WHERE {where_sql}
+                    ORDER BY started_at DESC, id DESC LIMIT ? OFFSET ?""",
+                (*parameters, limit, offset),
             ).fetchall()
             return {"items": [_journey_item(row) for row in rows], "total": total}
 
@@ -548,54 +763,41 @@ class ManualJourneyStoreMixin:
         if type(days) is not int or days not in {30, 90, 365}:
             _domain_error("days debe ser 30, 90 o 365.")
         ended = self._clock_now()
+        with self._read_transaction() as connection:
+            return _manual_journey_report(connection, owner, days, ended)
+
+    def journey_document_data(self, owner_id: str, days: int = 30) -> dict[str, Any]:
+        """Return one owner-scoped report and at most 10,000 matching journey rows."""
+        owner = _owner_id(owner_id)
+        if type(days) is not int or days not in {30, 90, 365}:
+            _domain_error("days debe ser 30, 90 o 365.")
+        ended = self._clock_now()
         started = ended - timedelta(days=days)
         start_text, end_text = _format_datetime(started), _format_datetime(ended)
-        month_keys: list[str] = []
-        local_start = started.astimezone(_MONTH_ZONE)
-        local_last = (ended - timedelta(microseconds=1)).astimezone(_MONTH_ZONE)
-        year, month = local_start.year, local_start.month
-        while (year, month) <= (local_last.year, local_last.month):
-            month_keys.append(f"{year:04d}-{month:02d}")
-            year, month = (year + 1, 1) if month == 12 else (year, month + 1)
-
-        # Hold a fixed-size accumulator per bucket, not per-row journey payloads.
-        total = _JourneyTotalsAccumulator()
-        grouped = {key: _JourneyTotalsAccumulator() for key in month_keys}
         with self._read_transaction() as connection:
+            count = int(connection.execute(
+                """SELECT COUNT(*) FROM manual_journeys
+                   WHERE owner_id = ? AND started_at >= ? AND started_at < ?""",
+                (owner, start_text, end_text),
+            ).fetchone()[0])
+            if count > MAX_MANUAL_JOURNEY_DOCUMENT_ROWS:
+                _domain_error("El informe supera 10.000 trayectos.", 413)
+            report = _manual_journey_report(connection, owner, days, ended)
             rows = connection.execute(
                 """SELECT * FROM manual_journeys
                    WHERE owner_id = ? AND started_at >= ? AND started_at < ?
-                   ORDER BY started_at, id""",
-                (owner, start_text, end_text),
-            )
-            for row in rows:
-                validated = _journey_item(row)
-                month_key = _datetime(
-                    validated["started_at"], "started_at"
-                ).astimezone(_MONTH_ZONE).strftime("%Y-%m")
-                distance = validated["distance_km"]
-                energy = validated["energy_kwh"]
-                total.add(distance, energy)
-                bucket = grouped.get(month_key)
-                if bucket is None:
-                    bucket = grouped[month_key] = _JourneyTotalsAccumulator()
-                bucket.add(distance, energy)
-        months = [
-            {"month_key": key, **grouped[key].result()}
-            for key in month_keys
-        ]
-        return {
-            "source": "manual",
-            "coverage": "unknown",
-            "period": {
-                "started_at": start_text,
-                "ended_at": end_text,
-                "days": days,
-                "timezone": "UTC",
-            },
-            "totals": total.result(),
-            "months": months,
-        }
+                   ORDER BY started_at, id LIMIT ?""",
+                (
+                    owner, start_text, end_text,
+                    MAX_MANUAL_JOURNEY_DOCUMENT_ROWS + 1,
+                ),
+            ).fetchall()
+            if len(rows) > MAX_MANUAL_JOURNEY_DOCUMENT_ROWS:
+                _domain_error("El informe supera 10.000 trayectos.", 413)
+            return {
+                "report": report,
+                "journeys": [_journey_item(row) for row in rows],
+            }
 
     def add_manual_journey(
         self, owner_id: str, request_id: str, values: Mapping[str, Any]
@@ -625,7 +827,14 @@ class ManualJourneyStoreMixin:
                 _domain_error("La solicitud de creación de trayecto ya no está disponible.", 409)
             previous_fingerprint = reservation["attempt_fingerprint"]
             if previous_fingerprint is not None:
-                if previous_fingerprint != fingerprint:
+                # SQLite20 reservations hashed the same canonical intent without
+                # annotations. Accept that exact legacy intent only when empty;
+                # never recompute a reservation from a subsequently edited row.
+                legacy_fingerprint = attempt_fingerprint({
+                    key: value for key, value in data.items()
+                    if key not in {"notes", "tags"}
+                }) if data["notes"] is None and not data["tags"] else None
+                if previous_fingerprint not in {fingerprint, legacy_fingerprint}:
                     _domain_error("La solicitud ya se utilizó con otros datos.", 409)
                 row = connection.execute(
                     "SELECT * FROM manual_journeys WHERE id = ? AND owner_id = ?",
@@ -688,6 +897,11 @@ class ManualJourneyStoreMixin:
             if row is None:
                 _domain_error("No se encontró el trayecto solicitado.", 404)
             current = _journey_item(row)
+            # Clients predating annotations cannot express edits to them.
+            # Explicit null/[] still clear values in the new editor.
+            for field in ("notes", "tags"):
+                if field not in values:
+                    data[field] = current[field]
             if _same_journey_data(current, data):
                 return current
             if revision != current["revision"]:
@@ -700,13 +914,18 @@ class ManualJourneyStoreMixin:
             cursor = connection.execute(
                 """UPDATE manual_journeys SET revision = revision + 1,
                    started_at = ?, ended_at = ?, from_label = ?, to_label = ?,
-                   distance_km = ?, energy_kwh = ?, stops_json = ?, updated_at = ?
+                   distance_km = ?, energy_kwh = ?, stops_json = ?, notes = ?,
+                   tags_json = ?, updated_at = ?
                    WHERE id = ? AND owner_id = ? AND revision = ?""",
                 (
                     data["started_at"], data["ended_at"], data["from_label"],
                     data["to_label"], data["distance_km"], data["energy_kwh"],
                     json.dumps(data["stops"], ensure_ascii=False, allow_nan=False,
                                separators=(",", ":")),
+                    data["notes"], json.dumps(
+                        data["tags"], ensure_ascii=False, allow_nan=False,
+                        separators=(",", ":"),
+                    ),
                     updated_at, journey_id, owner, revision,
                 ),
             )

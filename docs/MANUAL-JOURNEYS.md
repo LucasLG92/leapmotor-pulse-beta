@@ -1,5 +1,7 @@
 # Diario manual de trayectos
 
+El incremento13oct usa SQLite21/JSON17 y admite importar formatos históricos1–16. Añade notas/etiquetas, filtros, planes, favoritos, comparación manual y simulación informativa; CSV/HTML imprimible son funciones web. Las cifras de cualificación anteriores mantienen su revisión histórica. Véase EVOLUTION-QUALIFICATION.json.
+
 Actividad conserva recorridos terminados que introduce el usuario. Cada registro indica `source: manual` y `coverage: unknown`; no se recibe del coche ni confirma cobertura de todos los viajes. La recepción automática B10, detección de inicio/fin/paradas y asociación a un vehículo siguen pendientes del contrato y muestra autorizados en [SOURCE-QUALIFICATION.md](SOURCE-QUALIFICATION.md). No se deduce energía del SoC ni se convierten diferencias de odómetro en viajes.
 
 ## Datos y cálculos

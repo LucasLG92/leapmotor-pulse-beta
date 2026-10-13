@@ -67,9 +67,12 @@ final class NativeAPIPolicyTests: XCTestCase {
                        "&extra=1", "&session_id=\(id)", "&limit=10&limit=20"] {
             XCTAssertFalse(NativeAPIPolicy.allows(path: route + suffix, method: "GET"))
         }
-        for value in [String(id.dropFirst()), id.uppercased(), "%30" + String(id.dropFirst()), "../" + id] {
+        for value in [String(id.dropFirst()), id.uppercased(), "%2530" + String(id.dropFirst()), "../" + id] {
             XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/charger/pricing-history?session_id=\(value)", method: "GET"))
         }
+        XCTAssertTrue(NativeAPIPolicy.allows(
+            path: "/api/charger/pricing-history?session_id=%30\(id.dropFirst())", method: "GET"
+        ))
         XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/charger/pricing-history", method: "GET"))
         XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/charger/sessions?session_id=\(id)", method: "GET"))
         for method in ["POST", "PUT", "DELETE"] {
@@ -138,6 +141,109 @@ final class NativeAPIPolicyTests: XCTestCase {
         XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/journeys/\(id)", method: "POST"))
         XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/journeys", method: "get"))
         XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/journeys", method: "post"))
+    }
+
+    func testManualJourneyFiltersDecodeOnceAndEnforceUnicodeAndControlBounds() {
+        let emoji = "%F0%9F%9A%99"
+        let longSearch = String(repeating: emoji, count: 100)
+        let longTag = String(repeating: emoji, count: 32)
+        XCTAssertTrue(NativeAPIPolicy.allows(
+            path: "/api/journeys?search=\(longSearch)&tag=\(longTag)&limit=100&offset=1000000", method: "GET"
+        ))
+        XCTAssertTrue(NativeAPIPolicy.allows(path: "/api/journeys?search=viaje+interurbano&tag=%C3%A9", method: "GET"))
+        XCTAssertTrue(NativeAPIPolicy.allows(path: "/api/journeys?search=%23ruta", method: "GET"))
+        XCTAssertTrue(NativeAPIPolicy.allows(path: "/api/journeys?search=%2526literal", method: "GET"))
+        XCTAssertTrue(NativeAPIPolicy.allows(path: "/api/journeys?search=", method: "GET"))
+        XCTAssertTrue(NativeAPIPolicy.allows(path: "/api/journeys?%6cimit=%31", method: "GET"))
+
+        for path in [
+            "/api/journeys?search=\(String(repeating: emoji, count: 101))",
+            "/api/journeys?tag=\(String(repeating: emoji, count: 33))",
+            "/api/journeys?search=%00", "/api/journeys?search=%7f", "/api/journeys?tag=%C2%80",
+            "/api/journeys?search=%E2%28%A1", "/api/journeys?search=%ZZ", "/api/journeys?search=%",
+            "/api/journeys?limit=1&%6cimit=2", "/api/journeys?%78=1",
+            "/api/journeys?offset=2147483648", "/api/journeys?search=bad#fragment",
+            "/api/journeys?search=%2526&search=again"
+        ] {
+            XCTAssertFalse(NativeAPIPolicy.allows(path: path, method: "GET"), path)
+        }
+        XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/journeys?limit=%2531", method: "GET"))
+        XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/journeys/document", method: "GET"))
+        XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/journeys/document?format=csv", method: "GET"))
+    }
+
+    func testMaintenancePlansHaveExactRoutesAndBoundedReadFilters() {
+        let route = "/api/maintenance-plans"
+        XCTAssertTrue(NativeAPIPolicy.allows(path: route, method: "GET"))
+        XCTAssertTrue(NativeAPIPolicy.allows(
+            path: route + "?limit=1&offset=1000000&odometer_km=0", method: "GET"
+        ))
+        XCTAssertTrue(NativeAPIPolicy.allows(path: route + "?limit=100&odometer_km=2000000", method: "GET"))
+        XCTAssertTrue(NativeAPIPolicy.allows(
+            path: route + "?%6fdometer_km=%32%30%30%30%30%30%30", method: "GET"
+        ))
+        XCTAssertTrue(NativeAPIPolicy.allows(path: route, method: "POST"))
+        XCTAssertTrue(NativeAPIPolicy.allows(path: route + "/\(id)", method: "PUT"))
+        XCTAssertTrue(NativeAPIPolicy.allows(path: route + "/\(id)", method: "DELETE"))
+        XCTAssertTrue(NativeAPIPolicy.allows(path: route + "/\(id)/complete", method: "POST"))
+
+        for path in [route + "?limit=0", route + "?limit=101", route + "?offset=1000001",
+                     route + "?odometer_km=-1", route + "?odometer_km=2000001", route + "?odometer_km=2147483648",
+                     route + "?odometer_km=1.5", route + "?odometer_km=1&odometer_km=2",
+                     route + "?odometer_km=1&%6fdometer_km=2", route + "?refresh=1",
+                     route + "/\(id.uppercased())", route + "/../\(id)",
+                     route + "/\(id)/complete/extra", route + "/%30\(id.dropFirst())"] {
+            let method = path == route + "/\(id)/complete/extra" ? "POST"
+                : (path.contains("?") || path.contains("/../") ? "GET" : "PUT")
+            XCTAssertFalse(NativeAPIPolicy.allows(path: path, method: method), path)
+        }
+        for method in ["PUT", "DELETE", "PATCH"] {
+            XCTAssertFalse(NativeAPIPolicy.allows(path: route, method: method))
+        }
+        for method in ["GET", "POST", "PATCH"] {
+            XCTAssertFalse(NativeAPIPolicy.allows(path: route + "/\(id)", method: method))
+        }
+        for method in ["GET", "PUT", "DELETE", "PATCH"] {
+            XCTAssertFalse(NativeAPIPolicy.allows(path: route + "/\(id)/complete", method: method))
+        }
+        XCTAssertFalse(NativeAPIPolicy.allows(path: route + "?limit=1", method: "POST"))
+        XCTAssertFalse(NativeAPIPolicy.allows(path: route + "/\(id)?x=1", method: "DELETE"))
+    }
+
+    func testNavigationFavoritesAndEnergyRoutesHaveExactMethods() {
+        let favorites = "/api/navigation/favorites"
+        XCTAssertTrue(NativeAPIPolicy.allows(path: favorites, method: "GET"))
+        XCTAssertTrue(NativeAPIPolicy.allows(path: favorites, method: "POST"))
+        XCTAssertTrue(NativeAPIPolicy.allows(path: favorites + "/\(id)", method: "DELETE"))
+        XCTAssertFalse(NativeAPIPolicy.allows(path: favorites + "/\(id)", method: "GET"))
+        XCTAssertFalse(NativeAPIPolicy.allows(path: favorites + "/\(id.uppercased())", method: "DELETE"))
+        for path in [favorites + "?x=1", favorites + "/\(id)?x=1"] {
+            for method in ["GET", "POST", "PUT", "DELETE"] {
+                XCTAssertFalse(NativeAPIPolicy.allows(path: path, method: method), "\(path) \(method)")
+            }
+        }
+        for method in ["PUT", "DELETE", "PATCH"] {
+            XCTAssertFalse(NativeAPIPolicy.allows(path: favorites, method: method))
+        }
+
+        let comparison = "/api/energy/comparison"
+        XCTAssertTrue(NativeAPIPolicy.allows(path: comparison, method: "GET"))
+        for days in ["30", "90", "365"] {
+            XCTAssertTrue(NativeAPIPolicy.allows(path: comparison + "?days=\(days)", method: "GET"))
+        }
+        XCTAssertTrue(NativeAPIPolicy.allows(path: comparison + "?days=%39%30", method: "GET"))
+        for path in [comparison + "?days=7", comparison + "?days=90&days=30",
+                     comparison + "?days=%2533%2530", comparison + "?days=30&unknown=1"] {
+            XCTAssertFalse(NativeAPIPolicy.allows(path: path, method: "GET"), path)
+        }
+        for method in ["POST", "PUT", "DELETE", "PATCH"] {
+            XCTAssertFalse(NativeAPIPolicy.allows(path: comparison, method: method))
+        }
+        XCTAssertTrue(NativeAPIPolicy.allows(path: "/api/energy/plan", method: "POST"))
+        for method in ["GET", "PUT", "DELETE", "PATCH"] {
+            XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/energy/plan", method: method))
+        }
+        XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/energy/plan?days=90", method: "POST"))
     }
 
     func testRejectsTraversalAbsoluteOriginsQueriesAndPrivateRoutes() {

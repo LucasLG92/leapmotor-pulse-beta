@@ -1141,7 +1141,7 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 
 			{@render updateNotice()}
 
-			<main id="pulse-content" class="page-content" tabindex="-1" aria-labelledby="page-title">
+			<main id="pulse-content" class="page-content" class:cockpit-content={route === 'overview'} tabindex="-1" aria-labelledby="page-title">
 				{#if View}
 					{#key formContextRevision}
 					<View
@@ -1191,7 +1191,18 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 					<Glyph name={item.icon} size={20} /><span>{item.route === 'navigation' ? 'Mapa' : item.label}</span>
 				</a>
 			{/each}
-
+			<details class="mobile-more" bind:open={moreNavigationOpen}>
+				<summary class:active={route === 'protection' || route === 'settings'} aria-expanded={moreNavigationOpen} aria-label={`Más secciones${route === 'protection' || route === 'settings' ? ` · ${titles[route]}` : ''}`}>
+					<Glyph name="more" size={20} /><span>Más</span>
+				</summary>
+				<nav aria-label="Más secciones">
+					{#each navigation.filter((item) => ['protection', 'settings'].includes(item.route)) as item (item.route)}
+						<a class:active={route === item.route} href={item.path} aria-current={route === item.route ? 'page' : undefined} onclick={(event) => navigate(event, item.path)}>
+							<Glyph name={item.icon} size={19} /><span>{item.label}</span>
+						</a>
+					{/each}
+				</nav>
+			</details>
 		</nav>
 		</div>
 	</div>

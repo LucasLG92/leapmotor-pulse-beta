@@ -12,7 +12,7 @@ import pytest
 from pulse import pvpc
 from pulse.charger_store import session_id as canonical_session_id
 from pulse.domain import DomainError, EXPORT_VERSION, SCHEMA_VERSION, Store
-from schema_helpers import downgrade_telemetry_to_v15
+from schema_helpers import downgrade_export_to_v16, downgrade_telemetry_to_v15
 
 
 UTC = timezone.utc
@@ -122,8 +122,8 @@ def test_real_quote_insert_creates_one_private_history_event_and_duplicate_does_
     assert item["quote"] == stored_quote
     assert item["corrected_session"] is None
     assert "scope" not in item and "upstream_id" not in item["session"]
-    assert SCHEMA_VERSION == 20
-    assert EXPORT_VERSION == 16
+    assert SCHEMA_VERSION == 21
+    assert EXPORT_VERSION == 17
 
     with pytest.raises(DomainError) as error:
         store.charger_pricing_history(scope(2), record["id"])
@@ -274,7 +274,7 @@ def test_v12_migration_creates_explicit_migration_baseline(tmp_path):
     assert page["items"][0]["kind"] == "baseline"
     assert page["items"][0]["quote"] == quote
     with sqlite3.connect(store.path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 20
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 21
         assert connection.execute(
             "PRAGMA foreign_key_list(charger_pricing_history)"
         ).fetchone()[6] == "CASCADE"
@@ -286,7 +286,8 @@ def test_json11_restore_preserves_events_and_json10_restore_creates_archive_base
     source.update_settings({"pricing_method": "pvpc"})
     source.save_charger_pricing(scope(), record, quote_for(record))
     archive11 = source.export_data()
-    assert archive11["schema_version"] == 16
+    assert archive11["schema_version"] == 17
+    downgrade_export_to_v16(archive11)
     archive11["schema_version"] = 11  # Preserve this historical compatibility fixture.
     archive11.pop("manual_journeys")
     archive11["settings"].pop("vehicle_color")

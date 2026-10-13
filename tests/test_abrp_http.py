@@ -66,7 +66,7 @@ def test_disabled_status_no_network_or_private_values(tmp_path):
         for marker in ("TEST_ONLY_API_KEY", "TEST_ONLY_USER_TOKEN", app.state.config.abrp.scope):
             assert marker not in state.text and marker not in export.text
             assert marker not in repr(app.state.config)
-        assert export.json()["schema_version"] == 16
+        assert export.json()["schema_version"] == 17
         assert transport.sent == []
 
 

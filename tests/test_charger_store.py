@@ -9,7 +9,7 @@ import sqlite3
 import pytest
 
 from pulse.domain import DomainError, EXPORT_VERSION, SCHEMA_VERSION, Store
-from schema_helpers import downgrade_telemetry_to_v15
+from schema_helpers import downgrade_export_to_v16, downgrade_telemetry_to_v15
 from pulse.charger_store import (
     MAX_CHARGER_ACTIVE_SECONDS,
     MAX_CHARGER_SCOPES,
@@ -112,11 +112,11 @@ def test_v6_to_v7_migration_preserves_domain_data_and_creates_charger_tables(tmp
         "items": [], "total": 0, "limit": 20, "offset": 0,
     }
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 20
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 21
         assert {row[0] for row in connection.execute(
             "SELECT name FROM sqlite_master WHERE type='table'"
         )} >= {"charger_observations", "charger_sessions"}
-    assert SCHEMA_VERSION == 20
+    assert SCHEMA_VERSION == 21
 
 
 def test_observation_and_sessions_persist_dedupe_and_accept_newer_corrections(tmp_path):
@@ -334,7 +334,7 @@ def test_export_import_roundtrip_and_rejection_are_atomic(tmp_path):
         sessions=[session(active_seconds=3_599.5)],
     )
     archive = source.export_data()
-    assert archive["schema_version"] == EXPORT_VERSION == 16
+    assert archive["schema_version"] == EXPORT_VERSION == 17
     assert archive["charger"] == [{
         "scope": scope(), "observation": observation() | {
             "received_at": "2026-10-08T14:00:00.000000Z",
@@ -377,6 +377,7 @@ def test_legacy_exports_replace_charger_data_with_empty_dataset(tmp_path, versio
     store = make_store(tmp_path, f"legacy-{version}.sqlite3", clock)
     store.ingest_charger(scope(), observation=observation(), sessions=[session()])
     legacy = store.export_data()
+    downgrade_export_to_v16(legacy)
     legacy["schema_version"] = version
     legacy.pop("manual_journeys")
     legacy["settings"].pop("vehicle_color")

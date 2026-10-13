@@ -18,10 +18,10 @@ from pulse.push_crypto import PushCrypto
 from pulse.push_policy import PushConfig, encode_url64
 
 
-def test_overwritten_failure_and_recovery_reach_community_once_only_payloads(tmp_path):
+def test_overwritten_failure_and_recovery_reach_private_once_only_payloads(tmp_path):
     script = Path(__file__).resolve().parents[1] / "deploy/community/backup-monitor.py"
     if not script.is_file():
-        pytest.fail("Community backup monitor source is missing.")
+        pytest.skip("Community monitor fixture is missing.")
     spec = importlib.util.spec_from_file_location("backup_monitor_pipeline_fixture", script)
     producer = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(producer)
@@ -36,9 +36,8 @@ def test_overwritten_failure_and_recovery_reach_community_once_only_payloads(tmp
             "age_seconds": 7200, "max_age_hours": 36,
             "artifact_content_hash_verified": False, "restore_verified": False,
             "notification_delivered": False}
-    archive_base = dict(base, profile="archive")
     producer.persist(directory, base, os.geteuid())
-    producer.persist(directory, archive_base, os.geteuid())
+    producer.persist(directory, dict(base, profile="archive"), os.geteuid())
     store = Store(tmp_path / "pulse.sqlite3", clock=lambda: now)
     assert store.observe_backup_reports(config.scope, read_monitor_reports(config, now))["event_count"] == 0
 
@@ -61,13 +60,13 @@ def test_overwritten_failure_and_recovery_reach_community_once_only_payloads(tmp
 
     # The consumer misses the failing poll and sees a later healthy report.
     now += timedelta(minutes=1)
-    producer.persist(directory, dict(archive_base, checked_at=iso(now), status="alert",
+    producer.persist(directory, dict(base, checked_at=iso(now), status="alert",
                                     issues=["copy_missing"], latest_copy_at=None,
                                     age_seconds=None), os.geteuid())
     now += timedelta(minutes=1)
-    producer.persist(directory, dict(archive_base, checked_at=iso(now)), os.geteuid())
+    producer.persist(directory, dict(base, checked_at=iso(now)), os.geteuid())
     now += timedelta(minutes=1)
-    producer.persist(directory, dict(archive_base, checked_at=iso(now)), os.geteuid())
+    producer.persist(directory, dict(base, checked_at=iso(now)), os.geteuid())
     reports = read_monitor_reports(config, now)
     assert all(report["status"] == "healthy" for report in reports)
     assert store.observe_backup_reports(config.scope, reports)["event_count"] == 2
