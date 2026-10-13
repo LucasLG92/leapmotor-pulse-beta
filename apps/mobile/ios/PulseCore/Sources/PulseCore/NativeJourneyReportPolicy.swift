@@ -202,6 +202,7 @@ public final class NativeJourneyReportTemporaryStore {
         guard [30, 90, 365].contains(days), let rootURL else {
             throw NativeJourneyReportTemporaryStoreError.unavailable
         }
+        #if os(iOS)
         var directory: URL?
         var createdDirectory = false
         do {
@@ -217,9 +218,6 @@ public final class NativeJourneyReportTemporaryStore {
             try protectAndExclude(exportDirectory)
 
             let file = exportDirectory.appendingPathComponent("pulse-viajes-\(days)-dias.json", isDirectory: false)
-            guard #available(macOS 11.0, *) else {
-                throw NativeJourneyReportTemporaryStoreError.unavailable
-            }
             try data.write(to: file, options: [.atomic, .completeFileProtection])
             try protectAndExclude(file)
             return file
@@ -229,6 +227,11 @@ public final class NativeJourneyReportTemporaryStore {
             }
             throw NativeJourneyReportTemporaryStoreError.unavailable
         }
+        #else
+        // The protected export handoff is an iOS capability; never create an
+        // unprotected substitute on platforms where those guarantees do not apply.
+        throw NativeJourneyReportTemporaryStoreError.unavailable
+        #endif
     }
 
     public func removeExport(at fileURL: URL) throws {
@@ -285,6 +288,7 @@ public final class NativeJourneyReportTemporaryStore {
         return uuid.uuidString == url.lastPathComponent.uppercased()
     }
 
+    #if os(iOS)
     private func protectAndExclude(_ url: URL) throws {
         try fileManager.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: url.path)
         var values = URLResourceValues()
@@ -292,6 +296,7 @@ public final class NativeJourneyReportTemporaryStore {
         var mutableURL = url
         try mutableURL.setResourceValues(values)
     }
+    #endif
 }
 
 public enum NativeJourneyReportTemporaryStoreError: Error, Equatable {

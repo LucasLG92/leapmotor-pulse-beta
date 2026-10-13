@@ -155,6 +155,7 @@ final class NativeJourneyReportPolicyTests: XCTestCase {
         let retained = exportRoot.appendingPathComponent("keep.txt")
         try Data("keep".utf8).write(to: retained)
         let store = NativeJourneyReportTemporaryStore(rootURL: exportRoot)
+        #if os(iOS)
         let file = try store.createExport(data: Data("{}".utf8), days: 90)
         XCTAssertEqual(file.lastPathComponent, "pulse-viajes-90-dias.json")
         XCTAssertEqual(try Data(contentsOf: file), Data("{}".utf8))
@@ -163,6 +164,14 @@ final class NativeJourneyReportPolicyTests: XCTestCase {
         try store.removeExport(at: file)
         XCTAssertFalse(fileManager.fileExists(atPath: file.deletingLastPathComponent().path))
         XCTAssertTrue(fileManager.fileExists(atPath: retained.path))
+        #else
+        XCTAssertThrowsError(try store.createExport(data: Data("{}".utf8), days: 90)) {
+            XCTAssertEqual($0 as? NativeJourneyReportTemporaryStoreError, .unavailable)
+        }
+        let remainingEntries = try fileManager.contentsOfDirectory(atPath: exportRoot.path)
+        XCTAssertEqual(Set(remainingEntries), Set(["keep.txt"]))
+        XCTAssertTrue(fileManager.fileExists(atPath: retained.path))
+        #endif
         XCTAssertThrowsError(try store.removeExport(at: retained))
     }
 

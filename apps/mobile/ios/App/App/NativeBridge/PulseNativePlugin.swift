@@ -486,12 +486,12 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
 
     private func finishJourneyReportPick(_ export: PendingJourneyReportExport, pickedURLs: [URL]?) {
         guard activeJourneyReportExport === export else { return }
-        guard sessions.isCurrent(export.session.generation) else {
-            failJourneyReportExport(export, code: "NATIVE_REPORT_EXPORT_UNAUTHENTICATED")
-            return
-        }
         guard let pickedURLs else {
             resolveJourneyReportExport(export, status: "cancelled")
+            return
+        }
+        guard sessions.isCurrent(export.session.generation) else {
+            failJourneyReportExport(export, code: "NATIVE_REPORT_EXPORT_UNAUTHENTICATED")
             return
         }
         guard !pickedURLs.isEmpty else {
@@ -520,16 +520,18 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
 
     private func failJourneyReportExport(_ export: PendingJourneyReportExport, code: String) {
         guard activeJourneyReportExport === export else { return }
+        let resultCode = code == "NATIVE_REPORT_EXPORT_UNAUTHENTICATED" && export.picker != nil
+            ? "NATIVE_REPORT_EXPORT_OUTCOME_UNKNOWN" : code
         if !retireJourneyReportExport(export) { journeyReportStoreReady = false }
-        switch code {
+        switch resultCode {
         case "NATIVE_REPORT_EXPORT_UNAUTHENTICATED":
-            export.call.reject("La sesión ha caducado. Vuelve a iniciar sesión.", code)
+            export.call.reject("La sesión ha caducado. Vuelve a iniciar sesión.", resultCode)
         case "NATIVE_REPORT_EXPORT_INVALID":
-            export.call.reject("Los datos de exportación no son válidos.", code)
+            export.call.reject("Los datos de exportación no son válidos.", resultCode)
         case "NATIVE_REPORT_EXPORT_BUSY":
-            export.call.reject("Ya hay una exportación en curso.", code)
+            export.call.reject("Ya hay una exportación en curso.", resultCode)
         case "NATIVE_REPORT_EXPORT_OUTCOME_UNKNOWN":
-            export.call.reject("El resultado de la exportación no se pudo confirmar. Comprueba el destino antes de reintentar.", code)
+            export.call.reject("El resultado de la exportación no se pudo confirmar. Comprueba el destino antes de reintentar.", resultCode)
         default:
             export.call.reject("No se pudo preparar el informe para exportarlo.", "NATIVE_REPORT_EXPORT_UNAVAILABLE")
         }
@@ -867,9 +869,7 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
         let credential = config.flatMap { credentials.credential(apiOrigin: $0.apiOrigin) }
         sessions.invalidate()
         if let export = activeJourneyReportExport {
-            if !retireJourneyReportExport(export) { journeyReportStoreReady = false }
-            export.call.reject("La sesión ha caducado. Vuelve a iniciar sesión.",
-                               "NATIVE_REPORT_EXPORT_UNAUTHENTICATED")
+            failJourneyReportExport(export, code: "NATIVE_REPORT_EXPORT_UNAUTHENTICATED")
         }
         cancelPendingAuthorization(message: "La autenticación se canceló.", code: "NATIVE_AUTH_CANCELLED")
         stopAllEvents()
