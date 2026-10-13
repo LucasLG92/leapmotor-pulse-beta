@@ -67,9 +67,15 @@ from pulse.manual_charge_requests import (
     attempt_fingerprint,
     valid_request_id,
 )
+from pulse.manual_journeys import (
+    ManualJourneyStoreMixin,
+    create_manual_journey_schema,
+    insert_manual_journey_archive_item,
+    validate_manual_journey_archive,
+)
 
-SCHEMA_VERSION = 19
-EXPORT_VERSION = 15
+SCHEMA_VERSION = 20
+EXPORT_VERSION = 16
 MAX_IMPORT_BYTES = 1_000_000
 MAX_V3_IMPORT_BYTES = 5_000_000
 MAX_V4_IMPORT_BYTES = 5_000_000
@@ -84,6 +90,7 @@ MAX_V12_IMPORT_BYTES = 5_000_000
 MAX_V13_IMPORT_BYTES = 5_000_000
 MAX_V14_IMPORT_BYTES = 5_000_000
 MAX_V15_IMPORT_BYTES = 5_000_000
+MAX_V16_IMPORT_BYTES = 5_000_000
 MAX_ROWS_PER_COLLECTION = 100_000
 MAX_TEXT_LENGTH = 240
 MAX_STATE_CHARGES = 100
@@ -189,7 +196,8 @@ class DomainError(Exception):
 
 class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin,
             ChargerPricingHistoryStoreMixin,
-            PushStoreMixin, BackupAlertStoreMixin, ObservedEventsStoreMixin):
+            PushStoreMixin, BackupAlertStoreMixin, ObservedEventsStoreMixin,
+            ManualJourneyStoreMixin):
     """A per-call SQLite store with explicit initialization and short transactions."""
 
     def __init__(
@@ -392,6 +400,10 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
         if version == 18:
             self._migrate_v18_to_v19(connection)
             connection.execute("PRAGMA user_version = 19")
+            version = 19
+        if version == 19:
+            self._migrate_v19_to_v20(connection)
+            connection.execute("PRAGMA user_version = 20")
 
     def _migrate_v17_to_v18(self, connection: sqlite3.Connection) -> None:
         """Add opt-in backup notices and bounded operational state, outside exports."""
@@ -434,6 +446,10 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
             """CREATE INDEX idx_manual_charge_requests_owner_expiry
                ON manual_charge_requests(owner_id, expires_at)"""
         )
+
+    def _migrate_v19_to_v20(self, connection: sqlite3.Connection) -> None:
+        """Add private manual journeys and their bounded creation ledger."""
+        create_manual_journey_schema(connection)
 
     def _migrate_v14_to_v15(self, connection: sqlite3.Connection) -> None:
         connection.execute(
@@ -2149,6 +2165,9 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
             charger_energy = self._export_charger_energy(connection)
             charger_pricing_history = self._export_charger_pricing_history(connection)
             observed_events = self._export_observed_events(connection)
+            manual_journeys = self.export_manual_journeys(
+                connection, owner, byte_limit=MAX_V16_IMPORT_BYTES
+            )
             result = {
                 "schema_version": EXPORT_VERSION,
                 "exported_at": self._now(),
@@ -2171,6 +2190,7 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                 "charger_energy": charger_energy,
                 "charger_pricing_history": charger_pricing_history,
                 "observed_events": observed_events,
+                "manual_journeys": manual_journeys,
             }
             if demo:
                 result["demo_vehicle"] = _read_demo_vehicle(connection)
@@ -2180,7 +2200,7 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                 ).encode("utf-8")
             except (TypeError, ValueError, UnicodeEncodeError):
                 raise DomainError("No se pudo validar el documento de exportación.", 500) from None
-            if len(encoded) > MAX_V15_IMPORT_BYTES:
+            if len(encoded) > MAX_V16_IMPORT_BYTES:
                 raise DomainError(
                     "La exportación supera el tamaño máximo admitido para una restauración.", 413
                 )
@@ -2198,10 +2218,24 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
         with self._transaction() as connection:
             # The full document was validated before any write transaction starts.
             # JSON restores never grant permission to an external account.
+            if owner is not None:
+                self._assert_manual_journey_ids_available(
+                    connection, owner, document["manual_journeys"]
+                )
             connection.execute("""UPDATE abrp_preference SET scope = '', enabled = 0,
                 generation = generation + 1, last_attempt_key = NULL, last_attempt_at = NULL
                 WHERE id = 1""")
             connection.execute("DELETE FROM manual_charge_requests")
+            if owner is None:
+                connection.execute("DELETE FROM manual_journey_requests")
+                connection.execute("DELETE FROM manual_journeys")
+            else:
+                connection.execute(
+                    "DELETE FROM manual_journey_requests WHERE owner_id = ?", (owner,)
+                )
+                connection.execute(
+                    "DELETE FROM manual_journeys WHERE owner_id = ?", (owner,)
+                )
             for table in (
                 "manual_charges",
                 "demo_charges",
@@ -2265,6 +2299,11 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
                         item["distance_km"], item["duration_min"], item["energy_kwh"],
                     ),
                 )
+            for item in document["manual_journeys"]:
+                if owner is not None and item["owner_id"] != owner:
+                    # Keep a second ownership guard next to the pre-transaction validation.
+                    raise DomainError("La importación contiene trayectos de otro usuario.")
+                insert_manual_journey_archive_item(connection, item)
             for item in document["maintenance"]:
                 table = "demo_maintenance" if item["source"] == "demo" else "manual_maintenance"
                 connection.execute(
@@ -2359,11 +2398,20 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
         self, data: Any, *, owner_id: str | None
     ) -> tuple[str | None, dict[str, Any]]:
         owner = None if owner_id is None else _validate_profile_owner(owner_id)
-        document = _validate_import(data)
+        document = _validate_import(data, now=self._clock_now())
         if owner is not None and any(
             item["owner_id"] != owner for item in document["widget_profiles"]
         ):
             raise DomainError("La importación contiene perfiles de otro usuario.")
+        if owner is not None and any(
+            item["owner_id"] != owner for item in document["manual_journeys"]
+        ):
+            raise DomainError("La importación contiene trayectos de otro usuario.")
+        if owner is not None and document["manual_journeys"]:
+            with self._read_transaction() as connection:
+                self._assert_manual_journey_ids_available(
+                    connection, owner, document["manual_journeys"]
+                )
         if document["telemetry_snapshots"]:
             future_limit = self._clock_now() + timedelta(seconds=60)
             for item in document["telemetry_snapshots"]:
@@ -2385,6 +2433,27 @@ class Store(ChargerStoreMixin, ChargerPricingStoreMixin, ChargerEnergyStoreMixin
         except ObservedEventError as exc:
             raise DomainError(str(exc)) from None
         return owner, document
+
+    @staticmethod
+    def _assert_manual_journey_ids_available(
+        connection: sqlite3.Connection,
+        owner: str,
+        journeys: list[Mapping[str, Any]],
+    ) -> None:
+        """Reject owner-scoped restores that would collide with another user's ID."""
+        ids = [item["id"] for item in journeys]
+        for start in range(0, len(ids), 500):
+            chunk = ids[start:start + 500]
+            placeholders = ",".join("?" for _ in chunk)
+            conflict = connection.execute(
+                f"""SELECT id FROM manual_journeys
+                    WHERE owner_id != ? AND id IN ({placeholders}) LIMIT 1""",
+                (owner, *chunk),
+            ).fetchone()
+            if conflict is not None:
+                raise DomainError(
+                    "La importación contiene un identificador usado por otro usuario.", 409
+                )
 
     def _reset_demo_vehicle(self, connection: sqlite3.Connection, observed_at: str) -> None:
         default = _default_demo_vehicle(observed_at)
@@ -3651,11 +3720,13 @@ def _unique_object_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
-def _validate_import(data: Any) -> dict[str, Any]:
+def _validate_import(
+    data: Any, *, now: datetime | None = None
+) -> dict[str, Any]:
     try:
         if isinstance(data, bytes):
             encoded_size = len(data)
-            if encoded_size > MAX_V9_IMPORT_BYTES:
+            if encoded_size > MAX_V16_IMPORT_BYTES:
                 raise DomainError("La importación supera el tamaño permitido.")
             decoded = json.loads(
                 data.decode("utf-8"),
@@ -3664,7 +3735,7 @@ def _validate_import(data: Any) -> dict[str, Any]:
             )
         elif isinstance(data, str):
             encoded_size = len(data.encode("utf-8"))
-            if encoded_size > MAX_V9_IMPORT_BYTES:
+            if encoded_size > MAX_V16_IMPORT_BYTES:
                 raise DomainError("La importación supera el tamaño permitido.")
             decoded = json.loads(
                 data, parse_constant=_reject_json_constant, object_pairs_hook=_unique_object_pairs
@@ -3674,7 +3745,7 @@ def _validate_import(data: Any) -> dict[str, Any]:
                 data, allow_nan=False, separators=(",", ":"), ensure_ascii=False
             )
             encoded_size = len(encoded.encode("utf-8"))
-            if encoded_size > MAX_V9_IMPORT_BYTES:
+            if encoded_size > MAX_V16_IMPORT_BYTES:
                 raise DomainError("La importación supera el tamaño permitido.")
             decoded = json.loads(encoded, parse_constant=_reject_json_constant)
     except DomainError:
@@ -3715,6 +3786,8 @@ def _validate_import(data: Any) -> dict[str, Any]:
         raise DomainError("La importación supera el tamaño permitido para la versión 14.")
     if version == 15 and encoded_size > MAX_V15_IMPORT_BYTES:
         raise DomainError("La importación supera el tamaño permitido para la versión 15.")
+    if version == 16 and encoded_size > MAX_V16_IMPORT_BYTES:
+        raise DomainError("La importación supera el tamaño permitido para la versión 16.")
     mode = decoded.get("mode")
     if mode not in ("demo", "unconfigured"):
         raise DomainError("El modo del documento no es válido.")
@@ -3736,6 +3809,8 @@ def _validate_import(data: Any) -> dict[str, Any]:
         fields.add("charger_energy")
     if version >= 11:
         fields.add("charger_pricing_history")
+    if version >= 16:
+        fields.add("manual_journeys")
     root = _exact_object(decoded, fields, "documento")
     _parse_datetime(root["exported_at"], "exported_at")
 
@@ -3993,6 +4068,7 @@ def _validate_import(data: Any) -> dict[str, Any]:
     charger_pricing_history: list[dict[str, Any]] = []
     charger_energy = {"epochs": [], "intervals": []}
     observed_events: list[dict[str, Any]] = []
+    manual_journeys: list[dict[str, Any]] = []
     if version >= 3:
         profile_rows = _collection(root["widget_profiles"], "widget_profiles")
         if len(profile_rows) > MAX_WIDGET_PROFILE_IMPORT_ROWS:
@@ -4049,6 +4125,11 @@ def _validate_import(data: Any) -> dict[str, Any]:
         except ChargerDataError as exc:
             raise DomainError(f"La importación de charger_pricing_history no es válida: {exc}") from None
 
+    if version >= 16:
+        manual_journeys = validate_manual_journey_archive(
+            root["manual_journeys"], now=now or datetime.now(timezone.utc)
+        )
+
     if version < 12 and any(
         item["quote"]["pricing"]["accuracy"] != "estimated_uniform"
         for item in [*charger_pricing, *charger_pricing_history]
@@ -4089,6 +4170,7 @@ def _validate_import(data: Any) -> dict[str, Any]:
         "charger_energy": charger_energy,
         "charger_pricing_history": charger_pricing_history,
         "observed_events": observed_events,
+        "manual_journeys": manual_journeys,
     }
 
 

@@ -154,6 +154,72 @@ class ChargeCreationRequest(BaseModel):
     expires_at: str
 
 
+class ManualJourneyStop(BaseModel):
+    started_at: str
+    ended_at: str
+
+
+class ManualJourney(BaseModel):
+    id: str = Field(pattern=r"^[0-9a-f]{32}$", min_length=32, max_length=32)
+    revision: int = Field(ge=1)
+    source: Literal["manual"]
+    coverage: Literal["unknown"]
+    started_at: str
+    ended_at: str
+    from_label: str | None
+    to_label: str | None
+    distance_km: float | None = Field(ge=0, le=50_000, allow_inf_nan=False)
+    energy_kwh: float | None = Field(ge=0, le=5_000, allow_inf_nan=False)
+    stops: list[ManualJourneyStop] = Field(max_length=32)
+    duration_min: float = Field(ge=0, allow_inf_nan=False)
+    paused_min: float = Field(ge=0, allow_inf_nan=False)
+    active_min: float = Field(ge=0, allow_inf_nan=False)
+    consumption_kwh_100km: float | None = Field(ge=0, allow_inf_nan=False)
+    created_at: str
+    updated_at: str
+
+
+class ManualJourneyPage(BaseModel):
+    items: list[ManualJourney]
+    total: int = Field(ge=0)
+
+
+class ManualJourneyCreationRequest(BaseModel):
+    id: str = Field(pattern=r"^[0-9a-f]{32}$", min_length=32, max_length=32)
+    expires_at: str
+
+
+class ManualJourneyPeriod(BaseModel):
+    started_at: str
+    ended_at: str
+    days: Literal[30, 90, 365]
+    timezone: Literal["UTC"]
+
+
+class ManualJourneyTotals(BaseModel):
+    count: int = Field(ge=0)
+    distance_km: float = Field(ge=0, allow_inf_nan=False)
+    energy_kwh: float = Field(ge=0, allow_inf_nan=False)
+    known_distance_count: int = Field(ge=0)
+    known_energy_count: int = Field(ge=0)
+    paired_count: int = Field(ge=0)
+    paired_distance_km: float = Field(ge=0, allow_inf_nan=False)
+    paired_energy_kwh: float = Field(ge=0, allow_inf_nan=False)
+    consumption_kwh_100km: float | None = Field(ge=0, allow_inf_nan=False)
+
+
+class ManualJourneyMonth(ManualJourneyTotals):
+    month_key: str = Field(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")
+
+
+class ManualJourneyReport(BaseModel):
+    source: Literal["manual"]
+    coverage: Literal["unknown"]
+    period: ManualJourneyPeriod
+    totals: ManualJourneyTotals
+    months: list[ManualJourneyMonth]
+
+
 class ChargerObservation(BaseModel):
     received_at: str
     loadpoint: str

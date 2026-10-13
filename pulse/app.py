@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, Path as PathParam, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
@@ -35,6 +35,12 @@ from pulse.static import PublicStaticFiles
 from pulse.push_service import PushService, register_push
 from pulse.charger import ChargerReader
 from pulse.contracts import ChargerPricingHistoryPage
+from pulse.contracts import (
+    ManualJourney,
+    ManualJourneyCreationRequest,
+    ManualJourneyPage,
+    ManualJourneyReport,
+)
 from pulse.navigation import Navigation
 from pulse.abrp import AbrpBridge
 from pulse.contracts import NavigationStatus, NavigationSearch, NavigationChargers, NavigationTile, ObservedEventPage
@@ -94,6 +100,33 @@ class ChargeEditPayload(Payload):
     tariff_eur_kwh: float | None = Field(default=None, ge=0, le=5)
     ended_at: str | None = Field(default=None, max_length=64)
     pricing_method: Literal["manual", "pvpc"] | None = None
+
+
+class ManualJourneyStopPayload(Payload):
+    started_at: str = Field(max_length=64)
+    ended_at: str = Field(max_length=64)
+
+
+class ManualJourneyFieldsPayload(Payload):
+    started_at: str = Field(max_length=64)
+    ended_at: str = Field(max_length=64)
+    from_label: str | None = Field(max_length=120)
+    to_label: str | None = Field(max_length=120)
+    distance_km: float | None = Field(ge=0, le=50_000, allow_inf_nan=False)
+    energy_kwh: float | None = Field(ge=0, le=5_000, allow_inf_nan=False)
+    stops: list[ManualJourneyStopPayload] = Field(max_length=32)
+
+
+class ManualJourneyPayload(ManualJourneyFieldsPayload):
+    request_id: str = Field(pattern=r"^[0-9a-f]{32}$", min_length=32, max_length=32)
+
+
+class ManualJourneyEditPayload(ManualJourneyFieldsPayload):
+    revision: int = Field(ge=1, strict=True)
+
+
+class ManualJourneyDeletePayload(Payload):
+    revision: int = Field(ge=1, strict=True)
 
 
 class MaintenancePayload(Payload):
@@ -378,6 +411,67 @@ def create_app(db_path: str | Path | None = None, *, name: str | None = None,
     @app.post("/api/protection/event")
     async def event(values: Payload):
         return {"ok": True, "event": await coordinator.call("simulate_event", write=True)}
+
+    @app.get("/api/journeys", response_model=ManualJourneyPage)
+    async def manual_journeys(
+        request: Request,
+        limit: int = Query(default=20, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
+    ):
+        return await coordinator.call(
+            "list_manual_journeys", owner_id(request), limit, offset
+        )
+
+    @app.get("/api/journeys/report", response_model=ManualJourneyReport)
+    async def manual_journeys_report(
+        request: Request,
+        days: str = Query(default="30", pattern=r"^(30|90|365)$"),
+    ):
+        return await coordinator.call(
+            "report_manual_journeys", owner_id(request), int(days)
+        )
+
+    @app.post("/api/journeys/requests", response_model=ManualJourneyCreationRequest)
+    async def reserve_manual_journey_creation(request: Request, values: Payload):
+        return await coordinator.call(
+            "reserve_manual_journey_creation", owner_id(request)
+        )
+
+    @app.post("/api/journeys", response_model=ManualJourney)
+    async def create_manual_journey(request: Request, values: ManualJourneyPayload):
+        data = values.model_dump()
+        request_id = data.pop("request_id")
+        return await coordinator.call(
+            "add_manual_journey", owner_id(request), request_id, data, write=True
+        )
+
+    @app.put("/api/journeys/{journey_id}", response_model=ManualJourney)
+    async def edit_manual_journey(
+        request: Request,
+        values: ManualJourneyEditPayload,
+        journey_id: str = PathParam(
+            pattern=r"^[0-9a-f]{32}$", min_length=32, max_length=32
+        ),
+    ):
+        data = values.model_dump(exclude={"revision"})
+        return await coordinator.call(
+            "update_manual_journey", owner_id(request), journey_id,
+            values.revision, data, write=True,
+        )
+
+    @app.delete("/api/journeys/{journey_id}")
+    async def delete_manual_journey(
+        request: Request,
+        values: ManualJourneyDeletePayload,
+        journey_id: str = PathParam(
+            pattern=r"^[0-9a-f]{32}$", min_length=32, max_length=32
+        ),
+    ):
+        await coordinator.call(
+            "delete_manual_journey", owner_id(request), journey_id,
+            values.revision, write=True,
+        )
+        return {"ok": True}
 
     @app.get("/api/charges", response_model=ChargePage)
     async def charges(limit: int = Query(default=100, ge=1, le=100), offset: int = Query(default=0, ge=0)):

@@ -98,6 +98,48 @@ final class NativeAPIPolicyTests: XCTestCase {
         XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/protection/observations", method: "DELETE"))
     }
 
+    func testManualJourneysHaveExactReadAndMutationRoutes() {
+        XCTAssertTrue(NativeAPIPolicy.allows(path: "/api/journeys", method: "GET"))
+        XCTAssertTrue(NativeAPIPolicy.allows(path: "/api/journeys?limit=100&offset=0", method: "GET"))
+        XCTAssertTrue(NativeAPIPolicy.allows(path: "/api/journeys?limit=1&offset=1000000", method: "GET"))
+        XCTAssertTrue(NativeAPIPolicy.allows(path: "/api/journeys/report", method: "GET"))
+        for days in ["30", "90", "365"] {
+            XCTAssertTrue(NativeAPIPolicy.allows(path: "/api/journeys/report?days=\(days)", method: "GET"))
+        }
+        XCTAssertTrue(NativeAPIPolicy.allows(path: "/api/journeys/requests", method: "POST"))
+        XCTAssertTrue(NativeAPIPolicy.allows(path: "/api/journeys", method: "POST"))
+        XCTAssertTrue(NativeAPIPolicy.allows(path: "/api/journeys/\(id)", method: "PUT"))
+        XCTAssertTrue(NativeAPIPolicy.allows(path: "/api/journeys/\(id)", method: "DELETE"))
+
+        for path in ["/api/journeys?limit=0", "/api/journeys?limit=101",
+                     "/api/journeys?offset=-1", "/api/journeys?offset=1000001",
+                     "/api/journeys?limit=1.0", "/api/journeys?limit=1&limit=2",
+                     "/api/journeys?limit=1&other=1", "/api/journeys?offset=+1",
+                     "/api/journeys/report?days=7", "/api/journeys/report?days=30&days=90",
+                     "/api/journeys/report?days=30&extra=1", "/api/journeys/report?DAYS=30",
+                     "/API/journeys", "/api/journeys/\(id)?x=1",
+                     "/api/journeys/\(id.uppercased())", "/api/journeys/../\(id)",
+                     "/api/journeys/0123456789abcdef0123456789abcdeg",
+                     "/api/journeys/%2e%2e/\(id)", "/api/journeys/\(id)/extra"] {
+            let method = path.contains("/report") || path == "/api/journeys" || path.hasPrefix("/api/journeys?")
+                ? "GET" : "PUT"
+            XCTAssertFalse(NativeAPIPolicy.allows(path: path, method: method), path)
+        }
+        for method in ["GET", "PUT", "DELETE", "PATCH"] {
+            XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/journeys/requests", method: method))
+        }
+        for method in ["PUT", "DELETE", "PATCH"] {
+            XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/journeys", method: method))
+        }
+        XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/journeys/requests?x=1", method: "POST"))
+        XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/journeys?x=1", method: "POST"))
+        XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/journeys/\(id)?x=1", method: "DELETE"))
+        XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/journeys/\(id)", method: "GET"))
+        XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/journeys/\(id)", method: "POST"))
+        XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/journeys", method: "get"))
+        XCTAssertFalse(NativeAPIPolicy.allows(path: "/api/journeys", method: "post"))
+    }
+
     func testRejectsTraversalAbsoluteOriginsQueriesAndPrivateRoutes() {
         for path in [
             "https://pulse.example.test/api/state",

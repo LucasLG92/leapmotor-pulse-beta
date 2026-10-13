@@ -2,10 +2,11 @@
 	import { onDestroy, onMount, tick, untrack } from 'svelte';
 	import { ApiError, getCommandHistory } from '../lib/api';
 	import Glyph from '../lib/Glyph.svelte';
+	import ManualJourneysPanel from '../lib/ManualJourneysPanel.svelte';
 	import { count, dateOnly, dateTime, number } from '../lib/format';
 	import type { CommandHistoryEntry, MaintenanceItem, PageProps } from '../lib/types';
 
-	let { pulseState, busy, online, revision, mutate, confirmAction, drafts, onSessionExpired }: PageProps = $props();
+	let { pulseState, busy, online, revision, mutate, reserveJourneyCreation, confirmAction, drafts, onSessionExpired }: PageProps = $props();
 	let commandHistory = $state<CommandHistoryEntry[]>([]);
 	let loadingCommands = $state(true);
 	let commandError = $state('');
@@ -192,15 +193,16 @@
 <section class="page-intro">
 	<div>
 		<h2>Tu diario</h2>
-		<p>Trayectos recibidos, acciones de demostración y mantenimiento guardado en Pulse, cada uno con su fecha.</p>
+		<p>Tu registro manual de trayectos, demostración y mantenimiento guardado en Pulse, cada uno con su fecha.</p>
 	</div>
 	<span class="status-pill" class:status-demo={pulseState.mode === 'demo'}><span class="status-dot"></span>{pulseState.mode === 'demo' ? 'Incluye datos simulados' : 'Solo datos guardados'}</span>
 </section>
 
 <section class="activity-grid">
 	<div class="activity-main-column">
+		<ManualJourneysPanel {busy} {online} {revision} {drafts} {mutate} {reserveJourneyCreation} {confirmAction} {onSessionExpired} />
 		<section aria-labelledby="journeys-heading">
-			<div class="section-heading"><div><h2 id="journeys-heading">Trayectos</h2><p class="activity-section-copy">Distancia, duración y energía que conserva cada registro.</p></div><span class="badge">{count(journeys.length)} disponibles</span></div>
+			<div class="section-heading"><div><h2 id="journeys-heading">{pulseState.mode === 'demo' ? 'Trayectos de demostración' : 'Trayectos automáticos'}</h2><p class="activity-section-copy">{pulseState.mode === 'demo' ? 'Registros ficticios, separados de tu diario manual.' : 'La recepción del vehículo requiere una integración cualificada.'}</p></div><span class="badge">{count(journeys.length)} disponibles</span></div>
 			{#if journeys.length === 0}
 				<div class="empty-state"><span class="empty-mark"><Glyph name="activity" /></span><h3>No hay trayectos recibidos</h3><p>{pulseState.mode === 'demo' ? 'El servidor no entrega recorridos en este momento.' : 'Pulse aún no tiene una integración que reciba recorridos del vehículo.'}</p>{#if pulseState.mode !== 'demo'}<a class="button button-secondary" href="/settings#preparation">Revisar preparación</a>{/if}</div>
 			{:else}

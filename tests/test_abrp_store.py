@@ -41,17 +41,19 @@ def test_db10_migration_preserves_business_and_defaults_to_no_consent(tmp_path):
         db.execute("DROP TABLE charger_energy_epochs")
         db.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
         db.execute("DROP TABLE IF EXISTS manual_charge_requests")
+        db.execute("DROP TABLE IF EXISTS manual_journey_requests")
+        db.execute("DROP TABLE IF EXISTS manual_journeys")
         db.execute("PRAGMA user_version = 10")
     migrated = Store(path, clock=lambda: NOW)
-    assert SCHEMA_VERSION == 19
+    assert SCHEMA_VERSION == 20
     assert migrated.export_data() == before
-    assert before["schema_version"] == EXPORT_VERSION == 15
+    assert before["schema_version"] == EXPORT_VERSION == 16
     context = migrated.abrp_context(SCOPE)
     assert context["snapshot"] == store.telemetry_latest()
     assert not context["consent"]
     assert context["generation"] == 0
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 19
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 20
 
 
 def test_consent_survives_restart_but_never_another_binding(tmp_path):
@@ -108,7 +110,7 @@ def test_valid_import_revokes_invalid_import_preserves_and_export_excludes_prefe
     snapshot(store)
     generation = store.set_abrp_consent(SCOPE, True)["generation"]
     archive = store.export_data()
-    assert archive["schema_version"] == 15
+    assert archive["schema_version"] == 16
     text = json.dumps(archive)
     assert "abrp" not in text and SCOPE not in text
     invalid = deepcopy(archive)

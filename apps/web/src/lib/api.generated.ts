@@ -361,6 +361,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/journeys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Manual Journeys */
+        get: operations["manual_journeys_api_journeys_get"];
+        put?: never;
+        /** Create Manual Journey */
+        post: operations["create_manual_journey_api_journeys_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/journeys/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Manual Journeys Report */
+        get: operations["manual_journeys_report_api_journeys_report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/journeys/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reserve Manual Journey Creation */
+        post: operations["reserve_manual_journey_creation_api_journeys_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/journeys/{journey_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Edit Manual Journey */
+        put: operations["edit_manual_journey_api_journeys__journey_id__put"];
+        post?: never;
+        /** Delete Manual Journey */
+        delete: operations["delete_manual_journey_api_journeys__journey_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/charges": {
         parameters: {
             query?: never;
@@ -1379,6 +1449,198 @@ export interface components {
             title: string;
             /** Due Date */
             due_date: string;
+        };
+        /** ManualJourney */
+        ManualJourney: {
+            /** Id */
+            id: string;
+            /** Revision */
+            revision: number;
+            /**
+             * Source
+             * @constant
+             */
+            source: "manual";
+            /**
+             * Coverage
+             * @constant
+             */
+            coverage: "unknown";
+            /** Started At */
+            started_at: string;
+            /** Ended At */
+            ended_at: string;
+            /** From Label */
+            from_label: string | null;
+            /** To Label */
+            to_label: string | null;
+            /** Distance Km */
+            distance_km: number | null;
+            /** Energy Kwh */
+            energy_kwh: number | null;
+            /** Stops */
+            stops: components["schemas"]["ManualJourneyStop"][];
+            /** Duration Min */
+            duration_min: number;
+            /** Paused Min */
+            paused_min: number;
+            /** Active Min */
+            active_min: number;
+            /** Consumption Kwh 100Km */
+            consumption_kwh_100km: number | null;
+            /** Created At */
+            created_at: string;
+            /** Updated At */
+            updated_at: string;
+        };
+        /** ManualJourneyCreationRequest */
+        ManualJourneyCreationRequest: {
+            /** Id */
+            id: string;
+            /** Expires At */
+            expires_at: string;
+        };
+        /** ManualJourneyDeletePayload */
+        ManualJourneyDeletePayload: {
+            /** Revision */
+            revision: number;
+        };
+        /** ManualJourneyEditPayload */
+        ManualJourneyEditPayload: {
+            /** Started At */
+            started_at: string;
+            /** Ended At */
+            ended_at: string;
+            /** From Label */
+            from_label: string | null;
+            /** To Label */
+            to_label: string | null;
+            /** Distance Km */
+            distance_km: number | null;
+            /** Energy Kwh */
+            energy_kwh: number | null;
+            /** Stops */
+            stops: components["schemas"]["ManualJourneyStopPayload"][];
+            /** Revision */
+            revision: number;
+        };
+        /** ManualJourneyMonth */
+        ManualJourneyMonth: {
+            /** Count */
+            count: number;
+            /** Distance Km */
+            distance_km: number;
+            /** Energy Kwh */
+            energy_kwh: number;
+            /** Known Distance Count */
+            known_distance_count: number;
+            /** Known Energy Count */
+            known_energy_count: number;
+            /** Paired Count */
+            paired_count: number;
+            /** Paired Distance Km */
+            paired_distance_km: number;
+            /** Paired Energy Kwh */
+            paired_energy_kwh: number;
+            /** Consumption Kwh 100Km */
+            consumption_kwh_100km: number | null;
+            /** Month Key */
+            month_key: string;
+        };
+        /** ManualJourneyPage */
+        ManualJourneyPage: {
+            /** Items */
+            items: components["schemas"]["ManualJourney"][];
+            /** Total */
+            total: number;
+        };
+        /** ManualJourneyPayload */
+        ManualJourneyPayload: {
+            /** Started At */
+            started_at: string;
+            /** Ended At */
+            ended_at: string;
+            /** From Label */
+            from_label: string | null;
+            /** To Label */
+            to_label: string | null;
+            /** Distance Km */
+            distance_km: number | null;
+            /** Energy Kwh */
+            energy_kwh: number | null;
+            /** Stops */
+            stops: components["schemas"]["ManualJourneyStopPayload"][];
+            /** Request Id */
+            request_id: string;
+        };
+        /** ManualJourneyPeriod */
+        ManualJourneyPeriod: {
+            /** Started At */
+            started_at: string;
+            /** Ended At */
+            ended_at: string;
+            /**
+             * Days
+             * @enum {integer}
+             */
+            days: 30 | 90 | 365;
+            /**
+             * Timezone
+             * @constant
+             */
+            timezone: "UTC";
+        };
+        /** ManualJourneyReport */
+        ManualJourneyReport: {
+            /**
+             * Source
+             * @constant
+             */
+            source: "manual";
+            /**
+             * Coverage
+             * @constant
+             */
+            coverage: "unknown";
+            period: components["schemas"]["ManualJourneyPeriod"];
+            totals: components["schemas"]["ManualJourneyTotals"];
+            /** Months */
+            months: components["schemas"]["ManualJourneyMonth"][];
+        };
+        /** ManualJourneyStop */
+        ManualJourneyStop: {
+            /** Started At */
+            started_at: string;
+            /** Ended At */
+            ended_at: string;
+        };
+        /** ManualJourneyStopPayload */
+        ManualJourneyStopPayload: {
+            /** Started At */
+            started_at: string;
+            /** Ended At */
+            ended_at: string;
+        };
+        /** ManualJourneyTotals */
+        ManualJourneyTotals: {
+            /** Count */
+            count: number;
+            /** Distance Km */
+            distance_km: number;
+            /** Energy Kwh */
+            energy_kwh: number;
+            /** Known Distance Count */
+            known_distance_count: number;
+            /** Known Energy Count */
+            known_energy_count: number;
+            /** Paired Count */
+            paired_count: number;
+            /** Paired Distance Km */
+            paired_distance_km: number;
+            /** Paired Energy Kwh */
+            paired_energy_kwh: number;
+            /** Consumption Kwh 100Km */
+            consumption_kwh_100km: number | null;
         };
         /** MqttStatus */
         MqttStatus: {
@@ -2873,6 +3135,205 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["Payload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_journeys_api_journeys_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualJourneyPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_manual_journey_api_journeys_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualJourneyPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualJourney"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_journeys_report_api_journeys_report_get: {
+        parameters: {
+            query?: {
+                days?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualJourneyReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reserve_manual_journey_creation_api_journeys_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Payload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualJourneyCreationRequest"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_manual_journey_api_journeys__journey_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                journey_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualJourneyEditPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualJourney"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_manual_journey_api_journeys__journey_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                journey_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualJourneyDeletePayload"];
             };
         };
         responses: {

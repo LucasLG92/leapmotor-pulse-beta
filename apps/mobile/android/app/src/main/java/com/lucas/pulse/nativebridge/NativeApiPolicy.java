@@ -48,11 +48,19 @@ public final class NativeApiPolicy {
         if (is(method, "GET", path, "/api/charges", "/api/telemetry/history")) {
             return boundedPageQuery(parameters);
         }
+        if ("GET".equals(method) && "/api/journeys".equals(path)) {
+            return boundedPageQuery(parameters);
+        }
         if (is(method, "GET", path, "/api/charger/sessions", "/api/protection/observations")) {
             return boundedPageQuery(parameters) && (!parameters.containsKey("offset")
                     || Integer.parseInt(parameters.get("offset")) <= 1000);
         }
         if ("GET".equals(method) && "/api/analytics/energy".equals(path)) {
+            return parameters.isEmpty() || (parameters.size() == 1 && validDecimal(parameters.get("days"))
+                    && ("30".equals(parameters.get("days")) || "90".equals(parameters.get("days"))
+                    || "365".equals(parameters.get("days"))));
+        }
+        if ("GET".equals(method) && "/api/journeys/report".equals(path)) {
             return parameters.isEmpty() || (parameters.size() == 1 && validDecimal(parameters.get("days"))
                     && ("30".equals(parameters.get("days")) || "90".equals(parameters.get("days"))
                     || "365".equals(parameters.get("days"))));
@@ -70,7 +78,7 @@ public final class NativeApiPolicy {
             return parameters.isEmpty();
         }
 
-        if (is(method, "POST", path, "/api/charges/quote", "/api/charges/requests", "/api/charges", "/api/demo", "/api/commands",
+        if (is(method, "POST", path, "/api/charges/quote", "/api/charges/requests", "/api/charges", "/api/journeys/requests", "/api/journeys", "/api/demo", "/api/commands",
                 "/api/protection/event", "/api/maintenance", "/api/import", "/api/widget-profiles",
                 "/api/auth/logout", "/api/navigation/places", "/api/navigation/chargers", "/api/navigation/tiles")) return parameters.isEmpty();
         if ("POST".equals(method) && path.matches("/api/widget-profiles/[a-f0-9]{32}/pairings")) {
@@ -79,6 +87,8 @@ public final class NativeApiPolicy {
         if (is(method, "PUT", path, "/api/settings", "/api/protection", "/api/integrations/abrp")) return parameters.isEmpty();
         if ("PUT".equals(method) && path.matches("/api/charges/[a-f0-9]{32}")) return parameters.isEmpty();
         if ("DELETE".equals(method) && path.matches("/api/charges/[a-f0-9]{32}")) return parameters.isEmpty();
+        if (path.matches("/api/journeys/[a-f0-9]{32}")
+                && ("PUT".equals(method) || "DELETE".equals(method))) return parameters.isEmpty();
         if (path.matches("/api/maintenance/[a-f0-9]{32}")
                 && ("PUT".equals(method) || "DELETE".equals(method))) return parameters.isEmpty();
         if (path.matches("/api/widget-profiles/[a-f0-9]{32}")

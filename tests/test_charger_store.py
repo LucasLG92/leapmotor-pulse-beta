@@ -101,6 +101,8 @@ def test_v6_to_v7_migration_preserves_domain_data_and_creates_charger_tables(tmp
         connection.execute("DROP TABLE charger_observations")
         connection.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
         connection.execute("DROP TABLE IF EXISTS manual_charge_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journey_requests")
+        connection.execute("DROP TABLE IF EXISTS manual_journeys")
         connection.execute("PRAGMA user_version = 6")
 
     migrated = Store(path, clock=clock)
@@ -110,11 +112,11 @@ def test_v6_to_v7_migration_preserves_domain_data_and_creates_charger_tables(tmp
         "items": [], "total": 0, "limit": 20, "offset": 0,
     }
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 19
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 20
         assert {row[0] for row in connection.execute(
             "SELECT name FROM sqlite_master WHERE type='table'"
         )} >= {"charger_observations", "charger_sessions"}
-    assert SCHEMA_VERSION == 19
+    assert SCHEMA_VERSION == 20
 
 
 def test_observation_and_sessions_persist_dedupe_and_accept_newer_corrections(tmp_path):
@@ -332,7 +334,7 @@ def test_export_import_roundtrip_and_rejection_are_atomic(tmp_path):
         sessions=[session(active_seconds=3_599.5)],
     )
     archive = source.export_data()
-    assert archive["schema_version"] == EXPORT_VERSION == 15
+    assert archive["schema_version"] == EXPORT_VERSION == 16
     assert archive["charger"] == [{
         "scope": scope(), "observation": observation() | {
             "received_at": "2026-10-08T14:00:00.000000Z",
@@ -376,6 +378,7 @@ def test_legacy_exports_replace_charger_data_with_empty_dataset(tmp_path, versio
     store.ingest_charger(scope(), observation=observation(), sessions=[session()])
     legacy = store.export_data()
     legacy["schema_version"] = version
+    legacy.pop("manual_journeys")
     legacy["settings"].pop("vehicle_color")
     legacy.pop("charger_pricing_history")
     legacy.pop("charger_energy")

@@ -6,7 +6,7 @@
 	import { observeServiceWorkerUpdate } from './lib/pwa-update';
 	import { createStartupAttempt } from './lib/startup-read';
 	import { internalAppPath, preparationSection } from './lib/app-links';
-import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuotePayload, HttpMethod, MutationPayload, PageProps, PulseState, Route, SessionState, ThemePreference, WebPushSubscriptionInput, WidgetPairingResult, PushDevice, PushTestResult } from './lib/types';
+import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuotePayload, HttpMethod, ManualJourneyCreationRequest, MutationPayload, PageProps, PulseState, Route, SessionState, ThemePreference, WebPushSubscriptionInput, WidgetPairingResult, PushDevice, PushTestResult } from './lib/types';
 	import Glyph from './lib/Glyph.svelte';
 
 	type ViewComponent = Component<PageProps>;
@@ -492,6 +492,25 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 			if (!result || typeof result.id !== 'string' || !/^[a-f0-9]{32}$/.test(result.id)
 				|| typeof result.expires_at !== 'string' || !Number.isFinite(Date.parse(result.expires_at))) {
 				throw new Error('No se pudo preparar el guardado de la carga.');
+			}
+			return result;
+		} catch (error) {
+			if (error instanceof ApiError && error.status === 401) expireSession();
+			throw error;
+		} finally {
+			busyCount = Math.max(0, busyCount - 1);
+			if (!isBusy && eventRefreshPending) scheduleEventRefresh();
+		}
+	}
+
+	async function reserveJourneyCreation(): Promise<ManualJourneyCreationRequest> {
+		if (updateBusy) throw new Error('Pulse se está actualizando. Espera antes de guardar el trayecto.');
+		busyCount += 1;
+		try {
+			const result = await mutateApi<ManualJourneyCreationRequest>('/api/journeys/requests', 'POST', csrfToken);
+			if (!result || typeof result.id !== 'string' || !/^[a-f0-9]{32}$/.test(result.id)
+				|| typeof result.expires_at !== 'string' || !Number.isFinite(Date.parse(result.expires_at))) {
+				throw new Error('No se pudo preparar el guardado del trayecto.');
 			}
 			return result;
 		} catch (error) {
@@ -1138,6 +1157,7 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 						{mutate}
 						{quoteCharge}
 						{reserveChargeCreation}
+						{reserveJourneyCreation}
 						onSessionExpired={expireSession}
 						navigation={navigationClient}
 						{createWidgetPairing}

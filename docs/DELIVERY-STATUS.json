@@ -230,7 +230,7 @@
     {
       "id": "phase-5",
       "name": "Trayectos e informes",
-      "status": "pending",
+      "status": "in_progress",
       "software_criteria": [
         "Ingestión/persistencia, inicio/fin/paradas, distancia/energía/cobertura, agregados y exportación."
       ],
@@ -238,7 +238,14 @@
         "Validar trayectos y cobertura con datos reales.",
         "Notas, unión reversible, informes ampliados y salud estimada son mejoras opcionales, no evidencia de datos disponibles."
       ],
-      "source_contract_review": "docs/SOURCE-QUALIFICATION.md"
+      "source_contract_review": "docs/SOURCE-QUALIFICATION.md",
+      "qualification": "docs/MANUAL-JOURNEY-QUALIFICATION.json",
+      "local_increment": "Diario manual privado y paginado con fechas/paradas y magnitudes nullable; reserva/replay, edición revision e informe30/90/365d por propietario, SQLite20/JSON16.1285backend/131subcasos/34SDKskip,57web/7mobile y QA loopback sintética. APK genérico auditado77JUnit/Lint0errores17avisos. Publicación y Apple nuevos pendientes al congelar fuentes; sin despliegue, firma o aceptación B10.",
+      "remaining_software_checks": [
+        "Contrato B10 con identidad, unidades, fechas/frescura y cobertura antes de ingestión automática.",
+        "Validación con recorridos y energía reales; no deducir energía por SoC.",
+        "Recepción de exportación/restauración en navegador, firma/instalación y pruebas reales en ambos teléfonos."
+      ]
     },
     {
       "id": "phase-6",
@@ -370,5 +377,16 @@
     "physical_acceptance": false,
     "evidence": "evidence/phase4-charge-save-20261013",
     "qualification": "docs/CHARGE-SAVE-QUALIFICATION.json"
+  },
+  "manual_journeys_review": {
+    "status": "local_software_verified_native_android_unsigned_apple_pending",
+    "storage_schema": 20,
+    "export_version": 16,
+    "source_published": false,
+    "native_full_build_platform": "Android",
+    "runtime_deployed": false,
+    "physical_acceptance": false,
+    "qualification": "docs/MANUAL-JOURNEY-QUALIFICATION.json",
+    "evidence": "evidence/phase5-manual-journeys-20261013"
   }
 }
