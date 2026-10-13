@@ -47,6 +47,10 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 
 	let route = $state<Route>(routeFromPath(window.location.pathname));
 	let View = $state<ViewComponent | null>(null);
+	let viewLoadFailed = $state(false);
+	let viewLoadAttempt = $state(0);
+	let viewRetryButton = $state<HTMLButtonElement | undefined>();
+	let viewRetryFocusRequested = false;
 	let pageTitle = $state<HTMLHeadingElement | undefined>();
 	let routeFocusPending = $state(window.location.pathname === '/settings' && window.location.hash === '#preparation');
 	const drafts = new DraftGuard();
@@ -111,13 +115,26 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 
 	$effect(() => {
 		const selectedRoute = route;
+		viewLoadAttempt;
+		const restoreRetryFocus = viewRetryFocusRequested;
+		viewRetryFocusRequested = false;
+		let cancelled = false;
+		viewLoadFailed = false;
 		View = null;
 		loaders[selectedRoute]().then((module) => {
-			if (route !== selectedRoute) return;
+			if (cancelled || route !== selectedRoute) return;
 			View = module.default;
 		}).catch(() => {
-			showToast('No se pudo abrir esta sección. Recarga la página para intentarlo de nuevo.', 'error');
+			if (cancelled || route !== selectedRoute) return;
+			viewLoadFailed = true;
+			showToast('No se pudo abrir esta sección. Puedes volver a intentarlo.', 'error');
+			if (restoreRetryFocus) void tick().then(() => {
+				if (!cancelled && route === selectedRoute && document.hasFocus() && document.activeElement === document.body) {
+					viewRetryButton?.focus({ preventScroll: true });
+				}
+			});
 		});
+		return () => { cancelled = true; };
 	});
 
 	$effect(() => {
@@ -1099,7 +1116,7 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 		<aside class="desktop-rail" aria-label="Navegación principal">
 			<a class="brand-lockup" href="/" onclick={(event) => navigate(event, '/')} aria-label={`${appName}, ir al resumen`}>
 				<span class="brand-mark" aria-hidden="true"><img src="/icon.svg" width="34" height="34" alt="" /></span>
-				<span><strong>{appName}</strong></span>
+				<span><strong>{appName}</strong><small>Tu garaje personal</small></span>
 			</a>
 			<nav class="primary-nav" aria-label="Secciones de Pulse">
 				{#each navigation as item (item.route)}
@@ -1113,7 +1130,8 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 				<div class="rail-connection"><span class:offline={!online} class="status-dot"></span><span>{online ? 'Red disponible' : 'Sin conexión'}</span></div>
 				<a class="account-link" href="/settings" onclick={(event) => navigate(event, '/settings')}>
 					<span class="account-avatar" aria-hidden="true">{(session?.user?.name || 'L').slice(0, 1).toUpperCase()}</span>
-					<span class="sr-only">{session?.user?.name || 'Cuenta personal'} · Preferencias y copias</span>
+					<span><strong>{session?.user?.name || 'Cuenta personal'}</strong><small>Preferencias y copias</small></span>
+					<Glyph name="chevron" size={16} />
 				</a>
 			</div>
 		</aside>
@@ -1141,8 +1159,9 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 
 			{@render updateNotice()}
 
-			<main id="pulse-content" class="page-content" class:cockpit-content={route === 'overview'} tabindex="-1" aria-labelledby="page-title">
+			<main id="pulse-content" class="page-content" class:cockpit-content={route === 'overview'} tabindex="-1" aria-labelledby="page-title" aria-busy={!View && !viewLoadFailed}>
 				{#if View}
+					<div class="view-entry">
 					{#key formContextRevision}
 					<View
 						{drafts}
@@ -1172,6 +1191,20 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 						onInstall={installApp}
 					/>
 					{/key}
+					</div>
+				{:else if viewLoadFailed}
+					<section class="route-load-state" aria-labelledby="route-load-title">
+						<span class="route-load-mark" aria-hidden="true"><Glyph name={navigation.find((item) => item.route === route)?.icon ?? 'overview'} size={28} /></span>
+						<h2 id="route-load-title">Esta sección no se ha podido abrir</h2>
+						<p role="alert">Comprueba la conexión y vuelve a intentarlo.</p>
+						<button class="button button-primary" type="button" bind:this={viewRetryButton} onclick={() => { routeFocusPending = true; viewRetryFocusRequested = true; viewLoadAttempt += 1; }}>Reintentar sección <Glyph name="arrow" size={18} /></button>
+					</section>
+				{:else}
+					<div class="route-load-state" role="status">
+						<span class="route-load-mark" aria-hidden="true"><Glyph name={navigation.find((item) => item.route === route)?.icon ?? 'overview'} size={28} /></span>
+						<p>Abriendo {titles[route].toLocaleLowerCase('es')}…</p>
+						<div class="route-load-lines" aria-hidden="true"><span></span><span></span><span></span></div>
+					</div>
 				{/if}
 			</main>
 		</div>
@@ -1209,7 +1242,7 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 {/if}
 
 {#if toastMessage}
-	<div class="toast" class:toast-error={toastTone === 'error'} class:toast-success={toastTone === 'success'} role="status" aria-live="polite">{toastMessage}</div>
+	<div class="toast" class:toast-error={toastTone === 'error'} class:toast-success={toastTone === 'success'} role="status" aria-live="polite"><span class="toast-mark" aria-hidden="true"><Glyph name={toastTone === 'success' ? 'check' : toastTone === 'error' ? 'close' : 'activity'} size={18} /></span><span>{toastMessage}</span></div>
 {/if}
 
 <dialog aria-labelledby="confirm-title" aria-describedby="confirm-message" class="confirm-dialog" bind:this={confirmDialog} oncancel={(event) => { event.preventDefault(); answerConfirmation(false); }}>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { ApiError } from '../lib/api';
+	import Glyph from '../lib/Glyph.svelte';
 	import MapCanvas from '../lib/MapCanvas.svelte';
 	import NavigationFavoritesPanel from '../lib/NavigationFavoritesPanel.svelte';
 	import {
@@ -425,7 +426,8 @@
 </script>
 
 <section class="page-intro navigation-intro">
-	<div>
+	<div class="navigation-intro-copy">
+		<p class="navigation-intro-kicker eyebrow"><Glyph name="navigation" size={16} /> DESTINOS Y LUGARES GUARDADOS</p>
 		<h2>¿A dónde vamos?</h2>
 		<p>Encuentra lugares y cargadores. Abre el mapa cuando lo necesites.</p>
 	</div>
@@ -449,9 +451,9 @@
 <div class="navigation-layout" class:map-visible={mapOpen}>
 	<div class="navigation-main-column">
 		{#if mapOpen && selectedPlace}
-	<section class="map-card card" aria-labelledby="map-heading">
+	<section class="map-card card" id="navigation-map" aria-labelledby="map-heading">
 				<div class="map-card-heading">
-					<div><h3 id="map-heading">Mapa del destino</h3><p>{selectedPlace.name}</p></div>
+					<div><h3 id="map-heading" class="navigation-section-title"><Glyph name="navigation" size={16} />Mapa del destino</h3><p>{selectedPlace.name}</p></div>
 					<button class="button button-secondary button-small" type="button" onclick={() => mapOpen = false}>Ocultar mapa</button>
 				</div>
 				<MapCanvas point={selectedPlace} {stations} tile={navigation.tile} onCenter={onMapCenter} onSelectStation={(station) => selectedStation = station} onError={(message) => mapError = message} {theme} />
@@ -462,7 +464,7 @@
 
 		<section class="search-card card card-pad" aria-labelledby="places-heading">
 			<div class="section-heading search-heading">
-				<div><h3 id="places-heading">Buscar un lugar</h3><p>Una ciudad, dirección o punto de interés.</p></div>
+				<div><h3 id="places-heading" class="navigation-section-title"><Glyph name="search" size={16} />Buscar un lugar</h3><p>Una ciudad, dirección o punto de interés.</p></div>
 				<span class="source-chip">OpenStreetMap</span>
 			</div>
 			<form class="place-search-form" onsubmit={searchPlaces}>
@@ -484,13 +486,13 @@
 					{/each}
 				</ul>
 			{:else if submittedQuery && searchFetchedAt && !searchBusy}
-				<div class="empty-search"><h4>No se encontraron lugares</h4><p>Prueba con una ciudad o una referencia más concreta.</p></div>
+				<div class="empty-search"><span class="empty-search-mark" aria-hidden="true"><Glyph name="search" size={17} /></span><div><h4>No se encontraron lugares</h4><p>Prueba con una ciudad o una referencia más concreta.</p></div></div>
 			{/if}
 		</section>
 
 		<section class="manual-card card card-pad" aria-labelledby="manual-heading">
 			<div class="section-heading manual-heading">
-				<div><h3 id="manual-heading">Usar coordenadas públicas</h3><p>Alternativa sin proveedor de búsqueda. Introduce las coordenadas de un lugar público.</p></div>
+				<div><h3 id="manual-heading" class="navigation-section-title"><Glyph name="navigation" size={16} />Usar coordenadas públicas</h3><p>Alternativa sin proveedor de búsqueda. Introduce las coordenadas de un lugar público.</p></div>
 			</div>
 			<form class="manual-form" onsubmit={chooseManualPlace}>
 				<div class="field">
@@ -518,7 +520,7 @@
 				</div>
 				<dl class="destination-coordinates"><div><dt>Latitud</dt><dd>{selectedPlace.latitude.toFixed(6)}</dd></div><div><dt>Longitud</dt><dd>{selectedPlace.longitude.toFixed(6)}</dd></div></dl>
 				<div class="destination-actions">
-					<button class="button button-primary button-block" type="button" disabled={!canUseProviders} aria-expanded={mapOpen} aria-controls="navigation-map" onclick={toggleMap}>{mapOpen ? 'Mapa visible' : 'Mostrar mapa'}</button>
+					<button class="button button-primary button-block" type="button" disabled={!canUseProviders} aria-expanded={mapOpen} aria-controls="navigation-map" onclick={toggleMap}>{mapOpen ? 'Ocultar mapa' : 'Mostrar mapa'}</button>
 					<div class="external-map-links">
 						<a class="button button-secondary" href={googleLink} target="_blank" rel="noopener noreferrer">Abrir en Google Maps</a>
 						<a class="button button-secondary" href={appleLink} target="_blank" rel="noopener noreferrer">Abrir en Apple Maps</a>
@@ -564,7 +566,7 @@
 			</section>
 		{:else}
 			<section class="destination-empty card" aria-labelledby="destination-empty-heading">
-				<div class="destination-empty-mark" aria-hidden="true"><svg viewBox="0 0 36 36" fill="none"><path d="M18 31s10-9.3 10-18a10 10 0 1 0-20 0c0 8.7 10 18 10 18Z" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="13" r="3.4" stroke="currentColor" stroke-width="1.8"/></svg></div>
+				<div class="destination-empty-mark" aria-hidden="true"><Glyph name="navigation" size={23} /></div>
 				<h3 id="destination-empty-heading">Elige un destino</h3>
 				<p>Selecciona un resultado o usa coordenadas públicas para mostrar opciones de mapa y consultar cargadores cercanos.</p>
 			</section>
@@ -576,6 +578,9 @@
 
 <style>
 	.navigation-intro { align-items: flex-start; margin-bottom: 18px; }
+	.navigation-intro-copy { display: grid; justify-items: start; gap: 5px; }
+	.navigation-intro-kicker { display: inline-flex; align-items: center; gap: 7px; margin: 0; color: var(--forest); font-size: .6875rem; font-weight: 720; letter-spacing: .075em; }
+	.navigation-intro-kicker :global(svg) { flex: 0 0 auto; }
 	.navigation-intro h2 { margin: 0; font-size: clamp(1.375rem, 2.6vw, 1.85rem); }
 	.navigation-intro p { max-width: 70ch; }
 	.status-loading, .provider-status { display: flex; min-height: 44px; align-items: center; gap: 9px; margin: 0 0 14px; color: var(--muted-strong); font-size: .875rem; }
@@ -586,6 +591,8 @@
 	.search-card, .manual-card, .destination-card, .map-card { min-width: 0; }
 	.search-heading, .manual-heading { align-items: flex-start; margin: 0 0 15px; }
 	.section-heading h3 { margin: 0; font-size: 1.125rem; font-weight: 650; letter-spacing: -.025em; }
+	.navigation-section-title { display: flex; align-items: center; gap: 8px; }
+	.navigation-section-title :global(svg) { flex: 0 0 auto; color: var(--forest); }
 	.section-heading p { max-width: 65ch; font-size: .875rem; line-height: 1.5; }
 	.source-chip { display: inline-flex; min-height: 30px; align-items: center; padding: 0 9px; border: 1px solid var(--line); border-radius: 99px; background: var(--surface-soft); color: var(--muted-strong); font-size: .75rem; font-weight: 650; white-space: nowrap; }
 	.place-search-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; }
@@ -598,14 +605,16 @@
 	.place-result-coordinates { color: var(--muted); font-size: .75rem; font-variant-numeric: tabular-nums; }
 	.result-provenance { margin: 10px 0 0; color: var(--muted); font-size: .75rem; line-height: 1.5; }
 	.inline-error { margin: 10px 0 0; color: var(--danger); font-size: .875rem; line-height: 1.5; }
-	.empty-search { margin-top: 14px; padding: 14px; border: 1px dashed var(--line-strong); border-radius: 10px; background: var(--surface-soft); }
+	.empty-search { display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; padding: 14px; border: 1px dashed var(--line-strong); border-radius: 10px; background: var(--surface-soft); }
+	.empty-search-mark { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border-radius: 10px; background: var(--surface); color: var(--forest); }
+	.empty-search-mark :global(svg) { display: block; }
 	.empty-search h4 { margin: 0; font-size: .875rem; }
 	.empty-search p { margin: 5px 0 0; color: var(--muted); font-size: .875rem; }
 	.manual-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 10px; }
 	.manual-submit { grid-column: 1 / -1; justify-self: start; }
 	.destination-empty { display: grid; justify-items: start; gap: 11px; min-height: 240px; align-content: center; padding: 22px; }
 	.destination-empty-mark { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 13px; background: var(--forest-soft); color: var(--forest); }
-	.destination-empty-mark svg { width: 28px; height: 28px; }
+	.destination-empty-mark :global(svg) { display: block; }
 	.destination-empty h3 { margin: 0; font-size: 1rem; }
 	.destination-empty p { max-width: 50ch; margin: 0; color: var(--muted); font-size: .875rem; line-height: 1.6; }
 	.destination-heading { align-items: flex-start; margin: 0 0 12px; }

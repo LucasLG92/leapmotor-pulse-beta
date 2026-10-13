@@ -2,6 +2,7 @@
 	import { onMount, onDestroy, tick, untrack } from 'svelte';
 	import { ApiError, getManualJourneys, getManualJourneyReport } from './api';
 	import { count } from './format';
+	import Glyph from './Glyph.svelte';
 	import { getNativeBridge, isNativeApp } from './native';
 	import { exportNativeJourneyReport, journeyReportExportError } from './journey-report-export';
 	import { convertJourneyBasis, emptyJourneyForm, journeyQuantityInput, localJourneyTime, validateJourneyForm, type JourneyForm } from './manual-journey-form';
@@ -266,7 +267,7 @@
 
 <section class="manual-journeys" aria-labelledby="manual-journeys-heading">
 	<div class="panel-header">
-		<div class="panel-copy"><span class="eyebrow">DIARIO PERSONAL</span><h2 id="manual-journeys-heading">Trayectos manuales</h2><p>Tu registro privado en Pulse, separado de los datos de demostración y del vehículo.</p></div>
+		<div class="panel-title-row"><span class="panel-mark" aria-hidden="true"><Glyph name="activity" size={18} /></span><div class="panel-copy"><span class="eyebrow">DIARIO PERSONAL</span><h2 id="manual-journeys-heading">Trayectos manuales</h2><p>Tu registro privado en Pulse, separado de los datos de demostración y del vehículo.</p></div></div>
 		<button class="button button-primary" disabled={busy || saving || !online} onclick={() => open()}>Añadir trayecto</button>
 	</div>
 	{#if editorOpen}
@@ -313,7 +314,7 @@
 	{:else if page}
 		<div class="list-heading"><p><strong>{count(page.total)}</strong> {page.total === 1 ? 'trayecto' : 'trayectos'}{appliedSearch || appliedTag ? (page.total === 1 ? ' encontrado' : ' encontrados') : (page.total === 1 ? ' registrado' : ' registrados')}</p><button class="button button-quiet" disabled={busy || saving || !online} onclick={load}>Actualizar</button></div>
 		{#if actionError}<p class="form-error" role="alert">{actionError}</p>{/if}
-		{#if !page.total}<p class="empty-copy">{appliedSearch || appliedTag ? 'No hay trayectos que coincidan con esa búsqueda. Prueba otro texto o etiqueta.' : 'Aún no has registrado trayectos. La recepción automática del B10 está pendiente; puedes añadir un recorrido que hayas realizado.'}</p>{/if}
+		{#if !page.total}<div class="empty-copy"><span class="empty-mark" aria-hidden="true"><Glyph name="activity" size={20} /></span><p>{appliedSearch || appliedTag ? 'No hay trayectos que coincidan con esa búsqueda. Prueba otro texto o etiqueta.' : 'Aún no has registrado trayectos. La recepción automática del B10 está pendiente; puedes añadir un recorrido que hayas realizado.'}</p></div>{/if}
 		<div class="journey-timeline evolution-list">
 		{#each page.items as item (item.id)}
 			<article class="journey-entry evolution-item">
@@ -364,6 +365,9 @@
 	h2, h3, h4, p { margin: 0; } h2 { font-size: clamp(1.2rem, 2vw, 1.45rem); letter-spacing: -.025em; } h3 { font-size: 1.05rem; letter-spacing: -.015em; }
 	p, label, dt, dd { font-size: .875rem; line-height: 1.6; } p, dt, .muted { color: var(--muted); }
 	.panel-header, .list-heading, .report-heading { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
+	.panel-title-row { display: flex; min-width: 0; align-items: flex-start; gap: 12px; }
+	.panel-mark { display: grid; width: 40px; height: 40px; flex: 0 0 40px; place-items: center; border: 1px solid var(--line); border-radius: 12px; background: var(--forest-soft); color: var(--forest); }
+	.panel-mark :global(svg) { display: block; }
 	.panel-copy { display: grid; gap: 6px; flex: 1 1 260px; }
 	.panel-copy > p { max-width: 55ch; }
 	.eyebrow { color: var(--forest); font-size: .6875rem; font-weight: 750; letter-spacing: .09em; }
@@ -402,7 +406,10 @@
 	.list-heading { margin-top: -8px; }
 	.list-heading > p { color: var(--muted-strong); }
 	.list-heading strong { color: var(--ink); font-variant-numeric: tabular-nums; }
-	.empty-copy { max-width: 60ch; padding: 18px 0; }
+	.empty-copy { display: flex; max-width: 60ch; align-items: flex-start; gap: 11px; padding: 18px 0; }
+	.empty-copy p { margin: 0; }
+	.empty-mark { display: grid; width: 36px; height: 36px; flex: 0 0 36px; place-items: center; border-radius: 11px; background: var(--forest-soft); color: var(--forest); }
+	.empty-mark :global(svg) { display: block; }
 	.journey-entry.evolution-item { position: relative; display: grid; grid-template-columns: 17px minmax(0, 1fr); gap: 13px; min-width: 0; padding: 13px 0; }
 	.journey-entry:not(:last-of-type)::before { position: absolute; top: 27px; bottom: -14px; left: 7px; width: 1px; background: var(--line-strong); content: ''; }
 	.timeline-pin { position: relative; z-index: 1; width: 13px; height: 13px; margin-top: 4px; border: 3px solid var(--surface); border-radius: 50%; background: var(--forest); box-shadow: 0 0 0 1px var(--forest); }

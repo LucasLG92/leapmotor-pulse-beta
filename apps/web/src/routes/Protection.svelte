@@ -41,6 +41,7 @@
 
 <section class="page-intro">
 	<div>
+		<p class="eyebrow">CADA CAMBIO, EN SU MOMENTO</p>
 		<h2>Historial de estados</h2>
 		<p>Compara lo que cambió entre lecturas de cierre o carga, con su fuente y hora de recepción.</p>
 	</div>
@@ -143,10 +144,10 @@
 	.protection-control-row span:not(.switch-control span) { color: var(--muted); font-size: .875rem; line-height: 1.5; }
 	.switch-control { position: relative; display: flex; width: 58px; min-width: 58px; min-height: 48px; align-items: center; justify-content: flex-start; padding: 0 5px; border: 0; border-radius: 99px; background: transparent; cursor: pointer; }
 	.switch-control::before { position: absolute; inset: 7px 4px; border: 1px solid var(--line-strong); border-radius: 99px; background: var(--surface-soft); content: ''; transition: background-color 140ms ease, border-color 140ms ease; }
-	.switch-control[aria-checked="true"] { justify-content: flex-end; }
+	.switch-control[aria-checked="true"] > span { transform: translateX(26px); }
 	.switch-control[aria-checked="true"]::before { border-color: var(--forest); background: var(--forest); }
 	.switch-control:disabled { opacity: .55; }
-	.switch-control > span { position: relative; width: 22px; height: 22px; border-radius: 50%; background: var(--surface-raised); box-shadow: 0 1px 3px rgb(0 0 0 / 18%); }
+	.switch-control > span { position: relative; width: 22px; height: 22px; border-radius: 50%; background: var(--surface-raised); box-shadow: 0 1px 3px rgb(0 0 0 / 18%); transition: transform var(--motion-state) var(--ease-out); }
 	.protection-boundaries h2 { margin: 0 0 10px; }
 	.protection-boundaries-intro { margin: 0 0 17px; color: var(--muted); font-size: .875rem; line-height: 1.5; }
 	.protection-boundaries ul { display: grid; gap: 15px; margin: 0; padding: 0; list-style: none; }

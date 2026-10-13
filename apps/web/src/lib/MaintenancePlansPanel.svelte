@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onDestroy, onMount, tick, untrack } from 'svelte';
 	import { ApiError, getMaintenancePlans } from './api';
+	import Glyph from './Glyph.svelte';
 	import type { MaintenancePlan, MaintenancePlanInput, MaintenancePlanPage, PageProps } from './types';
 
 	let { busy, online, revision, drafts, mutate, confirmAction, onSessionExpired }:
@@ -239,7 +240,7 @@
 
 <section class="maintenance-panel" aria-labelledby="maintenance-plans-heading">
 	<header class="maintenance-header">
-		<div><p class="eyebrow">Mantenimiento introducido por ti</p><h2 id="maintenance-plans-heading">Planes de mantenimiento</h2><p>Organiza revisiones por calendario, kilometraje o ambos. Pulse no lee el odómetro del vehículo.</p></div>
+		<span class="maintenance-mark" aria-hidden="true"><Glyph name="settings" size={18} /></span><div class="maintenance-heading-copy"><p class="eyebrow">Mantenimiento introducido por ti</p><h2 id="maintenance-plans-heading">Planes de mantenimiento</h2><p>Organiza revisiones por fecha y lecturas que indiques. Pulse no lee el odómetro del vehículo.</p></div>
 		<button class="button button-primary" type="button" disabled={busy || saving || !online || (page?.total ?? 0) >= MAX_PLANS} onclick={() => openPlan()}>
 			<span aria-hidden="true">＋</span> Añadir plan
 		</button>
@@ -251,7 +252,7 @@
 			<div class="odometer-controls"><input id="maintenance-odometer" type="text" inputmode="numeric" placeholder="Sin lectura" bind:value={manualOdometer} disabled={busy || saving || !online} /><button class="button button-secondary" type="submit" disabled={busy || saving || !online}>Aplicar km</button></div>
 			<p>{appliedOdometer === undefined ? 'Sin lectura enviada: los estados por kilómetros quedan desconocidos.' : `Evaluación con ${formatNumber.format(appliedOdometer)} km, indicada manualmente.`}</p>
 		</form>
-		<div class="quota" aria-label={`Planes activos: ${page?.total ?? 'sin consultar'}`}><span>Planes activos</span><strong>{page ? formatNumber.format(page.total) : '—'}</strong><small>Tope conservado por cuenta: {formatNumber.format(MAX_PLANS)}, incluidos los archivados.</small></div>
+		<div class="quota" aria-label={`Planes activos: ${page?.total ?? 'sin consultar'}`}><span>Planes activos</span><strong>{page ? formatNumber.format(page.total) : '—'}</strong><details class="quota-details"><summary>Sobre el límite</summary><small>Tope de cuenta: {formatNumber.format(MAX_PLANS)}, incluidos los planes archivados.</small></details></div>
 	</div>
 
 	{#if actionError}<div class="maintenance-error" role="alert"><span>{actionError}</span><button class="button button-secondary" type="button" onclick={() => void load()} disabled={!online || loading}>Actualizar lista</button></div>{/if}
@@ -310,7 +311,7 @@
 				{/each}
 			</ol>
 			<nav class="pagination" aria-label="Páginas de mantenimiento"><p>Mostrando {pageStart}–{pageEnd} de {formatNumber.format(page.total)}</p><div><button class="button button-secondary" type="button" disabled={offset === 0 || loading} onclick={() => { offset = Math.max(0, offset - PAGE_SIZE); }}>Anterior</button><button class="button button-secondary" type="button" disabled={offset + PAGE_SIZE >= page.total || loading} onclick={() => { offset += PAGE_SIZE; }}>Siguiente</button></div></nav>
-		{:else}<div class="empty-state"><span class="empty-mark" aria-hidden="true">⌁</span><h3>{page.total ? 'No hay planes en esta página' : 'Empieza por una tarea conocida'}</h3><p>{page.total ? 'La lista ha cambiado. Vuelve a consultar los planes.' : 'Añade una revisión por fecha o kilómetros usando datos que conozcas.'}</p>{#if !page.total}<button class="button button-primary" type="button" onclick={() => openPlan()} disabled={busy || saving || !online}>Crear primer plan</button>{/if}</div>{/if}
+		{:else}<div class="empty-state"><span class="empty-mark" aria-hidden="true"><Glyph name="settings" size={20} /></span><div><h3>{page.total ? 'No hay planes en esta página' : 'Empieza por una tarea conocida'}</h3><p>{page.total ? 'La lista ha cambiado. Vuelve a consultar los planes.' : 'Añade una revisión por fecha o kilómetros usando datos que conozcas.'}</p></div>{#if !page.total}<button class="button button-primary" type="button" onclick={() => openPlan()} disabled={busy || saving || !online}>Crear primer plan</button>{/if}</div>{/if}
 	{:else if !loading && !readError}<p class="maintenance-state">Conéctate para consultar los planes guardados en tu cuenta.</p>{/if}
 	{#if page?.total === MAX_PLANS}<p class="quota-note">Has alcanzado el límite de {formatNumber.format(MAX_PLANS)} planes. El historial eliminado se conserva según las reglas de la cuenta.</p>{/if}
 </section>
@@ -319,8 +320,11 @@
 	.maintenance-panel { display: grid; gap: 18px; min-width: 0; }
 	.maintenance-header, .plan-top, .form-title, .form-actions, .pagination, .pagination > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 	.maintenance-header { align-items: flex-end; padding: 4px 0 6px; }
+	.maintenance-mark { display: grid; width: 42px; height: 42px; flex: 0 0 42px; place-items: center; border: 1px solid var(--line); border-radius: 12px; background: var(--forest-soft); color: var(--forest); }
+	.maintenance-mark :global(svg) { display: block; }
+	.maintenance-heading-copy { min-width: 0; flex: 1 1 auto; }
 	.maintenance-header h2 { margin: 3px 0 4px; font-size: clamp(1.35rem, 2vw, 1.75rem); letter-spacing: -.025em; }
-	.maintenance-header p:not(.eyebrow) { max-width: 66ch; margin: 0; color: var(--muted); }
+	.maintenance-heading-copy > p:not(.eyebrow) { max-width: 66ch; margin: 0; color: var(--muted); }
 	.eyebrow { margin: 0; color: var(--forest); font-size: .75rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
 	.maintenance-tools { display: flex; align-items: stretch; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 14px 0; border-block: 1px solid var(--line); border-inline: 0; border-radius: 0; background: transparent; }
 	.odometer-form { display: grid; gap: 5px; min-width: min(100%, 290px); }
@@ -333,7 +337,9 @@
 	.odometer-form p, .quota-note { margin: 0; color: var(--muted); font-size: .8125rem; line-height: 1.45; }
 	.quota { display: grid; min-width: 118px; align-content: center; gap: 2px; padding: 8px 14px; border-left: 1px solid var(--line-strong); color: var(--muted); font-size: .8125rem; }
 	.quota strong { color: var(--ink); font-size: 1rem; font-variant-numeric: tabular-nums; }
-	.quota small { max-width: 30ch; color: var(--muted); font-size: .75rem; line-height: 1.4; }
+	.quota-details { max-width: 30ch; }
+	.quota-details summary { display: flex; min-height: 48px; align-items: center; color: var(--forest); font-size: .75rem; font-weight: 650; cursor: pointer; }
+	.quota-details small { display: block; padding-bottom: 5px; color: var(--muted); font-size: .75rem; line-height: 1.4; }
 	.maintenance-form { display: grid; gap: 16px; min-width: 0; padding: clamp(14px, 2.4vw, 22px); border: 1px solid var(--line-strong); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); }
 	.form-title h3 { margin: 2px 0 0; font-size: 1.2rem; }
 	.icon-button { min-width: 48px; min-height: 48px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface-soft); font-size: 1.5rem; cursor: pointer; }
@@ -397,10 +403,12 @@
 	.pagination { padding-top: 4px; color: var(--muted); font-size: .875rem; }
 	.pagination p { margin: 0; }
 	.pagination > div { flex-wrap: wrap; }
-	.empty-state { display: grid; justify-items: start; gap: 6px; padding: clamp(20px, 4vw, 36px); border: 1px dashed var(--line-strong); border-radius: 18px; background: var(--surface); }
+	.empty-state { display: grid; grid-template-columns: 36px minmax(0, 1fr); justify-items: start; align-items: start; gap: 6px 11px; padding: clamp(20px, 4vw, 36px); border: 1px dashed var(--line-strong); border-radius: 18px; background: var(--surface); }
 	.empty-state h3, .empty-state p { margin: 0; }
 	.empty-state p { max-width: 54ch; color: var(--muted); }
-	.empty-mark { color: var(--forest); font-size: 1.75rem; }
-	@media (max-width: 620px) { .maintenance-header { align-items: flex-start; flex-direction: column; }.maintenance-header > button { width: 100%; }.form-grid, .plan-detail-grid { grid-template-columns: 1fr; }.field.full { grid-column: auto; }.quota { border-left: 0; border-top: 1px solid var(--line-strong); padding: 10px 0 0; }.plan-top { flex-direction: column; }.status-chip { max-width: none; }.pagination { align-items: flex-start; flex-direction: column; }.pagination > div { width: 100%; }.pagination .button { flex: 1; } }
+	.empty-state > .button { grid-column: 2; }
+	.empty-mark { display: grid; width: 36px; height: 36px; grid-row: span 2; place-items: center; border-radius: 11px; background: var(--forest-soft); color: var(--forest); }
+	.empty-mark :global(svg) { display: block; }
+	@media (max-width: 620px) { .maintenance-header { display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: start; }.maintenance-heading-copy { grid-column: 2; }.maintenance-header > button { grid-column: 1 / -1; width: 100%; }.form-grid, .plan-detail-grid { grid-template-columns: 1fr; }.field.full { grid-column: auto; }.quota { border-left: 0; border-top: 1px solid var(--line-strong); padding: 10px 0 0; }.plan-top { flex-direction: column; }.status-chip { max-width: none; }.pagination { align-items: flex-start; flex-direction: column; }.pagination > div { width: 100%; }.pagination .button { flex: 1; }.empty-state > .button { grid-column: 1 / -1; width: 100%; } }
 	@media (prefers-reduced-motion: reduce) { .button { transition: none; }.button:hover:not(:disabled) { transform: none; } }
 </style>

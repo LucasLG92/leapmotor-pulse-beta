@@ -691,7 +691,8 @@
 </script>
 
 <section class="page-intro energy-intro">
-	<div>
+	<div class="energy-intro-copy">
+		<p class="energy-intro-kicker eyebrow"><Glyph name="energy" size={16} /> TU ENERGÍA, EN UN SOLO LUGAR</p>
 		<h2>Energía</h2>
 		<p>Consulta las sesiones del cargador, su coste y los registros personales por separado.</p>
 	</div>
@@ -716,7 +717,7 @@
 <section class="energy-totals" aria-labelledby="energy-totals-title">
 	<div class="energy-totals-heading">
 		<div>
-			<p class="section-label">ACUMULADO REGISTRADO</p>
+			<p class="section-label"><Glyph name="energy" size={14} /> TOTALES REGISTRADOS</p>
 			<h2 id="energy-totals-title">Totales personales</h2>
 			<p>Los registros manuales y la demostración conservan sus propios totales.</p>
 		</div>
@@ -772,6 +773,7 @@
 <section class="personal-records" aria-labelledby="personal-records-title">
 	<div class="personal-records-heading">
 		<div>
+			<p class="personal-records-kicker"><Glyph name="charge" size={14} /> HISTORIAL PERSONAL</p>
 			<h2 id="personal-records-title">Registros personales</h2>
 			<p>Historial manual y de demostración, separado de las sesiones importadas del cargador.</p>
 		</div>
@@ -895,7 +897,7 @@
 </section>
 <section class="analytics-panel card" aria-labelledby="analytics-title">
 	<div class="analytics-heading">
-			<div><h2 id="analytics-title">Resumen de cargas registradas</h2><p>La energía cargada procede de sesiones registradas; las observaciones del vehículo se muestran por separado.</p></div>
+			<div class="analytics-title-copy"><p class="analytics-kicker"><Glyph name="activity" size={14} /> EVOLUCIÓN POR PERÍODO</p><h2 id="analytics-title">Energía y coste por período</h2><p>Compara cargas manuales y de demostración. Las lecturas del vehículo se muestran aparte.</p></div>
 		<div class="analytics-range-control" role="group" aria-label="Período de analítica">
 			{#each analyticsRanges as days (days)}
 				<button class="analytics-range-button" class:analytics-range-selected={analyticsDays === days} type="button" aria-pressed={analyticsDays === days} disabled={!online} onclick={() => chooseAnalyticsDays(days)}>{days} días</button>
@@ -931,7 +933,7 @@
 			<div class="analytics-subheading"><div><h3 id="monthly-title">Energía por mes</h3></div><span class="badge">Meses UTC</span></div>
 			<p class="analytics-explainer">Cada barra suma sesiones del origen indicado. No se rellenan meses ni huecos con estimaciones.</p>
 			{#if analytics.months.length === 0 || analytics.months.every((month) => month.manual.sessions === 0 && month.demo.sessions === 0)}
-				<div class="analytics-empty-chart"><strong>Sin registros en esta ventana</strong><span>No hay sesiones manuales o de demostración para representar.</span></div>
+				<div class="analytics-empty-chart"><span class="analytics-empty-mark"><Glyph name="energy" size={20} /></span><strong>Sin registros en esta ventana</strong><span>No hay sesiones manuales o de demostración para representar.</span></div>
 			{:else}
 				<ol class="month-chart" aria-label="Kilovatios hora por mes UTC, separados por origen">
 					{#each analytics.months as month (month.month)}
@@ -1003,8 +1005,13 @@
 <style>
 	.analytics-panel { display: grid; gap: 19px; margin-top: 28px; padding: 22px 0 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; }
 	.analytics-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+	.analytics-title-copy { display: grid; justify-items: start; gap: 0; }
+	.analytics-kicker, .energy-intro-kicker, .personal-records-kicker { display: inline-flex; align-items: center; gap: 7px; margin: 0; color: var(--forest); font-size: .75rem; font-weight: 720; letter-spacing: .075em; }
+	.analytics-kicker :global(svg), .energy-intro-kicker :global(svg), .personal-records-kicker :global(svg), .energy-totals-heading .section-label :global(svg) { flex: 0 0 auto; }
+	.energy-intro-copy { display: grid; justify-items: start; gap: 5px; }
+	.energy-intro h2 { margin: 0; }
 	.analytics-heading h2 { margin: 5px 0 0; font-size: 1.125rem; font-weight: 640; letter-spacing: -.03em; }
-	.analytics-heading > div:first-child > p:last-child { max-width: 580px; margin: 7px 0 0; color: var(--muted); font-size: 1rem; line-height: 1.55; }
+	.analytics-title-copy > p:last-child { max-width: 580px; margin: 7px 0 0; color: var(--muted); font-size: 1rem; line-height: 1.55; }
 	.analytics-range-control { display: flex; flex: 0 0 auto; gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-soft); }
 	.analytics-range-button { min-width: 67px; min-height: 48px; padding: 0 9px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--muted-strong); cursor: pointer; font: inherit; font-size: .875rem; font-weight: 650; }
 	.analytics-range-button:hover:not(:disabled) { background: var(--surface-raised); }
@@ -1029,7 +1036,7 @@
 	.analytics-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 	.analytics-metrics > div { display: grid; gap: 5px; min-width: 0; }
 	.analytics-metrics span { color: var(--muted); font-size: .875rem; }
-	.analytics-metrics strong { overflow-wrap: anywhere; font-size: .875rem; font-weight: 660; font-variant-numeric: tabular-nums; }
+	.analytics-metrics strong { overflow-wrap: anywhere; font-size: clamp(.95rem, 1.4vw, 1.125rem); font-weight: 660; font-variant-numeric: tabular-nums; }
 	.analytics-metrics small { color: var(--muted); font-size: .75rem; font-weight: 520; }
 	.analytics-empty-source { display: flex; min-height: 39px; align-items: center; margin: 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
 	.analytics-months { display: grid; gap: 10px; padding-top: 17px; border-top: 1px solid var(--line); }
@@ -1037,7 +1044,9 @@
 	.analytics-subheading h3, .analytics-coverage-heading h3 { margin: 4px 0 0; font-size: 0.875rem; font-weight: 650; letter-spacing: -.02em; }
 	.analytics-explainer { margin: -5px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
 	.analytics-retention-note { margin: 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
-	.analytics-empty-chart { display: grid; align-content: center; gap: 5px; min-height: 76px; }
+	.analytics-empty-chart { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-content: center; gap: 3px 10px; min-height: 76px; }
+	.analytics-empty-mark { display: grid; width: 34px; height: 34px; grid-row: span 2; place-items: center; border-radius: 10px; background: var(--forest-soft); color: var(--forest) !important; }
+	.analytics-empty-mark :global(svg) { display: block; }
 	.analytics-empty-chart span { color: var(--muted); font-size: .875rem; }
 	.month-chart { display: grid; gap: 0; margin: 0; padding: 0; border-bottom: 1px solid var(--line); list-style: none; }
 	.month-chart-row { display: grid; gap: 7px; padding: 12px 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; }
@@ -1078,7 +1087,8 @@
 	.analytics-consumption small { color: var(--muted); font-size: .75rem; }
 	.personal-records { display: grid; gap: 14px; margin-top: 20px; }
 	.personal-records-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-	.personal-records-heading h2 { margin: 5px 0 0; font-size: 1.25rem; font-weight: 650; letter-spacing: -.025em; overflow-wrap: anywhere; }
+	.personal-records-heading h2 { margin: 4px 0 0; font-size: 1.25rem; font-weight: 650; letter-spacing: -.025em; overflow-wrap: anywhere; }
+	.personal-records-kicker { font-size: .6875rem; }
 	.personal-records-heading > div:first-child > p:last-child { max-width: 600px; margin: 6px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
 	.personal-records-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 	.personal-records-actions .button { min-height: 48px; }
@@ -1087,7 +1097,7 @@
 	.form-icon { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 11px; background: var(--forest-soft); color: var(--forest); }
 	.energy-totals { display: grid; gap: 17px; margin: 0 0 30px; padding-top: 20px; border-top: 1px solid var(--line); }
 	.energy-totals-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
-	.energy-totals-heading .section-label { margin: 0; }
+	.energy-totals-heading .section-label { display: flex; align-items: center; gap: 7px; margin: 0; }
 	.energy-totals-heading h2 { margin: 5px 0 0; font-size: 1.25rem; font-weight: 650; letter-spacing: -.025em; }
 	.energy-totals-heading > div > p:last-child { margin: 6px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.5; }
 	.energy-totals-scope { max-width: 250px; padding: 7px 0 3px 14px; border-left: 2px solid var(--forest); color: var(--muted); font-size: .8125rem; line-height: 1.5; }
@@ -1228,7 +1238,8 @@
 		.pagination .button { flex: 1 1 0; }
 	}
 	.energy-intro { margin-bottom: 24px; }
-	.energy-intro h2 { margin: 0; font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing: -.035em; }
+	.energy-intro h2 { font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing: -.035em; }
+	.energy-intro-kicker { font-size: .6875rem; }
 	.energy-session-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(245px, .72fr); align-items: start; gap: clamp(20px, 3vw, 42px); margin: 0 0 34px; }
 	.energy-charger-column { min-width: 0; }
 	:global(.charger-panel.card) { margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }

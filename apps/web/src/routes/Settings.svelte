@@ -948,6 +948,7 @@
 
 <section class="page-intro">
 	<div>
+		<p class="eyebrow">UN ESPACIO QUE ES TUYO</p>
 		<h2>A tu manera.</h2>
 		<p>Personaliza tu B10, elige cómo calcular las cargas y revisa los servicios conectados.</p>
 	</div>
@@ -1051,9 +1052,18 @@
 			<p id="settings-preferences-group" class="settings-group-label">Preferencias de uso</p>
 		<section class="settings-card card" aria-labelledby="appearance-heading">
 			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="sun" size={18} /></span><div><h2 id="appearance-heading">Apariencia</h2></div></div>
-			<div class="field theme-field"><label for="theme-select">Tema</label><select id="theme-select" value={theme} onchange={(event) => { const value = event.currentTarget.value; if (value === 'system' || value === 'light' || value === 'dark') setTheme(value as ThemePreference); }}>
-				<option value="system">Según el dispositivo</option><option value="light">Claro</option><option value="dark">Charcoal</option>
-			</select><p class="field-hint">Esta es la única preferencia que Pulse guarda en el navegador.</p></div>
+			<fieldset class="theme-field theme-choices" aria-describedby="theme-hint">
+				<legend>Elige cómo se siente Pulse</legend>
+				<div class="theme-options">
+					{#each [{ id: 'light', label: 'Claro' }, { id: 'dark', label: 'Charcoal' }, { id: 'system', label: 'Sistema' }] as option (option.id)}
+						<button class="theme-option" class:selected={theme === option.id} type="button" aria-pressed={theme === option.id} onclick={() => setTheme(option.id as ThemePreference)}>
+							<span class="theme-sample" class:sample-dark={option.id === 'dark'} class:sample-system={option.id === 'system'} aria-hidden="true"><span class="sample-rail"></span><span class="sample-content"><i></i><i></i><i></i></span></span>
+							<span class="theme-option-label">{option.label}<span class="theme-check" aria-hidden="true">{#if theme === option.id}<Glyph name="check" size={14} />{/if}</span></span>
+						</button>
+					{/each}
+				</div>
+				<p id="theme-hint" class="field-hint">Sistema acompaña la apariencia de tu dispositivo. Esta preferencia se guarda en este navegador.</p>
+			</fieldset>
 		</section>
 
 		{#if !isNativeApp()}
@@ -1247,6 +1257,26 @@
 	.backup-restore { margin-top: 10px; padding-top: 13px; }
 	.settings-card > .fine-print { margin: 15px 0 0; }
 	.theme-field { margin-top: 17px; }
+	.theme-choices { min-width: 0; padding: 0; border: 0; }
+	.theme-choices legend { margin-bottom: 12px; color: var(--muted-strong); font-size: .875rem; }
+	.theme-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+	.theme-option { display: grid; min-width: 0; min-height: 48px; gap: 9px; padding: 7px; border: 1px solid var(--line-strong); border-radius: 13px; background: var(--surface); color: var(--muted-strong); cursor: pointer; transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease, box-shadow var(--motion-fast) ease; }
+	.theme-option:hover { background: var(--surface-soft); }
+	.theme-option.selected { border-color: var(--forest); color: var(--forest); background: var(--forest-soft); box-shadow: 0 0 0 1px var(--forest); }
+	.theme-option-label { display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: .75rem; font-weight: 650; }
+	.theme-check { display: grid; flex: 0 0 16px; width: 16px; height: 16px; place-items: center; }
+	.theme-sample { display: flex; height: 56px; overflow: hidden; border: 1px solid #89968c; border-radius: 7px; background: #f5f6f4; }
+	.sample-rail { flex: 0 0 22%; border-right: 1px solid #dfe4df; background: #ffffff; }
+	.sample-content { display: grid; flex: 1; align-content: center; gap: 5px; padding: 9px; }
+	.sample-content i { height: 4px; border-radius: 4px; background: #b8ddc8; }
+	.sample-content i:first-child { width: 55%; height: 7px; background: #246c4b; }
+	.sample-content i:last-child { width: 70%; }
+	.sample-dark { background: #1c1f21; }
+	.sample-dark .sample-rail { border-color: #3b4240; background: #2c3133; }
+	.sample-dark .sample-content i { background: #48554b; }
+	.sample-dark .sample-content i:first-child { background: #9cddba; }
+	.sample-system { background: linear-gradient(115deg, #f5f6f4 48%, #1c1f21 49%); }
+	@media (max-width: 350px) { .theme-options { grid-template-columns: minmax(0, 1fr); } .theme-option { grid-template-columns: 70px minmax(0, 1fr); align-items: center; } }
 	.pwa-intro { margin: 13px 0 14px; font-size: 1rem; }
 	.install-guide { display: grid; gap: 4px; padding: 11px 0; border-top: 1px solid var(--line); }
 	.install-guide strong { font-size: .875rem; }
