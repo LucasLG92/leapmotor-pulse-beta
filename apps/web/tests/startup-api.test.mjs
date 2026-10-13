@@ -78,6 +78,42 @@ test('las mutaciones conservan su resultado y no heredan el deadline de arranque
 	assert.equal(received.headers.get('X-Pulse-CSRF'), 'synthetic-csrf');
 });
 
+test('la pérdida de una respuesta no provoca replay automático del alta manual', async (context) => {
+	const originalFetch = globalThis.fetch;
+	context.after(() => { globalThis.fetch = originalFetch; });
+	const payload = { started_at: '2026-10-13T10:00:00Z', kwh: 12,
+		pricing_method: 'manual', request_id: 'a'.repeat(32) };
+	const bodies = [];
+	globalThis.fetch = async (_path, init) => {
+		bodies.push(JSON.parse(init.body));
+		if (bodies.length === 1) throw new TypeError('synthetic lost response');
+		return Response.json({ ok: true });
+	};
+	await assert.rejects(mutateApi('/api/charges', 'POST', 'synthetic-csrf', payload));
+	assert.equal(bodies.length, 1);
+	await mutateApi('/api/charges', 'POST', 'synthetic-csrf', payload);
+	assert.deepEqual(bodies, [payload, payload]);
+});
+
+test('el bridge nativo conserva la reserva y request_id en el cuerpo, sin headers especiales', async (context) => {
+	const calls = [];
+	installNativeBridge({
+		status: async () => ({ configured: true, authenticated: true }),
+		request: async (request) => {
+			calls.push(request);
+			return { status: 200, contentType: 'application/json', body: JSON.stringify(
+				request.path === '/api/charges/requests'
+					? { id: 'b'.repeat(32), expires_at: '2026-10-20T10:00:00Z' } : { ok: true }) };
+		}
+	}, 'ios');
+	context.after(() => installNativeBridge(null));
+	const reservation = await mutateApi('/api/charges/requests', 'POST', 'synthetic-csrf');
+	const payload = { started_at: '2026-10-13T10:00:00Z', kwh: 12, request_id: reservation.id };
+	await mutateApi('/api/charges', 'POST', 'synthetic-csrf', payload);
+	assert.deepEqual(calls.map(call => [call.path, call.method, JSON.parse(call.body)]),
+		[['/api/charges/requests', 'POST', {}], ['/api/charges', 'POST', payload]]);
+});
+
 test('un status nativo tardío no inicia un GET tras el timeout', async (context) => {
 	let resolveStatus, calls = 0;
 	installNativeBridge({

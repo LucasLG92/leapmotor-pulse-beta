@@ -1,5 +1,7 @@
 # Comprobación del acceso genérico en iOS Simulator
 
+La revisión del13oct sobre run38342561243 detectó una captura blanca pese al éxito del observador AX y del comando. La compilación y la IPA se cualifican por separado; el arranque visual de ese run se rechaza. El recibo original versión2 permanece intacto y un veredicto externo liga el fallo al SHA de la PNG. La guarda de píxeles nueva está implementada y sus45pruebas locales/13subcasos de helper/proyecto pasan; compilación y ejecución Apple del nuevo input siguen pendientes. Las secciones siguientes describen el protocolo semántico previo y sus límites.
+
 Este incremento responde a la captura vacía de la ejecución38324253913. Aquella ejecución acreditó compilación y proceso vivo durante cinco segundos, pero no la interfaz. Su PNG y recibo se conservan; la causa de la captura anterior no queda demostrada por estas nuevas fuentes.
 
 `PulseStartupUITests` es un target XCTest independiente. El scheme `PulseStartupCI` construye los productos sólo para pruebas y no los archiva. El scheme `App`, los ajustes de App/Widget, sus fuentes, identidades y capacidades siguen siendo los del producto. El test no se embebe en App, Widget o IPA y no añade APIs de depuración a la aplicación.
@@ -21,3 +23,21 @@ El workflow conserva exclusivamente las dos PNG genéricas y el recibo durante s
 APIs primarias: [XCUIApplication.launch](https://developer.apple.com/documentation/xcuiautomation/xcuiapplication/launch()), [XCUIScreenshot.pngRepresentation](https://developer.apple.com/documentation/xcuiautomation/xcuiscreenshot/pngrepresentation) y [adjuntos de XCTest](https://developer.apple.com/documentation/xctest/adding-attachments-to-tests-activities-and-issues).
 
 Reversión de este incremento: recuperar conjuntamente el proyecto/checker/helper/shell/workflow anteriores y retirar sólo el schemeCI/test nuevo. Los cambios previos de UI/avisos y las evidencias de sus PRs se conservan. No implica cambios de producción o downgrade de datos.
+
+
+## Captura blanca del run38342561243
+
+La PNG tomada dentro del método pasó el protocolo anterior porque era no vacía y los elementos AX existían. El área central80% tiene un solo color; la captura positiva previa muestra texto y controles. Esto confirma una aceptación falsa, pero no establece si la causa está en la presentación, el compositor o la captura. El statusbar no basta como señal de renderizado.
+
+El cambio acotado espera, dentro de la misma ejecución y el mismo launch, una captura con contraste distribuido en los frames exactos del título y del aviso. La geometría AX es de pantalla: se traduce a la captura del app, se valida y se convierte a píxeles. No se admite una región vacía, fuera del app, incoherente o transparente. La PNG transportada debe ser la misma examinada. Al agotar el límite se adjunta el último intento y falla sin READY. Un pixel guard es una heurística de contenido visual, no OCR ni aceptación física, y sigue siendo necesaria la revisión humana de la imagen.
+
+Fuentes primarias: [frame en coordenadas de pantalla](https://developer.apple.com/documentation/xcuiautomation/xcuielementattributes/frame), [captura de estado visual](https://developer.apple.com/documentation/xcuiautomation/xcuiscreenshotproviding/screenshot()), [alfa premultiplicado](https://developer.apple.com/documentation/coregraphics/cgimagealphainfo/premultipliedlast) y [orden de bytes](https://developer.apple.com/documentation/coregraphics/cgbitmapinfo/byteorder32big). Las pruebas y el runner del nuevo input determinarán su cualificación; no se infiere el resultado de un build anterior.
+
+
+## Protocolo nuevo: V2, recibo versión3
+
+El XCTest mantiene un solo launch. Tras la observación AX espera hasta15s por una captura cuyo título y aviso tengan contraste distribuido. Cada crop se renderiza en32×32RGBA opaco con orden de bytes explícito; se exige p95−p5 de luma de al menos12 y al menos12muestras separadas12niveles de la mediana. Es un umbral heurístico; la comparación aproximada de imágenes anteriores no sustituye validación del sampler UIKit. Comprueba geometría, orientación, alfa, foreground, accesibilidad y estabilidad de frames; vuelve a comprobar el plazo después de la captura síncrona y del análisis. La espera no añade relanzamientos ni repetición del método.
+
+Se emiten una PNGV2, un objeto de métricasV2 y READYV2. El helper requiere exactamente una instancia de cada registro, rechaza READYV1, campos extra, claves duplicadas, números no finitos, booleanos como contadores y métricas fuera de rango o incompatibles con éxito. No transporta frames, textos de usuario ni diagnósticos libres. El recibo versión3 conserva las métricas acotadas en `visual_pixel_checks`; `visual_review_pending` sigue verdadero hasta revisar la imagen. La PNG válida es la misma que examinó XCTest.
+
+Si falla, la captura posterior del simulador se escribe en `startup-diagnostic.png`, con `diagnostic_screenshot_created` separado, y nunca reemplaza `startup.png` ni acredita el instante del test. El workflow permite conservar esa tercera PNG genérica de diagnóstico. Las evidencias del protocolo anterior permanecen intactas. Reversión local de esta corrección: Swift test, helper, fixtures, workflow y documentación previos juntos; no cambia la aplicación ni el almacenamiento o la firma.

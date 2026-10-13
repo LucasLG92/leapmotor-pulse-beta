@@ -55,7 +55,7 @@ public enum NativeAPIPolicy {
         }
 
         if method == "POST" {
-            if ["/api/charges/quote", "/api/charges", "/api/demo", "/api/commands",
+            if ["/api/charges/quote", "/api/charges/requests", "/api/charges", "/api/demo", "/api/commands",
                 "/api/protection/event", "/api/maintenance", "/api/import", "/api/widget-profiles",
                 "/api/auth/logout", "/api/navigation/places", "/api/navigation/chargers", "/api/navigation/tiles"].contains(path) {
                 return parameters.isEmpty

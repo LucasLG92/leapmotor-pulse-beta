@@ -143,6 +143,7 @@ def test_v4_to_current_migration_preserves_pvpc_profiles_and_adds_cascading_tabl
         connection.execute("DROP TABLE charger_sessions")
         connection.execute("DROP TABLE charger_observations")
         connection.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
+        connection.execute("DROP TABLE IF EXISTS manual_charge_requests")
         connection.execute("PRAGMA user_version = 4")
 
     migrated = Store(path)
@@ -150,7 +151,7 @@ def test_v4_to_current_migration_preserves_pvpc_profiles_and_adds_cascading_tabl
     assert migrated.get_settings()["pricing_method"] == "pvpc"
     assert migrated.list_widget_profiles("owner-a")["items"] == [profile]
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 18
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 19
         assert connection.execute("SELECT COUNT(*) FROM push_subscriptions").fetchone()[0] == 0
         for table in ("widget_pairings", "widget_grants"):
             foreign_keys = connection.execute(

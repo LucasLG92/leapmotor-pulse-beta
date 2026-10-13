@@ -52,6 +52,7 @@ jobs:
           path: |
             apps/mobile/ios/App/output/ci-smoke/startup-initial.png
             apps/mobile/ios/App/output/ci-smoke/startup.png
+            apps/mobile/ios/App/output/ci-smoke/startup-diagnostic.png
             apps/mobile/ios/App/output/ci-smoke/receipt.json
           retention-days: 7
           if-no-files-found: warn

@@ -85,17 +85,18 @@ def test_schema_14_migration_adds_null_color_and_preserves_existing_settings_and
     with sqlite3.connect(path) as connection:
         downgrade_telemetry_to_v15(connection)
         connection.execute("ALTER TABLE settings DROP COLUMN vehicle_color")
+        connection.execute("DROP TABLE IF EXISTS manual_charge_requests")
         connection.execute("PRAGMA user_version = 14")
 
     migrated = Store(path)
     settings = migrated.get_settings()
-    assert SCHEMA_VERSION == 18
+    assert SCHEMA_VERSION == 19
     assert settings["vehicle_color"] is None
     settings.pop("vehicle_color")
     assert settings == prior_settings
     assert migrated.get_charge(charge["id"])["id"] == charge["id"]
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 18
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 19
 
 
 def test_settings_api_returns_and_persists_vehicle_color(tmp_path):

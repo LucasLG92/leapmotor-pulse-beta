@@ -70,7 +70,7 @@ public final class NativeApiPolicy {
             return parameters.isEmpty();
         }
 
-        if (is(method, "POST", path, "/api/charges/quote", "/api/charges", "/api/demo", "/api/commands",
+        if (is(method, "POST", path, "/api/charges/quote", "/api/charges/requests", "/api/charges", "/api/demo", "/api/commands",
                 "/api/protection/event", "/api/maintenance", "/api/import", "/api/widget-profiles",
                 "/api/auth/logout", "/api/navigation/places", "/api/navigation/chargers", "/api/navigation/tiles")) return parameters.isEmpty();
         if ("POST".equals(method) && path.matches("/api/widget-profiles/[a-f0-9]{32}/pairings")) {

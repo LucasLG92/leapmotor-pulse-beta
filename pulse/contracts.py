@@ -149,6 +149,11 @@ class ChargeQuote(BaseModel):
     pricing: PricingSnapshot | TemporalPricingSnapshot = Field(discriminator="accuracy")
 
 
+class ChargeCreationRequest(BaseModel):
+    id: str = Field(pattern=r"^[0-9a-f]{32}$", min_length=32, max_length=32)
+    expires_at: str
+
+
 class ChargerObservation(BaseModel):
     received_at: str
     loadpoint: str
