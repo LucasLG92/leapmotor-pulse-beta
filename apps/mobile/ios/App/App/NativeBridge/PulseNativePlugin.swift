@@ -566,7 +566,9 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
     }
 
     private static func journeyReportDays(from call: CAPPluginCall) -> Int? {
-        NativeJourneyReportPolicy.requestedDays(arguments: call.options ?? [:])
+        guard let options = call.options, Set(options.keys) == ["days"],
+              let days = options["days"] else { return nil }
+        return NativeJourneyReportPolicy.requestedDays(arguments: ["days": days])
     }
 
     private func deliver(_ response: NativeHTTPResponse, method: String, path: String,
