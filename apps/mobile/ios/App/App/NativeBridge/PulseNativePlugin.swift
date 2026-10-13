@@ -17,6 +17,7 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
         CAPPluginMethod(name: "login", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "logout", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "request", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "cancelRequest", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "exportJourneyReport", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "linkWidget", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setWidgetCache", returnType: CAPPluginReturnPromise),
@@ -84,6 +85,8 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
     private var widgetGeneration: UInt64 = 0
     private var didReconcileWidgetStatus = false
     private var lastWidgetLinked: Bool?
+    private var cancellableNativeReads: [String: PendingNativeRead] = [:]
+    private var cancelledBeforeDispatch: [String: TimeInterval] = [:]
 
     public override func load() {
         do {
@@ -114,6 +117,9 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
     deinit {
         for observer in observers { NotificationCenter.default.removeObserver(observer) }
         activeEvents?.cancel()
+        cancellableNativeReads.values.forEach { $0.cancel() }
+        cancellableNativeReads.removeAll()
+        cancelledBeforeDispatch.removeAll()
         pendingAuthorization?.webSession?.cancel()
         pendingAuthorization?.request?.cancel()
         if let export = activeJourneyReportExport {
@@ -151,7 +157,8 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
                 "configured": config != nil,
                 "authenticated": self.sessions.isAuthenticated,
                 "widgetLinked": linked,
-                "widgetCacheEnabled": enabled && self.widgetCache != nil
+                "widgetCacheEnabled": enabled && self.widgetCache != nil,
+                "supportsRequestCancellation": true
             ])
         }
     }
@@ -166,6 +173,10 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
 
     @objc public func request(_ call: CAPPluginCall) {
         onMain { [weak self] in self?.performRequest(call) }
+    }
+
+    @objc public func cancelRequest(_ call: CAPPluginCall) {
+        onMain { [weak self] in self?.performCancelRequest(call) }
     }
 
     @objc public func exportJourneyReport(_ call: CAPPluginCall) {
@@ -306,7 +317,26 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
                                  body: "{\"detail\":\"La solicitud nativa no es válida.\"}")
             return
         }
+        let requestID = call.getString("request_id")
+        if call.options?.keys.contains("request_id") == true && requestID == nil {
+            Self.resolveResponse(call, status: 400, contentType: "application/json",
+                                 body: "{\"detail\":\"La solicitud nativa no es válida.\"}")
+            return
+        }
+        if let requestID {
+            guard Self.validNativeRequestID(requestID),
+                  NativeAPIPolicy.isCancellableRead(path: path, method: method) else {
+                Self.resolveResponse(call, status: 400, contentType: "application/json",
+                                     body: "{\"detail\":\"La solicitud nativa no es válida.\"}")
+                return
+            }
+        }
         if method == "POST", path == "/api/auth/logout" {
+            if requestID != nil {
+                Self.resolveResponse(call, status: 400, contentType: "application/json",
+                                     body: "{\"detail\":\"La solicitud nativa no es válida.\"}")
+                return
+            }
             performLogout(call, responseMode: true)
             return
         }
@@ -338,10 +368,36 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
             }
             body = data
         }
+        let pendingRead: PendingNativeRead?
+        if let requestID {
+            pruneCancelledBeforeDispatch()
+            if cancelledBeforeDispatch.removeValue(forKey: requestID) != nil {
+                call.reject("La solicitud se canceló.", "NATIVE_CANCELLED")
+                return
+            }
+            guard cancellableNativeReads[requestID] == nil,
+                  cancellableNativeReads.count < 16 else {
+                call.reject("Hay demasiadas solicitudes. Reintenta.", "NATIVE_BUSY")
+                return
+            }
+            let registered = PendingNativeRead()
+            cancellableNativeReads[requestID] = registered
+            pendingRead = registered
+        } else {
+            pendingRead = nil
+        }
         let methodForPolicy = method
-        _ = http.sendAPI(method: method, path: path, body: body, session: session) { [weak self] result in
+        let handle = http.sendAPI(method: method, path: path, body: body, session: session) { [weak self] result in
             self?.onMain {
                 guard let self else { return }
+                if let requestID, let pendingRead,
+                   self.cancellableNativeReads[requestID] === pendingRead {
+                    self.cancellableNativeReads.removeValue(forKey: requestID)
+                }
+                if pendingRead?.isCancelled == true {
+                    call.reject("La solicitud se canceló.", "NATIVE_CANCELLED")
+                    return
+                }
                 let current = self.sessions.isCurrent(session.generation)
                 switch result {
                 case .failure:
@@ -373,6 +429,35 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
                 }
             }
         }
+        if let requestID, let pendingRead,
+           cancellableNativeReads[requestID] === pendingRead {
+            pendingRead.handle = handle
+            if pendingRead.isCancelled { handle?.cancel() }
+        }
+    }
+
+    private func performCancelRequest(_ call: CAPPluginCall) {
+        guard let requestID = call.getString("request_id"), Self.validNativeRequestID(requestID) else {
+            call.resolve()
+            return
+        }
+        pruneCancelledBeforeDispatch()
+        if let pending = cancellableNativeReads[requestID] {
+            pending.cancel()
+        } else if cancelledBeforeDispatch[requestID] == nil, cancelledBeforeDispatch.count < 64 {
+            cancelledBeforeDispatch[requestID] = ProcessInfo.processInfo.systemUptime + 15
+        }
+        call.resolve()
+    }
+
+    private func pruneCancelledBeforeDispatch() {
+        let now = ProcessInfo.processInfo.systemUptime
+        cancelledBeforeDispatch = cancelledBeforeDispatch.filter { $0.value > now }
+    }
+
+    private static func validNativeRequestID(_ value: String) -> Bool {
+        value.range(of: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                    options: .regularExpression) != nil
     }
 
     private func performJourneyReportExport(_ call: CAPPluginCall) {
@@ -1232,6 +1317,17 @@ public final class PulseNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
     private func onMain(_ work: @escaping () -> Void) {
         if Thread.isMainThread { work() }
         else { DispatchQueue.main.async(execute: work) }
+    }
+}
+
+private final class PendingNativeRead {
+    var handle: NativeHTTPRequestHandle?
+    private(set) var isCancelled = false
+
+    func cancel() {
+        guard !isCancelled else { return }
+        isCancelled = true
+        handle?.cancel()
     }
 }
 

@@ -287,7 +287,7 @@ class ChargerStoreMixin:
                 before_observation = connection.execute(
                     "SELECT * FROM charger_observations WHERE scope = ?", (normalized_scope,)
                 ).fetchone()
-                before_sessions = _session_snapshot(connection)
+                before_sessions: dict[str, tuple[Any, ...] | None] = {}
 
                 if normalized_observation is not None:
                     current = before_observation
@@ -300,6 +300,7 @@ class ChargerStoreMixin:
                     current = connection.execute(
                         "SELECT * FROM charger_sessions WHERE id = ?", (session["id"],)
                     ).fetchone()
+                    before_sessions[session["id"]] = _row_values(current)
                     if current is not None:
                         stable_fields = (
                             (current["scope"], normalized_scope),
@@ -317,13 +318,15 @@ class ChargerStoreMixin:
                     else:
                         self._write_charger_session(connection, normalized_scope, session)
 
-                connection.execute(
-                    """DELETE FROM charger_sessions WHERE id IN (
-                           SELECT id FROM charger_sessions
-                           ORDER BY ended_at DESC, id DESC LIMIT -1 OFFSET ?
-                       )""",
-                    (MAX_CHARGER_SESSIONS,),
-                )
+                deleted_session_ids = {
+                    row[0] for row in connection.execute(
+                        """DELETE FROM charger_sessions WHERE id IN (
+                               SELECT id FROM charger_sessions
+                               ORDER BY ended_at DESC, id DESC LIMIT -1 OFFSET ?
+                           ) RETURNING id""",
+                        (MAX_CHARGER_SESSIONS,),
+                    ).fetchall()
+                }
                 scope_count = connection.execute(
                     """SELECT COUNT(*) FROM (
                            SELECT scope FROM charger_observations
@@ -337,11 +340,23 @@ class ChargerStoreMixin:
                 after_observation = connection.execute(
                     "SELECT * FROM charger_observations WHERE scope = ?", (normalized_scope,)
                 ).fetchone()
-                after_sessions = _session_snapshot(connection)
-                changed = (
-                    _row_values(before_observation) != _row_values(after_observation)
-                    or before_sessions != after_sessions
-                )
+                changed = _row_values(before_observation) != _row_values(after_observation)
+                if not changed:
+                    for item_id, before in before_sessions.items():
+                        after = (
+                            None if item_id in deleted_session_ids else _row_values(
+                                connection.execute(
+                                    "SELECT * FROM charger_sessions WHERE id = ?", (item_id,)
+                                ).fetchone()
+                            )
+                        )
+                        if before != after:
+                            changed = True
+                            break
+                if not changed:
+                    # A deleted id outside the submitted batch existed before this
+                    # transaction, so retention changed stored session state.
+                    changed = any(item_id not in before_sessions for item_id in deleted_session_ids)
                 return {"changed": changed}
         except ChargerDataError as exc:
             raise _domain_error(str(exc)) from None
@@ -529,11 +544,6 @@ def _page_int(value: Any, name: str, *, minimum: int, maximum: int) -> int:
     if type(value) is not int or not minimum <= value <= maximum:
         raise ChargerDataError(f"{name} está fuera de rango.")
     return value
-
-
-def _session_snapshot(connection: sqlite3.Connection) -> tuple[tuple[Any, ...], ...]:
-    rows = connection.execute("SELECT * FROM charger_sessions ORDER BY id").fetchall()
-    return tuple(tuple(row) for row in rows)
 
 
 def _row_values(row: sqlite3.Row | None) -> tuple[Any, ...] | None:

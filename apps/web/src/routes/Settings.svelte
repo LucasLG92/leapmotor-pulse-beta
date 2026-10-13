@@ -57,6 +57,7 @@
 	let widgetProfileFormError = $state('');
 	let widgetProfileFormErrorField = $state<'name' | 'fields' | 'age' | null>(null);
 	let widgetProfileRequest = 0;
+	let widgetProfilesController: AbortController | null = null;
 	let widgetProfileSwitchRequest = 0;
 	let widgetProfileDraft = $state<WidgetProfileInput>(newWidgetProfileDraft());
 	let widgetEnergy = $state<EnergyAnalytics | null>(null);
@@ -220,7 +221,7 @@
 
 	async function loadWidgetEnergy() {
 		invalidateWidgetEnergy();
-		if (!online || !widgetPreviewIsEnergy || settingsDisposed) return;
+		if (!online || !widgetPreviewIsEnergy || settingsDisposed || activeSettingsSection !== 'data') return;
 		const request = widgetEnergyRequest;
 		const controller = new AbortController();
 		widgetEnergyController = controller;
@@ -238,7 +239,7 @@
 	}
 
 	$effect(() => {
-		const needed = widgetPreviewIsEnergy;
+		const needed = activeSettingsSection === 'data' && widgetPreviewIsEnergy;
 		const reachable = online;
 		const currentRevision = revision;
 		queueMicrotask(() => {
@@ -252,9 +253,17 @@
 	$effect(() => {
 		const currentRevision = revision;
 		const canReachServer = online;
+		const active = activeSettingsSection === 'data';
 		queueMicrotask(() => {
 			void currentRevision;
+			if (settingsDisposed) return;
+			if (!active || activeSettingsSection !== 'data') {
+				widgetProfileRequest++; widgetProfilesController?.abort(); widgetProfilesLoading = false;
+				invalidateNativeCapabilities(); invalidateWidgetGrants();
+				return;
+			}
 			if (!canReachServer) {
+				widgetProfileRequest++; widgetProfilesController?.abort(); widgetProfilesLoading = false;
 				invalidateNativeCapabilities();
 				invalidateWidgetGrants();
 				clearWidgetPairing();
@@ -270,6 +279,7 @@
 		const profileId = selectedWidgetProfileId;
 		const canReachServer = online;
 		const currentRevision = revision;
+		const active = activeSettingsSection === 'data';
 		if (previousWidgetProfileId !== profileId) {
 			previousWidgetProfileId = profileId;
 			clearWidgetPairing();
@@ -282,6 +292,8 @@
 		}
 		queueMicrotask(() => {
 			void currentRevision;
+			if (settingsDisposed) return;
+			if (!active || activeSettingsSection !== 'data') { invalidateWidgetGrants(); return; }
 			if (!canReachServer || !profileId) {
 				invalidateWidgetGrants();
 				if (!canReachServer && profileId) {
@@ -327,6 +339,10 @@
 	});
 
 	async function loadWidgetProfiles() {
+		if (settingsDisposed || activeSettingsSection !== 'data') return;
+		widgetProfilesController?.abort();
+		const controller = new AbortController();
+		widgetProfilesController = controller;
 		const request = ++widgetProfileRequest;
 		if (!online) {
 			widgetProfilesLoading = false;
@@ -338,8 +354,8 @@
 		widgetProfilesLoading = true;
 		widgetProfilesError = '';
 		try {
-			const profiles = await getWidgetProfiles();
-			if (request !== widgetProfileRequest || settingsDisposed) return;
+			const profiles = await getWidgetProfiles(controller.signal);
+			if (request !== widgetProfileRequest || settingsDisposed || controller.signal.aborted) return;
 			const firstLoad = !widgetProfilesLoaded;
 			if (widgetPairingResult && profiles.find((profile) => profile.id === widgetPairingProfileId)?.revision !== widgetPairingProfileRevision) clearWidgetPairing();
 			widgetProfiles = profiles;
@@ -349,7 +365,7 @@
 			}
 			if (firstLoad && profiles.length === 0) openNewWidgetProfile();
 		} catch (error) {
-			if (request !== widgetProfileRequest || settingsDisposed) return;
+			if (request !== widgetProfileRequest || settingsDisposed || controller.signal.aborted) return;
 			widgetProfilesError = error instanceof ApiError
 				? error.status === 0 ? 'No se pudo contactar con el servidor. Comprueba la conexión e inténtalo de nuevo.' : error.message
 				: 'No se pudieron cargar los perfiles de widget.';
@@ -366,7 +382,7 @@
 	}
 
 	async function loadNativeCapabilities(expectedRevision = revision) {
-		if (!online || settingsDisposed) return;
+		if (!online || settingsDisposed || activeSettingsSection !== 'data') return;
 		invalidateNativeCapabilities();
 		const request = ++nativeCapabilitiesRequest;
 		const controller = new AbortController();
@@ -399,7 +415,7 @@
 	}
 
 	async function loadWidgetGrants(profileId: string, expectedRevision = revision) {
-		if (!online || settingsDisposed || selectedWidgetProfileId !== profileId) return;
+		if (!online || settingsDisposed || activeSettingsSection !== 'data' || selectedWidgetProfileId !== profileId) return;
 		invalidateWidgetGrants();
 		const request = ++widgetGrantsRequest;
 		const controller = new AbortController();
@@ -546,6 +562,7 @@
 
 	onDestroy(() => {
 		settingsDisposed = true;
+		widgetProfilesController?.abort();
 		invalidateWidgetEnergy();
 		invalidateNativeCapabilities();
 		invalidateWidgetGrants();
@@ -1096,7 +1113,7 @@
 			<p class="fine-print">La disponibilidad de instalación depende del navegador y de la configuración del dispositivo.</p>
 		</section>
 		{/if}
-				<PushNotificationsPanel {online} {revision} {busy} native={isNativeApp()} {notifications} {runNotificationAction} {confirmAction} {drafts} />
+				<PushNotificationsPanel active={activeSettingsSection === 'preferences'} {online} {revision} {busy} native={isNativeApp()} {notifications} {runNotificationAction} {confirmAction} {drafts} />
 	</section>
 
 	<section id="settings-panel-data" class="workspace-panel settings-section-panel" aria-labelledby="settings-panel-data-heading" hidden={activeSettingsSection !== 'data'}>
@@ -1120,7 +1137,7 @@
 			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="activity" size={18} /></span><div><h2 id="widgets-heading" tabindex="-1" bind:this={widgetProfilesHeading}>Perfiles de widget</h2><p>{isNativeApp() ? 'Prepara vistas compactas para el widget de esta app.' : 'Prepara vistas compactas para una futura extensión móvil.'}</p></div></div>
 			<p class="muted-copy widget-intro">El editor guarda tus perfiles en el servidor. El widget consulta los campos que selecciones, sin conectar Pulse con el vehículo.</p>
 			{#if widgetActionError}<p class="form-error" role="alert">{widgetActionError}</p>{/if}
-			{#if isNativeApp()}<NativeWidgetPanel {online} {revision} {confirmAction} {drafts} />{/if}
+			{#if isNativeApp()}<NativeWidgetPanel active={activeSettingsSection === 'data'} {online} {revision} {confirmAction} {drafts} />{/if}
 			<div class="widget-count"><span>Perfiles guardados</span><strong>{widgetProfilesLoaded ? `${count(widgetProfiles.length)} / 5` : '— / 5'}</strong></div>
 			{#if pulseState.mode === 'demo' && !widgetPreviewIsEnergy}<div class="widget-demo-note" role="status"><span class="widget-demo-dot"></span>Vista previa del coche con datos simulados.</div>{/if}
 			{#if !online}<div class="notice widget-offline" role="status"><Glyph name="plug" size={16} /><span>{widgetProfilesLoaded ? 'Sin conexión. No podrás guardar cambios; los perfiles de esta sesión pueden estar desactualizados.' : 'Sin conexión. Conéctate para cargar los perfiles guardados en el servidor.'}</span></div>{/if}

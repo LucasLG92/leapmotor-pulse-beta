@@ -22,9 +22,11 @@
 	let maintenanceBaseline = { title: '', dueDate: '' };
 	let disposed = false;
 	let commandHistoryRequest = 0;
+	let commandHistoryController: AbortController | null = null;
 	let maintenanceEditRequest = 0;
 	let observedRevision: number | undefined;
 	let observedOnline: boolean | undefined;
+	let observedCommandsActive = false;
 	let journeys = $derived(pulseState.journeys);
 	let maintenance = $derived(pulseState.maintenance);
 
@@ -37,16 +39,19 @@
 	}
 
 	async function loadCommandHistory() {
-		if (disposed || !online) return;
+		if (disposed || !online || activeDiarySection !== 'actions') return;
 		const request = ++commandHistoryRequest;
+		commandHistoryController?.abort();
+		const controller = new AbortController();
+		commandHistoryController = controller;
 		loadingCommands = true;
 		commandError = '';
 		try {
-			const result = await getCommandHistory();
-			if (disposed || request !== commandHistoryRequest) return;
+			const result = await getCommandHistory(controller.signal);
+			if (disposed || controller.signal.aborted || request !== commandHistoryRequest) return;
 			commandHistory = result;
 		} catch (error) {
-			if (disposed || request !== commandHistoryRequest) return;
+			if (disposed || controller.signal.aborted || request !== commandHistoryRequest) return;
 			if (error instanceof ApiError && error.status === 401) {
 				onSessionExpired();
 				return;
@@ -67,21 +72,26 @@
 	onDestroy(() => {
 		disposed = true;
 		commandHistoryRequest += 1;
+		commandHistoryController?.abort();
 	});
 
 	$effect(() => {
 		const currentRevision = revision;
 		const connected = online;
-		const shouldRefresh = connected && (observedOnline !== true || currentRevision !== observedRevision);
+		const active = activeDiarySection === 'actions';
+		const shouldRefresh = connected && active && (!observedCommandsActive || observedOnline !== true || currentRevision !== observedRevision);
+		observedCommandsActive = active;
 		observedRevision = currentRevision;
 		observedOnline = connected;
 		if (!connected) {
 			commandHistoryRequest += 1;
+			commandHistoryController?.abort();
 			commandHistory = [];
 			loadingCommands = false;
 			commandError = 'La conexión no está disponible. El historial no se conserva sin red en este dispositivo.';
 			return;
 		}
+		if (!active) { commandHistoryRequest += 1; commandHistoryController?.abort(); loadingCommands = false; }
 		if (shouldRefresh) untrack(() => { void loadCommandHistory(); });
 	});
 
@@ -208,7 +218,7 @@
 </nav>
 
 <section id="diary-trips-view" class="diary-view" aria-label="Trayectos" hidden={activeDiarySection !== 'journeys'}>
-<ManualJourneysPanel {busy} {online} {revision} {drafts} {mutate} {reserveJourneyCreation} {confirmAction} {onSessionExpired} />
+<ManualJourneysPanel active={activeDiarySection === 'journeys'} {busy} {online} {revision} {drafts} {mutate} {reserveJourneyCreation} {confirmAction} {onSessionExpired} />
 <section class="journey-source-panel workspace-panel" aria-labelledby="journeys-heading">
 			<div class="section-heading"><div><h2 id="journeys-heading" class="activity-section-title">{pulseState.mode === 'demo' ? 'Ejemplos recibidos' : 'Trayectos recibidos'}</h2><p class="activity-section-copy">{pulseState.mode === 'demo' ? 'Demostración · no son recorridos del vehículo.' : 'La recepción automática del vehículo está pendiente.'}</p></div><span class="badge">{count(journeys.length)}</span></div>
 			{#if journeys.length === 0}
@@ -227,7 +237,7 @@
 		</section>
 </section>
 <section id="diary-maintenance-view" class="activity-side-column diary-view" aria-label="Mantenimiento" hidden={activeDiarySection !== 'maintenance'}>
-		<MaintenancePlansPanel {busy} {online} {revision} {drafts} {mutate} {confirmAction} {onSessionExpired} />
+		<MaintenancePlansPanel active={activeDiarySection === 'maintenance'} {busy} {online} {revision} {drafts} {mutate} {confirmAction} {onSessionExpired} />
 		<details class="maintenance-legacy workspace-panel" aria-labelledby="maintenance-heading">
 			<summary><span class="legacy-summary-copy"><strong id="maintenance-heading">Recordatorios por fecha</strong><small>Registro anterior de mantenimiento personal</small></span><span class="badge">{count(maintenance.length)}</span></summary>
 			<div class="legacy-maintenance-content">

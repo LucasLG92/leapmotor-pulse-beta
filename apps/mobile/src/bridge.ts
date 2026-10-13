@@ -2,6 +2,7 @@ import type { NativeBridge } from '../../web/src/lib/native';
 
 type Listener = { remove(): Promise<void> };
 export type NativePlugin = Omit<NativeBridge, 'subscribe'> & {
+  cancelRequest?: (input: { request_id: string }) => Promise<void>;
   addListener(event: 'pulseRevision' | 'pulseStreamError', callback: (value: { revision?: number; subscriptionId?: string }) => void): Promise<Listener>;
   startEvents(input: { subscriptionId: string }): Promise<void>;
   stopEvents(input: { subscriptionId: string }): Promise<void>;
@@ -10,11 +11,20 @@ export type NativePlugin = Omit<NativeBridge, 'subscribe'> & {
 /** Cada suscripción posee su lease: limpiar una anterior nunca detiene la nueva. */
 export function createNativeBridge(plugin: NativePlugin): NativeBridge {
   let latestSubscription = 0;
+  let requestCancellationSupported = false;
   return {
-    status: () => plugin.status(),
+    async status() {
+      const status = await plugin.status();
+      requestCancellationSupported = status.supportsRequestCancellation === true;
+      return status;
+    },
+    supportsRequestCancellation: () => requestCancellationSupported && typeof plugin.cancelRequest === 'function',
     login: () => plugin.login(),
     logout: () => plugin.logout(),
     request: (request) => plugin.request(request),
+    ...(typeof plugin.cancelRequest === 'function'
+      ? { cancelRequest: (request: { request_id: string }) => plugin.cancelRequest!(request) }
+      : {}),
     ...(typeof plugin.exportJourneyReport === 'function'
       ? { exportJourneyReport: (input: { days: 30 | 90 | 365 }) => plugin.exportJourneyReport!(input) }
       : {}),

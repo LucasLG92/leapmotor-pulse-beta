@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, localcontext
 import json
@@ -618,6 +618,24 @@ def _manual_journey_report(
 ) -> dict[str, Any]:
     started = ended - timedelta(days=days)
     start_text, end_text = _format_datetime(started), _format_datetime(ended)
+    rows = connection.execute(
+        """SELECT * FROM manual_journeys
+           WHERE owner_id = ? AND started_at >= ? AND started_at < ?
+           ORDER BY started_at, id""",
+        (owner, start_text, end_text),
+    )
+    return _manual_journey_report_from_items(
+        (_journey_item(row) for row in rows), days, ended
+    )
+
+
+def _manual_journey_report_from_items(
+    items: Iterable[Mapping[str, Any]],
+    days: int,
+    ended: datetime,
+) -> dict[str, Any]:
+    started = ended - timedelta(days=days)
+    start_text, end_text = _format_datetime(started), _format_datetime(ended)
     month_keys: list[str] = []
     local_start = started.astimezone(_MONTH_ZONE)
     local_last = (ended - timedelta(microseconds=1)).astimezone(_MONTH_ZONE)
@@ -628,14 +646,7 @@ def _manual_journey_report(
 
     total = _JourneyTotalsAccumulator()
     grouped = {key: _JourneyTotalsAccumulator() for key in month_keys}
-    rows = connection.execute(
-        """SELECT * FROM manual_journeys
-           WHERE owner_id = ? AND started_at >= ? AND started_at < ?
-           ORDER BY started_at, id""",
-        (owner, start_text, end_text),
-    )
-    for row in rows:
-        validated = _journey_item(row)
+    for validated in items:
         month_key = _datetime(
             validated["started_at"], "started_at"
         ).astimezone(_MONTH_ZONE).strftime("%Y-%m")
@@ -775,14 +786,6 @@ class ManualJourneyStoreMixin:
         started = ended - timedelta(days=days)
         start_text, end_text = _format_datetime(started), _format_datetime(ended)
         with self._read_transaction() as connection:
-            count = int(connection.execute(
-                """SELECT COUNT(*) FROM manual_journeys
-                   WHERE owner_id = ? AND started_at >= ? AND started_at < ?""",
-                (owner, start_text, end_text),
-            ).fetchone()[0])
-            if count > MAX_MANUAL_JOURNEY_DOCUMENT_ROWS:
-                _domain_error("El informe supera 10.000 trayectos.", 413)
-            report = _manual_journey_report(connection, owner, days, ended)
             rows = connection.execute(
                 """SELECT * FROM manual_journeys
                    WHERE owner_id = ? AND started_at >= ? AND started_at < ?
@@ -794,9 +797,10 @@ class ManualJourneyStoreMixin:
             ).fetchall()
             if len(rows) > MAX_MANUAL_JOURNEY_DOCUMENT_ROWS:
                 _domain_error("El informe supera 10.000 trayectos.", 413)
+            journeys = [_journey_item(row) for row in rows]
             return {
-                "report": report,
-                "journeys": [_journey_item(row) for row in rows],
+                "report": _manual_journey_report_from_items(journeys, days, ended),
+                "journeys": journeys,
             }
 
     def add_manual_journey(

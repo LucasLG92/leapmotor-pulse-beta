@@ -4,8 +4,8 @@
 	import Glyph from './Glyph.svelte';
 	import type { MaintenancePlan, MaintenancePlanInput, MaintenancePlanPage, PageProps } from './types';
 
-	let { busy, online, revision, drafts, mutate, confirmAction, onSessionExpired }:
-		Pick<PageProps, 'busy' | 'online' | 'revision' | 'drafts' | 'mutate' | 'confirmAction' | 'onSessionExpired'> = $props();
+	let { active = true, busy, online, revision, drafts, mutate, confirmAction, onSessionExpired }:
+		{ active?: boolean } & Pick<PageProps, 'busy' | 'online' | 'revision' | 'drafts' | 'mutate' | 'confirmAction' | 'onSessionExpired'> = $props();
 
 	type PlanForm = { title: string; intervalMonths: string; intervalKm: string; lastDate: string; lastOdometer: string; notes: string };
 	type CompletionForm = { date: string; odometer: string; cost: string };
@@ -45,27 +45,29 @@
 
 	onMount(() => {
 		mounted = true;
-		observedReadKey = `${revision}:${online}:${offset}:${appliedOdometer ?? ''}`;
+		observedReadKey = `${active}:${revision}:${online}:${offset}:${appliedOdometer ?? ''}`;
 		void load();
 		return drafts.register('maintenance-plan', dirty, () => sent);
 	});
 	onDestroy(() => { mounted = false; readGeneration++; formGeneration++; readController?.abort(); });
 	$effect(() => {
-		const key = { revision, online, offset, appliedOdometer };
+		const key = { active, revision, online, offset, appliedOdometer };
 		untrack(() => {
 			if (!mounted) return;
-			const next = `${key.revision}:${key.online}:${key.offset}:${key.appliedOdometer ?? ''}`;
+			const next = `${key.active}:${key.revision}:${key.online}:${key.offset}:${key.appliedOdometer ?? ''}`;
 			if (next === observedReadKey) return;
 			observedReadKey = next;
 			if (!key.online) {
 				readGeneration++; readController?.abort(); page = null; loading = false;
 				readError = 'Sin conexión. Los planes solo se consultan en el servidor y no se guardan sin conexión.';
+			} else if (!key.active) {
+				readGeneration++; readController?.abort(); loading = false;
 			} else void load();
 		});
 	});
 
 	async function load() {
-		if (!mounted || !online) return;
+		if (!mounted || !online || !active) return;
 		const request = ++readGeneration, currentRevision = revision, currentOffset = offset;
 		readController?.abort(); readController = new AbortController();
 		const signal = readController.signal;

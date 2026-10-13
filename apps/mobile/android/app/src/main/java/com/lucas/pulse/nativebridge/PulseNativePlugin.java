@@ -44,11 +44,14 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
@@ -63,11 +66,18 @@ import javax.net.ssl.HttpsURLConnection;
 public final class PulseNativePlugin extends Plugin {
     private static final long MAX_SAFE_JS_INTEGER = 9_007_199_254_740_991L;
     private static final int MAX_SSE_LINE_BYTES = 8 * 1024;
+    private static final Pattern NATIVE_REQUEST_ID = Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+    private static final int MAX_PENDING_NATIVE_READS = 16;
+    private static final int MAX_CANCELLED_BEFORE_DISPATCH = 64;
+    private static final long CANCELLED_BEFORE_DISPATCH_TTL_MS = 15_000L;
     private static final String BUSY_JSON = "{\"detail\":\"Hay demasiadas solicitudes. Reintenta.\"}";
 
     private final Object authLock = new Object();
     private final Object streamLock = new Object();
     private final Object journeyReportLock = new Object();
+    private final Object nativeReadLock = new Object();
+    private final Map<String, NativeHttpClient.RequestCancellation> nativeReadRequests = new HashMap<>();
+    private final LinkedHashMap<String, Long> cancelledBeforeDispatch = new LinkedHashMap<>();
     private final NativeSessionState sessions = new NativeSessionState();
     private final NativeJourneyReportState journeyReportState = new NativeJourneyReportState();
     private ThreadPoolExecutor io;
@@ -133,6 +143,7 @@ public final class PulseNativePlugin extends Plugin {
             result.put("authenticated", authenticated);
             result.put("widgetLinked", linked);
             result.put("widgetCacheEnabled", cacheEnabled);
+            result.put("supportsRequestCancellation", true);
             call.resolve(result);
         })) call.reject("Hay demasiadas solicitudes. Reintenta.", "NATIVE_BUSY");
     }
@@ -145,26 +156,73 @@ public final class PulseNativePlugin extends Plugin {
         String path = call.getString("path");
         String method = call.getString("method");
         String body = call.getString("body");
+        String requestId = call.getString("request_id");
+        if (call.getData().has("request_id") && requestId == null) {
+            resolveResponse(call, 400, "application/json", "{\"detail\":\"La solicitud nativa no es válida.\"}");
+            return;
+        }
         if (path == null || method == null || !NativeApiPolicy.allows(path, method)) {
             resolveResponse(call, 400, "application/json", "{\"detail\":\"La solicitud nativa no es válida.\"}");
             return;
         }
         if ("POST".equals(method) && "/api/auth/logout".equals(path)) {
+            if (requestId != null) {
+                resolveResponse(call, 400, "application/json", "{\"detail\":\"La solicitud nativa no es válida.\"}");
+                return;
+            }
             performLogout(call, true);
             return;
         }
+        NativeHttpClient.RequestCancellation cancellation = null;
+        if (requestId != null) {
+            if (!NATIVE_REQUEST_ID.matcher(requestId).matches()
+                    || !NativeApiPolicy.isCancellableRead(path, method)) {
+                resolveResponse(call, 400, "application/json", "{\"detail\":\"La solicitud nativa no es válida.\"}");
+                return;
+            }
+            cancellation = new NativeHttpClient.RequestCancellation();
+            synchronized (nativeReadLock) {
+                pruneCancelledBeforeDispatchLocked(SystemClock.elapsedRealtime());
+                if (nativeReadRequests.containsKey(requestId)) {
+                    resolveResponse(call, 400, "application/json", "{\"detail\":\"La solicitud nativa no es válida.\"}");
+                    return;
+                }
+                if (cancelledBeforeDispatch.remove(requestId) != null) {
+                    cancellation.cancel();
+                } else if (nativeReadRequests.size() >= MAX_PENDING_NATIVE_READS) {
+                    resolveResponse(call, 429, "application/json", BUSY_JSON);
+                    return;
+                } else {
+                    nativeReadRequests.put(requestId, cancellation);
+                }
+            }
+            if (cancellation.isCancelled()) {
+                call.reject("La solicitud se canceló.", "NATIVE_CANCELLED");
+                return;
+            }
+        }
         NativeSessionState.SessionSnapshot captured = sessions.snapshot(SystemClock.elapsedRealtime());
         if (captured == null) {
+            removeNativeRead(requestId, cancellation);
             resolveResponse(call, 401, "application/json", "{\"detail\":\"Inicia sesión para continuar.\"}");
             return;
         }
+        NativeHttpClient.RequestCancellation cancellationForRequest = cancellation;
         if (!submit(call, "request", () -> {
-            if (!sessions.isCurrent(captured.generation, SystemClock.elapsedRealtime())) {
-                resolveResponse(call, 401, "application/json", "{\"detail\":\"La sesión ha caducado. Vuelve a iniciar sesión.\"}");
-                return;
-            }
             try {
-                NativeHttpClient.NativeResponse response = http.request(method, path, body, captured);
+                if (cancellationForRequest != null && cancellationForRequest.isCancelled()) {
+                    call.reject("La solicitud se canceló.", "NATIVE_CANCELLED");
+                    return;
+                }
+                if (!sessions.isCurrent(captured.generation, SystemClock.elapsedRealtime())) {
+                    resolveResponse(call, 401, "application/json", "{\"detail\":\"La sesión ha caducado. Vuelve a iniciar sesión.\"}");
+                    return;
+                }
+                NativeHttpClient.NativeResponse response = http.request(method, path, body, captured, cancellationForRequest);
+                if (cancellationForRequest != null && cancellationForRequest.isCancelled()) {
+                    call.reject("La solicitud se canceló.", "NATIVE_CANCELLED");
+                    return;
+                }
                 if (!sessions.isCurrent(captured.generation, SystemClock.elapsedRealtime())) {
                     if (NativeRequestPolicy.mutationOutcomeUnknown(method, path, true, false)) {
                         call.reject("La sesión cambió mientras se completaba la operación.",
@@ -201,7 +259,9 @@ public final class PulseNativePlugin extends Plugin {
                 }
                 resolveResponse(call, response.status, response.contentType, response.body);
             } catch (NativeHttpClient.NativeTransportException error) {
-                if (error.status == 0 && NativeRequestPolicy.mutationOutcomeUnknown(
+                if (cancellationForRequest != null && cancellationForRequest.isCancelled()) {
+                    call.reject("La solicitud se canceló.", "NATIVE_CANCELLED");
+                } else if (error.status == 0 && NativeRequestPolicy.mutationOutcomeUnknown(
                         method, path, false, sessions.isCurrent(captured.generation, SystemClock.elapsedRealtime()))) {
                     call.reject("La sesión cambió mientras se completaba la operación.",
                             "NATIVE_MUTATION_OUTCOME_UNKNOWN");
@@ -209,8 +269,45 @@ public final class PulseNativePlugin extends Plugin {
                 else resolveResponse(call, error.status, "application/json", safeDetailBody(error.safeMessage));
             } catch (Exception ignored) {
                 call.reject("No se pudo completar la solicitud nativa.", "NATIVE_REQUEST");
+            } finally {
+                removeNativeRead(requestId, cancellationForRequest);
             }
-        })) resolveResponse(call, 429, "application/json", BUSY_JSON);
+        })) {
+            removeNativeRead(requestId, cancellationForRequest);
+            resolveResponse(call, 429, "application/json", BUSY_JSON);
+        }
+    }
+
+    @PluginMethod public void cancelRequest(PluginCall call) {
+        String requestId = call.getString("request_id");
+        if (requestId != null && NATIVE_REQUEST_ID.matcher(requestId).matches()) {
+            synchronized (nativeReadLock) {
+                long now = SystemClock.elapsedRealtime();
+                pruneCancelledBeforeDispatchLocked(now);
+                NativeHttpClient.RequestCancellation active = nativeReadRequests.get(requestId);
+                if (active != null) {
+                    active.cancel();
+                } else if (!cancelledBeforeDispatch.containsKey(requestId)
+                        && cancelledBeforeDispatch.size() < MAX_CANCELLED_BEFORE_DISPATCH) {
+                    cancelledBeforeDispatch.put(requestId, now + CANCELLED_BEFORE_DISPATCH_TTL_MS);
+                }
+            }
+        }
+        call.resolve();
+    }
+
+    private void removeNativeRead(String requestId, NativeHttpClient.RequestCancellation cancellation) {
+        if (requestId == null || cancellation == null) return;
+        synchronized (nativeReadLock) {
+            if (nativeReadRequests.get(requestId) == cancellation) nativeReadRequests.remove(requestId);
+        }
+    }
+
+    private void pruneCancelledBeforeDispatchLocked(long now) {
+        Iterator<Map.Entry<String, Long>> entries = cancelledBeforeDispatch.entrySet().iterator();
+        while (entries.hasNext()) {
+            if (entries.next().getValue() <= now) entries.remove();
+        }
     }
 
     @PluginMethod public void logout(PluginCall call) {
@@ -571,6 +668,11 @@ public final class PulseNativePlugin extends Plugin {
     }
 
     @Override protected void handleOnDestroy() {
+        synchronized (nativeReadLock) {
+            for (NativeHttpClient.RequestCancellation request : nativeReadRequests.values()) request.cancel();
+            nativeReadRequests.clear();
+            cancelledBeforeDispatch.clear();
+        }
         PendingJourneyReport retiredReport;
         synchronized (journeyReportLock) {
             journeyReportPluginDestroyed = true;

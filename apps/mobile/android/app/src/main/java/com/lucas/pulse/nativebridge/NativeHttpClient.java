@@ -34,14 +34,29 @@ final class NativeHttpClient {
     private static final Pattern GRANT_ID = Pattern.compile("[a-f0-9]{32}");
 
     private final NativeRuntimeConfig config;
+    private final ConnectionOpener connectionOpener;
 
     NativeHttpClient(NativeRuntimeConfig config) {
+        this(config, url -> (HttpsURLConnection) url.openConnection(Proxy.NO_PROXY));
+    }
+
+    NativeHttpClient(NativeRuntimeConfig config, ConnectionOpener connectionOpener) {
         this.config = config;
+        this.connectionOpener = connectionOpener;
     }
 
     NativeResponse request(String method, String rawPath, String body, NativeSessionState.SessionSnapshot session)
             throws NativeTransportException {
+        return request(method, rawPath, body, session, null);
+    }
+
+    NativeResponse request(String method, String rawPath, String body, NativeSessionState.SessionSnapshot session,
+            RequestCancellation cancellation) throws NativeTransportException {
         if (!NativeApiPolicy.allows(rawPath, method)) throw NativeTransportException.invalidRequest();
+        if (cancellation != null && !NativeApiPolicy.isCancellableRead(rawPath, method)) {
+            throw NativeTransportException.invalidRequest();
+        }
+        if (cancellation != null && cancellation.isCancelled()) throw NativeTransportException.cancelled();
         byte[] requestBytes = requestJson(method, body);
         if (session == null) throw NativeTransportException.unauthenticated();
         if (isMutation(method) && !NativeSessionState.validCsrf(session.csrf)) {
@@ -49,9 +64,10 @@ final class NativeHttpClient {
         }
         try {
             Exchange response = exchange(method, rawPath, requestBytes, session.cookie,
-                    isMutation(method) ? session.csrf : null, null, MAX_BODY_BYTES);
+                    isMutation(method) ? session.csrf : null, null, MAX_BODY_BYTES, false, false, cancellation);
             return publicResponse(response);
         } catch (Exception ignored) {
+            if (cancellation != null && cancellation.isCancelled()) throw NativeTransportException.cancelled();
             throw NativeTransportException.transport();
         }
     }
@@ -239,9 +255,16 @@ final class NativeHttpClient {
 
     private Exchange exchange(String method, String path, byte[] body, String cookie, String csrf,
             String bearer, int responseLimit, boolean skipNon200Body, boolean requireJsonOn200) throws Exception {
+        return exchange(method, path, body, cookie, csrf, bearer, responseLimit,
+                skipNon200Body, requireJsonOn200, null);
+    }
+
+    private Exchange exchange(String method, String path, byte[] body, String cookie, String csrf,
+            String bearer, int responseLimit, boolean skipNon200Body, boolean requireJsonOn200,
+            RequestCancellation cancellation) throws Exception {
         URL url = new URI(config.apiOrigin + path).toURL();
         if (!"https".equalsIgnoreCase(url.getProtocol())) throw new IOException();
-        HttpsURLConnection connection = (HttpsURLConnection) url.openConnection(Proxy.NO_PROXY);
+        HttpsURLConnection connection = connectionOpener.open(url);
         connection.setInstanceFollowRedirects(false);
         connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
         connection.setReadTimeout(READ_TIMEOUT_MS);
@@ -273,12 +296,15 @@ final class NativeHttpClient {
             }
             connection.setRequestProperty("Authorization", "Bearer " + bearer);
         }
+        if (cancellation != null && !cancellation.attach(connection)) throw new IOException();
         try {
+            ensureNotCancelled(cancellation);
             if (body != null) {
                 try (OutputStream output = connection.getOutputStream()) {
                     output.write(body);
                 }
             }
+            ensureNotCancelled(cancellation);
             int status = connection.getResponseCode();
             String rawContentType = connection.getContentType();
             String contentType = normalizedContentType(rawContentType);
@@ -289,6 +315,7 @@ final class NativeHttpClient {
             if (skipNon200Body && status != 200) {
                 bytes = new byte[0];
             } else {
+                ensureNotCancelled(cancellation);
                 InputStream stream = status >= 400 ? connection.getErrorStream() : connection.getInputStream();
                 bytes = stream == null ? new byte[0] : requireJsonOn200 && status == 200
                         ? readJourneyReportBody(stream) : readBounded(stream, responseLimit);
@@ -305,8 +332,13 @@ final class NativeHttpClient {
             }
             return new Exchange(status, contentType, responseBody, connection.getHeaderFields());
         } finally {
+            if (cancellation != null) cancellation.detach(connection);
             connection.disconnect();
         }
+    }
+
+    private static void ensureNotCancelled(RequestCancellation cancellation) throws IOException {
+        if (cancellation != null && cancellation.isCancelled()) throw new IOException();
     }
 
     private static byte[] requestJson(String method, String body) throws NativeTransportException {
@@ -493,6 +525,43 @@ final class NativeHttpClient {
         }
     }
 
+    interface ConnectionOpener {
+        HttpsURLConnection open(URL url) throws IOException;
+    }
+
+    /** Owns only an in-flight UI read connection; cancellation before attach prevents dispatch. */
+    static final class RequestCancellation {
+        private HttpsURLConnection connection;
+        private boolean cancelled;
+
+        synchronized boolean isCancelled() { return cancelled; }
+
+        boolean attach(HttpsURLConnection value) {
+            synchronized (this) {
+                if (!cancelled) {
+                    connection = value;
+                    return true;
+                }
+            }
+            value.disconnect();
+            return false;
+        }
+
+        void cancel() {
+            HttpsURLConnection active;
+            synchronized (this) {
+                if (cancelled) return;
+                cancelled = true;
+                active = connection;
+            }
+            if (active != null) active.disconnect();
+        }
+
+        synchronized void detach(HttpsURLConnection value) {
+            if (connection == value) connection = null;
+        }
+    }
+
     private static final class ResponseTooLargeException extends IOException {
         private ResponseTooLargeException() { super("Response exceeds its byte limit."); }
     }
@@ -524,6 +593,7 @@ final class NativeHttpClient {
         static NativeTransportException invalidRequest() { return new NativeTransportException(400, "La solicitud nativa no es válida."); }
         static NativeTransportException unauthenticated() { return new NativeTransportException(401, "Inicia sesión para continuar."); }
         static NativeTransportException transport() { return new NativeTransportException(0, "No se pudo contactar con Pulse."); }
+        static NativeTransportException cancelled() { return new NativeTransportException(0, "La solicitud se canceló."); }
         static NativeTransportException bootstrap() { return new NativeTransportException(401, "No se pudo iniciar sesión en Pulse."); }
         static NativeTransportException widget() { return new NativeTransportException(400, "No se pudo enlazar el widget."); }
         static NativeTransportException widgetStatus(int status) {

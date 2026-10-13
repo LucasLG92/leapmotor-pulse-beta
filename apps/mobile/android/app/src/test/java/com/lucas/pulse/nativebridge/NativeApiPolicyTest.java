@@ -25,6 +25,21 @@ public final class NativeApiPolicyTest {
         assertFalse(NativeApiPolicy.allows("/api/navigation/status?", "GET"));
     }
 
+    @Test public void requestCancellationIsRestrictedToReadsAndExactNavigationQueries() {
+        assertTrue(NativeApiPolicy.isCancellableRead("/api/state", "GET"));
+        assertTrue(NativeApiPolicy.isCancellableRead("/api/charges?limit=50", "GET"));
+        for (String path : new String[]{"/api/navigation/places", "/api/navigation/chargers", "/api/navigation/tiles"}) {
+            assertTrue(NativeApiPolicy.isCancellableRead(path, "POST"));
+            assertFalse(NativeApiPolicy.isCancellableRead(path + "?x=1", "POST"));
+        }
+        for (String path : new String[]{"/api/charges", "/api/commands", "/api/charges/requests"}) {
+            assertTrue(NativeApiPolicy.allows(path, "POST"));
+            assertFalse(NativeApiPolicy.isCancellableRead(path, "POST"));
+        }
+        assertFalse(NativeApiPolicy.isCancellableRead("/api/navigation/favorites", "POST"));
+        assertFalse(NativeApiPolicy.isCancellableRead("/api/state", "PUT"));
+    }
+
     @Test public void chargerIsReadOnlyAndBounded() {
         assertTrue(NativeApiPolicy.allows("/api/charger", "GET"));
         assertTrue(NativeApiPolicy.allows("/api/charger/sessions?limit=20&offset=1000", "GET"));

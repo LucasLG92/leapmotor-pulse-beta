@@ -20,6 +20,7 @@ jobs:
     env:
       PULSE_CHECK_PYTHON: python
       PULSE_CHECK_PNPM: pnpm
+      PULSE_CHECK_BROWSER: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -45,6 +46,12 @@ jobs:
           corepack enable pnpm
           corepack prepare pnpm@11.25.0 --activate
           test "$(pnpm --version)" = "11.25.0"
+
+      - name: Install isolated browser test runtime
+        working-directory: apps/web
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
 
       - name: Run contracts, tests, and container checks
         run: bash scripts/check-container.sh

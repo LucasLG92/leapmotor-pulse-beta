@@ -3,6 +3,7 @@ export interface NativeBridgeStatus {
 	authenticated: boolean;
 	widgetLinked: boolean;
 	widgetCacheEnabled: boolean;
+	supportsRequestCancellation?: boolean;
 }
 
 export interface NativeBridgeResponse {
@@ -20,7 +21,9 @@ export interface NativeBridge {
 	status(): Promise<NativeBridgeStatus>;
 	login(): Promise<void>;
 	logout(): Promise<void>;
-	request(input: { path: string; method: string; body?: string }): Promise<NativeBridgeResponse>;
+	request(input: { path: string; method: string; body?: string; request_id?: string }): Promise<NativeBridgeResponse>;
+	cancelRequest?(input: { request_id: string }): Promise<void>;
+	supportsRequestCancellation?(): boolean;
 	exportJourneyReport?(input: { days: 30 | 90 | 365 }): Promise<NativeJourneyReportExportResult>;
 	subscribe(onRevision: (revision: number) => void, onError: () => void): Promise<() => void>;
 	linkWidget(input: { pairingCode: string; deviceName: string }): Promise<void>;
