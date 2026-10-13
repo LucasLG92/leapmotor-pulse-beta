@@ -171,9 +171,26 @@ printf '%s\n' 'Comprobando que los builds conservaron la resolución Swift revis
     --output "$spm_evidence"
 
 printf '%s\n' 'Comprobación iOS de Apple completada para Debug y Release.'
+printf '%s\n' 'Construyendo el target XCTest de interfaz, sin incorporarlo a App o Widget.'
+xcodebuild build-for-testing \
+    -project "$project" \
+    -scheme PulseStartupCI \
+    -configuration Debug \
+    -destination 'generic/platform=iOS Simulator' \
+    -derivedDataPath "$derived_data" \
+    -clonedSourcePackagesDirPath "$spm_clones" \
+    CODE_SIGNING_ALLOWED=NO \
+    CODE_SIGNING_REQUIRED=NO \
+    CODE_SIGN_IDENTITY=
 printf '%s\n' 'Instalando y arrancando la app genérica en un simulador propio.'
 "$python_bin" scripts/ios-simulator-smoke.py \
-    "$derived_data/Build/Products/Debug-iphonesimulator/App.app"
+    "$derived_data/Build/Products/Debug-iphonesimulator/App.app" \
+    "$derived_data" "$spm_clones"
+
+"$python_bin" scripts/ios-spm-audit.py verify \
+    --lockfile "$spm_resolution" \
+    --checkout "$spm_checkout" \
+    --output "$spm_evidence"
 
 if [ "${PULSE_CHECK_IOS_DEVICE_IPA:-0}" = '1' ]; then
     if [[ ! "${GITHUB_SHA:-}" =~ ^[0-9a-f]{40}$ ]]; then
