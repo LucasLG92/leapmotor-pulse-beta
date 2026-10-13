@@ -184,6 +184,7 @@ def main() -> None:
                "ui_readiness_method_completed": False,
                "rendered_startup_verified": False,
                "ui_readiness_command_timeout_seconds": 240,
+               "test_repetition": "single_test_scheme_without_repetition_options",
                "ui_readiness_failure_diagnostic": None,
                "diagnostic_capture_failure": None,
                "visual_review_pending": True, "widget_runtime_verified": False,
@@ -229,7 +230,6 @@ def main() -> None:
             "-resultBundlePath", str(OUTPUT / "ui-readiness.xcresult"),
             "-only-testing:" + UI_TEST,
             "-parallel-testing-enabled", "NO",
-            "-test-iterations", "1",
             "CODE_SIGNING_ALLOWED=NO", "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=",
         ], stage=stage, timeout=240)
         retain_ui_screenshot(ui_output)

@@ -173,7 +173,8 @@ class IOSSimulatorSmokeTests(unittest.TestCase):
         self.assertNotIn("-allowProvisioningUpdates", ui_call.args[0])
         self.assertNotIn("-retry-tests-on-failure", ui_call.args[0])
         self.assertNotIn("-run-tests-until-failure", ui_call.args[0])
-        self.assertEqual(ui_call.args[0][ui_call.args[0].index("-test-iterations") + 1], "1")
+        self.assertNotIn("-test-iterations", ui_call.args[0])
+        self.assertEqual(receipt["test_repetition"], "single_test_scheme_without_repetition_options")
         self.assertEqual(ui_call.args[0][ui_call.args[0].index("-parallel-testing-enabled") + 1], "NO")
 
     def test_install_timeout_records_failure_and_still_cleans_owned_device(self):
