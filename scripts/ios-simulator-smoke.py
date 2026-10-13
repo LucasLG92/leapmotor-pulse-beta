@@ -26,13 +26,43 @@ UI_TEST = "PulseStartupUITests/PulseStartupUITests/testGenericLoginRenders"
 UI_READY_MARKER = "PULSE_CI_UI_READY_V1"
 UI_PNG_PREFIX = "PULSE_CI_UI_PNG_V1:"
 MAX_PNG_BYTES = 10 * 1024 * 1024
+UI_ERROR_WORDS = frozenset({
+    "action", "application", "architecture", "available", "build", "built",
+    "bundle", "bundles", "cannot", "code", "codesigned", "configured",
+    "destination", "disabling", "enabled", "error", "executable", "failure",
+    "file", "folder", "found", "framework", "host", "identifier", "invalid",
+    "iterations", "launch", "matching", "missing", "no", "not", "option",
+    "platform", "plist", "product", "products", "project", "provided",
+    "required", "requires", "retry", "root", "runner", "scheme", "sdk",
+    "signed", "signing", "simulator", "specifier", "target", "test",
+    "testable", "tests", "unable", "unsupported", "value",
+})
 
 
 class SmokeFailure(RuntimeError):
-    def __init__(self, stage: str, failure_type: str):
+    def __init__(self, stage: str, failure_type: str, diagnostic: dict | None = None):
         super().__init__(f"{stage}:{failure_type}")
         self.stage = stage
         self.failure_type = failure_type
+        self.diagnostic = diagnostic
+
+
+def ui_failure_diagnostic(result: subprocess.CompletedProcess) -> dict:
+    """Emit fixed vocabulary only; never retain error text or image transport.
+
+    These indicators describe the failed command, not a proven root cause.
+    Unknown words, identifiers, paths, URLs and credentials have no output slot.
+    """
+    output = result.stderr + "\n" + result.stdout
+    errors = re.findall(r"(?m)^xcodebuild: error:([^\n]*)", output)
+    words = set()
+    for line in errors:
+        for token in line.split():
+            word = token.strip("\"'.,:;!?").lower()
+            if re.fullmatch(r"[a-z]+", word) and word in UI_ERROR_WORDS:
+                words.add(word)
+    return {"return_code": result.returncode, "xcodebuild_error_detected": bool(errors),
+            "known_error_words": sorted(words)}
 
 
 def progress(stage: str) -> None:
@@ -48,7 +78,8 @@ def run(arguments: list[str], *, stage: str, timeout: int = 60) -> str:
     except OSError:
         raise SmokeFailure(stage, "operation") from None
     if result.returncode:
-        raise SmokeFailure(stage, "operation")
+        diagnostic = ui_failure_diagnostic(result) if stage == "ui-readiness" else None
+        raise SmokeFailure(stage, "operation", diagnostic)
     return result.stdout.strip()
 
 
@@ -140,6 +171,7 @@ def main() -> None:
                "ui_readiness_test": UI_TEST, "ui_readiness_test_started": False,
                "rendered_startup_verified": False,
                "ui_readiness_command_timeout_seconds": 240,
+               "ui_readiness_failure_diagnostic": None,
                "diagnostic_capture_failure": None,
                "visual_review_pending": True, "widget_runtime_verified": False,
                "physical_device_verified": False, "owned_simulator_removed": False,
@@ -199,6 +231,9 @@ def main() -> None:
         receipt["screenshot_created"] = True
     except SmokeFailure as exc:
         operation_failure = {"stage": exc.stage, "type": exc.failure_type}
+        if exc.stage == "ui-readiness" and exc.diagnostic is not None:
+            receipt["ui_readiness_failure_diagnostic"] = exc.diagnostic
+            print("iOS UI failure diagnostic: " + json.dumps(exc.diagnostic, sort_keys=True), flush=True)
     except Exception:
         operation_failure = {"stage": stage, "type": "operation"}
     finally:

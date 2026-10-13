@@ -3,9 +3,12 @@ import importlib.util
 import json
 from pathlib import Path
 import plistlib
+import subprocess
 import tempfile
 import unittest
 from unittest import mock
+from contextlib import redirect_stdout
+from io import StringIO
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts/ios-simulator-smoke.py"
@@ -15,6 +18,57 @@ SPEC.loader.exec_module(smoke)
 
 
 class IOSSimulatorSmokeTests(unittest.TestCase):
+    def test_ui_failure_diagnostic_has_only_fixed_words_and_no_free_text(self):
+        secret = "CANARY_PRIVATE_TOKEN_20261013"
+        result = subprocess.CompletedProcess([], 70, stdout=smoke.UI_PNG_PREFIX + secret,
+            stderr="xcodebuild: error: The scheme private-scheme cannot test: missing bundles at /private/" + secret + " https://example.invalid/?token=" + secret)
+        diagnostic = smoke.ui_failure_diagnostic(result)
+        self.assertEqual(diagnostic["return_code"], 70)
+        self.assertTrue(diagnostic["xcodebuild_error_detected"])
+        self.assertEqual(diagnostic["known_error_words"], ["bundles", "cannot", "missing", "scheme", "test"])
+        self.assertNotIn(secret, json.dumps(diagnostic))
+        self.assertNotIn("private", json.dumps(diagnostic))
+        self.assertNotIn("https", json.dumps(diagnostic))
+
+    def test_run_ui_nonzero_never_accepts_readiness_or_prints_raw_output(self):
+        secret = "CANARY_PRIVATE_TOKEN_20261013"
+        output = smoke.UI_READY_MARKER + "\n" + smoke.UI_PNG_PREFIX + secret
+        captured = StringIO()
+        with mock.patch.object(smoke.subprocess, "run", return_value=subprocess.CompletedProcess([], 64, output, "xcodebuild: error: invalid option " + secret)), redirect_stdout(captured):
+            with self.assertRaises(smoke.SmokeFailure) as raised:
+                smoke.run(["xcodebuild", "test-without-building"], stage="ui-readiness")
+        self.assertEqual(raised.exception.failure_type, "operation")
+        self.assertEqual(raised.exception.diagnostic["known_error_words"], ["invalid", "option"])
+        self.assertNotIn(secret, captured.getvalue())
+        self.assertNotIn(smoke.UI_READY_MARKER, captured.getvalue())
+
+    def test_non_ui_failure_does_not_collect_error_text(self):
+        result = subprocess.CompletedProcess([], 1, "secret", "xcodebuild: error: secret")
+        with mock.patch.object(smoke.subprocess, "run", return_value=result):
+            with self.assertRaises(smoke.SmokeFailure) as raised:
+                smoke.run(["xcrun"], stage="install")
+        self.assertIsNone(raised.exception.diagnostic)
+
+    def test_unknown_ui_error_keeps_only_return_code(self):
+        diagnostic = smoke.ui_failure_diagnostic(subprocess.CompletedProcess([], 65, "secret", "secret"))
+        self.assertEqual(diagnostic, {"return_code": 65, "xcodebuild_error_detected": False, "known_error_words": []})
+
+    def test_ui_failure_diagnostic_does_not_replace_original_failure_or_cleanup(self):
+        diagnostic = {"return_code": 70, "xcodebuild_error_detected": True, "known_error_words": ["test"]}
+        def failed_ui(arguments, *, stage, timeout=60):
+            if stage == "ui-readiness":
+                raise smoke.SmokeFailure(stage, "operation", diagnostic)
+            return self.successful_run(arguments, stage=stage, timeout=timeout)
+        with self.assertRaises(smoke.SmokeFailure):
+            self.run_main(failed_ui)
+        receipt = self.receipt()
+        self.assertEqual(receipt["failure"], {"stage": "ui-readiness", "type": "operation"})
+        self.assertEqual(receipt["ui_readiness_failure_diagnostic"], diagnostic)
+        self.assertFalse(receipt["rendered_startup_verified"])
+        self.assertTrue(receipt["initial_screenshot_created"])
+        self.assertTrue(receipt["owned_simulator_removed"])
+        self.assertIsNone(receipt["cleanup_failure"])
+
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
         self.root = Path(self.tempdir.name)
