@@ -200,10 +200,13 @@
 			selectedLookupPlace = { ...selectedPlace };
 			form = { name: selectedPlace.name, latitude: String(selectedPlace.latitude), longitude: String(selectedPlace.longitude) };
 		} else selectedLookupPlace = null;
+		const focusBeforeOpening = document.activeElement;
 		formOpen = true; baseline = fingerprint();
 		const openedGeneration = formGeneration;
 		requestAnimationFrame(() => {
-			if (mounted && formOpen && openedGeneration === formGeneration) {
+			const focus = document.activeElement;
+			if (mounted && formOpen && openedGeneration === formGeneration
+				&& (focus === focusBeforeOpening || focus === opener || focus === document.body)) {
 				document.getElementById(searchAvailable ? 'favorite-query' : 'favorite-name')?.focus();
 			}
 		});
@@ -233,7 +236,7 @@
 		if (!name) next.name = 'Escribe un nombre para este lugar.';
 		else if (name.length > 160) next.name = 'El nombre admite hasta 160 caracteres.';
 		const latitude = coordinate(form.latitude, -90, 90), longitude = coordinate(form.longitude, -180, 180);
-		if (manualCoordinatesElement?.open || manualCoordinatesOpen || form.latitude.trim() || form.longitude.trim()) {
+		if (!searchAvailable || manualCoordinatesElement?.open || manualCoordinatesOpen || form.latitude.trim() || form.longitude.trim()) {
 			if (latitude === null) next.latitude = 'Indica una latitud entre −90 y 90.';
 			if (longitude === null) next.longitude = 'Indica una longitud entre −180 y 180.';
 			if (next.latitude || next.longitude) manualCoordinatesOpen = true;
@@ -326,7 +329,6 @@
 						</ul>
 					{:else if lookupCompleted}<p class="lookup-status" role="status">No se encontraron lugares. Añade la localidad o escribe una dirección más concreta.</p>{/if}
 					{#if selectedLookupPlace}<p class="lookup-selection" role="status">Las coordenadas de «{selectedLookupPlace.name}» están en el borrador. Aún no se ha guardado el favorito.</p>{/if}
-					{#if !searchAvailable}<p class="lookup-status">La búsqueda de lugares no está disponible. Puedes usar las coordenadas manuales.</p>{/if}
 				</div>
 				<div class="field full"><label for="favorite-name">Nombre del lugar</label><input id="favorite-name" maxlength="160" autocomplete="off" placeholder="Puedes editar el nombre sugerido" bind:value={form.name} disabled={busy || saving} aria-invalid={!!errors.name} aria-describedby={errors.name ? 'favorite-name-error' : undefined} />{#if errors.name}<small id="favorite-name-error">{errors.name}</small>{/if}</div>
 				<details class="manual-coordinate-details" bind:this={manualCoordinatesElement} bind:open={manualCoordinatesOpen} ontoggle={clearPlaceValidationError}>

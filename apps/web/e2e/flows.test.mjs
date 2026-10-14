@@ -240,6 +240,7 @@ test('cerrar editores con teclado devuelve el foco y cancelar el descarte conser
 	for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 450 }]) {
 		const page = await pageFor(t, viewport);
 		for (const item of cases) {
+			t.diagnostic(`${item.path} ${item.opener} ${viewport.width}×${viewport.height}`);
 			await page.goto(`${origin}${item.path}`);
 			if (item.tab) await page.getByRole('button', { name: item.tab, exact: true }).click();
 			const panel = page.locator(item.panel), opener = panel.getByRole('button', { name: item.opener, exact: true });
@@ -252,7 +253,8 @@ test('cerrar editores con teclado devuelve el foco y cancelar el descarte conser
 				const box = element.getBoundingClientRect();
 				return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)?.closest('button') === element;
 			}), true, `${item.opener}: el foco debe quedar visible`);
-			await keyboardActivate(opener); await field.fill('Borrador sintético');
+			await keyboardActivate(opener); await settle(page); await field.fill('Borrador sintético');
+			assert.equal(await field.inputValue(), 'Borrador sintético');
 			await keyboardActivate(form.getByRole('button', { name: item.cancel || 'Cancelar', exact: true }));
 			await page.locator('dialog[open]').waitFor(); await page.keyboard.press('Escape');
 			assert.equal(await field.inputValue(), 'Borrador sintético');
@@ -262,6 +264,27 @@ test('cerrar editores con teclado devuelve el foco y cancelar el descarte conser
 			await eventually(() => activeIs(page, opener));
 		}
 	}
+});
+
+test('el foco inicial diferido de favoritos respeta otro control que el usuario ya ha enfocado', { timeout: 20_000 }, async t => {
+	const page = await pageFor(t); await page.goto(`${origin}/navigation`);
+	await page.locator('#favorite-add').waitFor(); await settle(page);
+	await page.evaluate(async () => {
+		const original = window.requestAnimationFrame, callbacks = [];
+		window.requestAnimationFrame = callback => { callbacks.push(callback); return 1_000_000 + callbacks.length; };
+		try {
+			const opener = document.getElementById('favorite-add'); opener.focus(); opener.click();
+			for (let i = 0; i < 20 && !document.querySelector('.favorite-form'); i++) await Promise.resolve();
+			const cancel = [...document.querySelectorAll('.favorite-form button')].find(button => button.textContent.trim() === 'Cancelar');
+			if (!cancel) throw new Error('El formulario no se abrió');
+			cancel.focus();
+		} finally {
+			window.requestAnimationFrame = original;
+			for (const callback of callbacks) original(callback);
+		}
+	});
+	await settle(page);
+	await activeIs(page, page.locator('.favorite-form').getByRole('button', { name: 'Cancelar', exact: true }));
 });
 
 async function describedError(page, id) {
@@ -449,6 +472,11 @@ test('el formulario de favoritos no envía direcciones a un proveedor público o
 		assert.equal(await page.locator('#favorite-query').isDisabled(), true);
 		assert.match(await page.locator('#favorite-query-help').textContent(), /búsqueda privada aún no está disponible/);
 		assert.equal(searches, 0);
+		await keyboardActivate(page.locator('.favorite-form').getByRole('button', { name: 'Guardar favorito', exact: true }));
+		await page.locator('.form-errors').waitFor();
+		assert.equal(await page.locator('#favorite-latitude').isVisible(), true);
+		assert.equal(await page.locator('#favorite-latitude').isEnabled(), true);
+		assert.equal(await page.locator('.form-errors a[href="#favorite-query"]').count(), 0, 'el error debe apuntar a campos accesibles');
 		await page.unroute('**/api/navigation/status');
 	}
 });

@@ -8,7 +8,7 @@ Validación local: Svelte sin errores ni avisos, build, 74 pruebas web, 11 flujo
 
 Estos resultados acreditan el software probado. Solo se dispone aquí de Chromium para la automatización: no acreditan Safari/WebKit, VoiceOver, TalkBack ni aceptación física.
 
-La entrega web cambia recursos de interfaz, conserva los 62 archivos de backend, SQLite 21/JSON 17, los cinco Compose y el montaje de avisos de copias en solo lectura. Se conserva copia protegida y rollback de imagen sin rebobinar datos. Las fuentes y la web se verifican antes de marcar su entrega; nunca se publica configuración privada, claves o bases de datos.
+La entrega web inicial cambia recursos de interfaz, conserva los 62 archivos de backend, SQLite 21/JSON 17, los cinco Compose y el montaje de avisos de copias en solo lectura. Se conserva copia protegida y rollback de imagen sin rebobinar datos. Las fuentes y la web se verifican antes de marcar su entrega; nunca se publica configuración privada, claves o bases de datos.
 
 ## Pruebas físicas pendientes
 
@@ -35,6 +35,6 @@ Añadir lugar ofrece búsqueda por nombre/dirección, selección y alias editabl
 
 Lucas solicita también direcciones privadas. El formulario solo permite buscar con estado coherente de Photon privado y rechaza respuestas públicas. El adaptador mTLS original está preparado y desactivado; no hay fallback público. La instalación aislada del geocodificador necesita aprobación específica y después pruebas de TLS/recursos reales. Mapas/cargadores y Apple/Google mantienen servicios públicos con avisos visibles antes de sus acciones. [Contrato y límites](PRIVATE-PLACE-SEARCH.md).
 
-Validación local del candidato: 74 pruebas web, 18 E2E Chromium, 1426 pruebas Python y 131 subcasos; 34 pruebas Python omitidas por sus gates de entorno. Tipado Svelte 0 errores/0 avisos y build. La suite acotada de navegación aporta 68 pruebas con transporte falso; no acredita handshake TLS real. La fuente actual conserva SQLite21/JSON17 y cambia exactamente tres módulos de navegación/contrato frente a la imagen inicial. El operador exige manifiestos base/candidato, cinco Compose preservados y rollback sin rebobinar datos.
+Validación local del candidato: 74 pruebas web, 19 E2E Chromium, 1426 pruebas Python y 131 subcasos; 34 pruebas Python omitidas por sus gates de entorno. Tipado Svelte 0 errores/0 avisos y build. La suite acotada de navegación aporta 68 pruebas con transporte falso; no acredita handshake TLS real. La fuente actual conserva SQLite21/JSON17 y cambia exactamente tres módulos de navegación/contrato frente a la imagen inicial. El operador exige manifiestos base/candidato, cinco Compose preservados y rollback sin rebobinar datos.
 
-Este apartado describe el candidato cualificado; no acredita todavía su despliegue, el geocodificador instalado ni nueva aceptación física. La fase 1 permanece abierta y no habilita avanzar a la fase 2.
+La versión corregida ya está entregada en la web: 65 recursos HTTPS exactos, cinco Compose y esquemas conservados. Los monitores de copias mantienen sus tres timers activos y dos informes sanos. También se corrigió el foco inicial diferido para respetar un control que el usuario haya enfocado, y los errores con buscador inactivo abren la alternativa manual accesible. Esto no acredita el geocodificador instalado ni nueva aceptación física. La fase 1 permanece abierta y no habilita avanzar a la fase 2.
