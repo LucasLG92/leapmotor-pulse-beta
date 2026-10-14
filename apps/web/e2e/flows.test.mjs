@@ -44,8 +44,8 @@ after(async () => {
 	}
 	if (directory) await rm(directory, { recursive: true, force: true });
 });
-async function pageFor(t) {
-	const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, serviceWorkers: 'block' });
+async function pageFor(t, viewport = { width: 1280, height: 800 }) {
+	const context = await browser.newContext({ viewport, serviceWorkers: 'block' });
 	const page = await context.newPage(), errors = [];
 	page.on('pageerror', error => errors.push(error.message));
 	t.after(async () => { await page.unrouteAll({ behavior: 'ignoreErrors' }); await context.close(); assert.deepEqual(errors, [], 'errores de la interfaz'); });
@@ -222,4 +222,325 @@ test('los eventos durante una lectura lenta producen una reconciliación sin mos
 	release();
 	await eventually(async () => assert.equal(await page.locator('#vehicle-name').inputValue(), 'Respuesta actual'));
 	assert.equal(reads, 2, 'una única reconciliación');
+});
+
+async function keyboardActivate(locator) {
+	await locator.focus(); await locator.press('Enter');
+}
+async function activeIs(page, locator) {
+	assert.equal(await locator.evaluate(element => element === document.activeElement), true, JSON.stringify(await page.evaluate(() => ({ hasFocus: document.hasFocus(), active: document.activeElement?.outerHTML.slice(0, 160) }))));
+}
+
+test('cerrar editores con teclado devuelve el foco y cancelar el descarte conserva el borrador', { timeout: 45_000 }, async t => {
+	const cases = [
+		{ path: '/navigation', panel: '.favorites-panel', opener: 'Añadir lugar', field: '#favorite-name', form: '.favorite-form' },
+		{ path: '/activity', panel: '.manual-journeys', opener: 'Añadir trayecto', cancel: 'Descartar formulario', field: '#journey-notes', form: '.journey-form' },
+		{ path: '/activity', tab: 'Mantenimiento', panel: '.maintenance-panel', opener: 'Añadir plan', field: '#maintenance-plan-title', form: '.maintenance-panel .maintenance-form' }
+	];
+	for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 450 }]) {
+		const page = await pageFor(t, viewport);
+		for (const item of cases) {
+			t.diagnostic(`${item.path} ${item.opener} ${viewport.width}×${viewport.height}`);
+			await page.goto(`${origin}${item.path}`);
+			if (item.tab) await page.getByRole('button', { name: item.tab, exact: true }).click();
+			const panel = page.locator(item.panel), opener = panel.getByRole('button', { name: item.opener, exact: true });
+			const form = page.locator(item.form), field = page.locator(item.field);
+			await keyboardActivate(opener);
+			await keyboardActivate(form.getByRole('button', { name: item.cancel || 'Cancelar', exact: true }));
+			await form.waitFor({ state: 'hidden' });
+			await eventually(() => activeIs(page, opener));
+			assert.equal(await opener.evaluate(element => {
+				const box = element.getBoundingClientRect();
+				return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)?.closest('button') === element;
+			}), true, `${item.opener}: el foco debe quedar visible`);
+			await keyboardActivate(opener); await settle(page); await field.fill('Borrador sintético');
+			assert.equal(await field.inputValue(), 'Borrador sintético');
+			await keyboardActivate(form.getByRole('button', { name: item.cancel || 'Cancelar', exact: true }));
+			await page.locator('dialog[open]').waitFor(); await page.keyboard.press('Escape');
+			assert.equal(await field.inputValue(), 'Borrador sintético');
+			await keyboardActivate(form.getByRole('button', { name: item.cancel || 'Cancelar', exact: true }));
+			await keyboardActivate(page.locator('dialog[open]').getByRole('button', { name: 'Descartar formulario', exact: true }));
+			await form.waitFor({ state: 'hidden' });
+			await eventually(() => activeIs(page, opener));
+		}
+	}
+});
+
+test('el foco inicial diferido de favoritos respeta otro control que el usuario ya ha enfocado', { timeout: 20_000 }, async t => {
+	const page = await pageFor(t); await page.goto(`${origin}/navigation`);
+	await page.locator('#favorite-add').waitFor(); await settle(page);
+	await page.evaluate(async () => {
+		const original = window.requestAnimationFrame, callbacks = [];
+		window.requestAnimationFrame = callback => { callbacks.push(callback); return 1_000_000 + callbacks.length; };
+		try {
+			const opener = document.getElementById('favorite-add'); opener.focus(); opener.click();
+			for (let i = 0; i < 20 && !document.querySelector('.favorite-form'); i++) await Promise.resolve();
+			const cancel = [...document.querySelectorAll('.favorite-form button')].find(button => button.textContent.trim() === 'Cancelar');
+			if (!cancel) throw new Error('El formulario no se abrió');
+			cancel.focus();
+		} finally {
+			window.requestAnimationFrame = original;
+			for (const callback of callbacks) original(callback);
+		}
+	});
+	await settle(page);
+	await activeIs(page, page.locator('.favorite-form').getByRole('button', { name: 'Cancelar', exact: true }));
+});
+
+async function describedError(page, id) {
+	const field = page.locator(`#${id}`);
+	assert.equal(await field.getAttribute('aria-invalid'), 'true');
+	const error = page.locator(`#${id}-error`), text = await error.textContent();
+	assert.ok(text?.trim());
+	assert.ok((await field.getAttribute('aria-describedby'))?.split(' ').includes(`${id}-error`));
+	// Inspect the browser's computed accessibility description, beyond the markup.
+	const label = await page.locator(`label[for="${id}"]`).textContent();
+	const session = await page.context().newCDPSession(page);
+	try {
+		const { nodes } = await session.send('Accessibility.getFullAXTree');
+		assert.ok(nodes.some(node => node.name?.value === label.trim() && node.description?.value.includes(text.trim())), `${id}: error en la descripción accesible`);
+	} finally { await session.detach(); }
+}
+
+test('los errores de favoritos, mantenimiento y simulación forman parte de la descripción accesible', { timeout: 30_000 }, async t => {
+	const page = await pageFor(t, { width: 390, height: 844 });
+	await page.goto(`${origin}/navigation`);
+	await page.getByRole('button', { name: 'Añadir lugar', exact: true }).click();
+	await keyboardActivate(page.locator('.favorite-form').getByText('Introducir coordenadas', { exact: true }));
+	await keyboardActivate(page.getByRole('button', { name: 'Guardar favorito', exact: true }));
+	for (const id of ['favorite-name', 'favorite-latitude', 'favorite-longitude']) await describedError(page, id);
+	await page.goto(`${origin}/activity`);
+	await page.getByRole('button', { name: 'Mantenimiento', exact: true }).click();
+	await page.getByRole('button', { name: 'Añadir plan', exact: true }).click();
+	await page.locator('#maintenance-plan-intervalMonths').fill('0');
+	await page.locator('#maintenance-plan-intervalKm').fill('0');
+	await keyboardActivate(page.getByRole('button', { name: 'Crear plan', exact: true }));
+	for (const id of ['maintenance-plan-title', 'maintenance-plan-intervalMonths', 'maintenance-plan-intervalKm']) await describedError(page, id);
+	await page.locator('.maintenance-panel .maintenance-form').getByRole('button', { name: 'Cancelar', exact: true }).click();
+	await page.locator('dialog[open]').getByRole('button', { name: 'Descartar formulario', exact: true }).click();
+	await page.goto(`${origin}/energy`);
+	await page.getByRole('button', { name: 'Planificar', exact: true }).click();
+	await page.getByRole('button', { name: 'Abrir simulador', exact: true }).click();
+	await keyboardActivate(page.getByRole('button', { name: 'Calcular escenario', exact: true }));
+	for (const id of ['plan-energy', 'plan-power', 'plan-efficiency', 'plan-earliest', 'plan-deadline', 'tariff-0-start', 'tariff-0-end', 'tariff-0-price']) await describedError(page, id);
+});
+
+test('guardar devuelve el foco a un control estable aunque el refresco de la lista llegue tarde', { timeout: 40_000 }, async t => {
+	for (const kind of ['favorite', 'maintenance', 'journey']) {
+		const page = await pageFor(t, { width: 390, height: 844 });
+		await page.bringToFront();
+		const path = kind === 'favorite' ? '/navigation' : '/activity';
+		await page.goto(`${origin}${path}`);
+		if (kind === 'maintenance') await page.getByRole('button', { name: 'Mantenimiento', exact: true }).click();
+		const name = `Prueba de foco ${kind}`;
+		const endpoint = kind === 'favorite' ? '/api/navigation/favorites' : kind === 'maintenance' ? '/api/maintenance-plans' : '/api/journeys';
+		const formSelector = kind === 'favorite' ? '.favorite-form' : kind === 'maintenance' ? '.maintenance-panel .maintenance-form' : '.journey-form';
+		const stableId = kind === 'favorite' ? '#favorite-add' : kind === 'maintenance' ? '#maintenance-plan-add' : '#manual-journey-add';
+		const emptyName = kind === 'favorite' ? 'Añadir el primero' : 'Crear primer plan';
+		const emptyOpener = page.getByRole('button', { name: emptyName, exact: true });
+		await keyboardActivate(kind !== 'journey' && await emptyOpener.isVisible() ? emptyOpener : page.locator(stableId));
+		if (kind === 'favorite') {
+			await page.locator('#favorite-name').fill(name);
+			await page.locator('.favorite-form').getByText('Introducir coordenadas', { exact: true }).click();
+			await page.locator('#favorite-latitude').fill('40'); await page.locator('#favorite-longitude').fill('-3');
+		} else if (kind === 'maintenance') {
+			await page.locator('#maintenance-plan-title').fill(name); await page.locator('#maintenance-plan-intervalMonths').fill('12');
+		} else {
+			const now = Date.now(), date = value => new Date(value).toISOString().slice(0, 16);
+			await page.locator('#journey-time-basis').selectOption('utc');
+			await page.locator('#journey-started').fill(date(now - 7_200_000)); await page.locator('#journey-ended').fill(date(now - 3_600_000));
+			await page.locator('#journey-from').fill(name);
+		}
+		let release, wrote = false, reading = false;
+		const held = new Promise(resolve => { release = resolve; });
+		t.after(() => release());
+		await page.route(`**${endpoint}*`, async route => {
+			if (route.request().method() === 'POST') { wrote = true; await route.continue(); }
+			else if (wrote && route.request().method() === 'GET') {
+				const response = await route.fetch(); reading = true; await held; await route.fulfill({ response });
+			} else await route.continue();
+		});
+		const form = page.locator(formSelector);
+		await keyboardActivate(form.locator('button[type="submit"]'));
+		await form.waitFor({ state: 'hidden' });
+		await eventually(() => assert.equal(reading, true));
+		await eventually(() => activeIs(page, page.locator(stableId)));
+		release();
+		await page.getByText(name, { exact: false }).first().waitFor();
+		await settle(page);
+		await activeIs(page, page.locator(stableId));
+	}
+});
+
+test('el recorrido de teclado deja visible el foco delante de la navegación móvil', { timeout: 45_000 }, async t => {
+	for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 450 }]) {
+		const page = await pageFor(t, viewport); await page.bringToFront();
+		for (const path of ['/', '/energy', '/activity', '/protection', '/navigation', '/settings']) {
+			await page.goto(`${origin}${path}`); await page.locator('main[aria-busy="false"]').waitFor();
+			for (let step = 0; step < 24; step++) {
+				await page.keyboard.press('Tab'); await settle(page);
+				const focus = await page.evaluate(() => {
+					const element = document.activeElement;
+					if (!(element instanceof HTMLElement) || !element.closest('.page-content') || element.id === 'pulse-content') return null;
+					const box = element.getBoundingClientRect(), bar = document.querySelector('.mobile-navigation-shell').getBoundingClientRect();
+					return { text: element.textContent?.trim().slice(0, 60) || element.id, top: box.top, bottom: box.bottom, height: box.height, barTop: bar.top };
+				});
+				if (focus) {
+					assert.ok(focus.top >= 0 && focus.bottom <= focus.barTop, `${path} ${viewport.width}×${viewport.height}: ${JSON.stringify(focus)}`);
+				}
+			}
+		}
+	}
+});
+
+
+test('las fechas de los trayectos guardados se leen en líneas normales con texto grande', { timeout: 15_000 }, async t => {
+	const page = await pageFor(t);
+	await page.goto(`${origin}/activity`);
+	await page.locator('.journey-details summary').first().waitFor();
+	for (const width of [320, 390, 430]) {
+		await page.setViewportSize({ width, height: 844 });
+		for (const size of ['16px', '32px']) {
+			await page.evaluate(size => document.documentElement.style.setProperty('font-size', size, 'important'), size);
+			await settle(page);
+			const metrics = await page.locator('.journey-details summary').first().evaluate(summary => {
+				const date = summary.querySelector('.journey-date-source'), time = date.querySelector('time');
+				const line = parseFloat(getComputedStyle(time).lineHeight) || parseFloat(getComputedStyle(time).fontSize) * 1.5;
+				return { available: summary.getBoundingClientRect().width, date: date.getBoundingClientRect().width, height: time.getBoundingClientRect().height, line };
+			});
+			assert.ok(metrics.date >= metrics.available - 2, JSON.stringify(metrics));
+			assert.ok(metrics.height <= metrics.line * 4, JSON.stringify(metrics));
+		}
+	}
+});
+
+test('una respuesta tardía de guardado respeta el foco que el usuario movió fuera del editor', { timeout: 15_000 }, async t => {
+	const page = await pageFor(t, { width: 390, height: 844 });
+	await page.goto(`${origin}/navigation`);
+	await page.locator('#favorite-add').click();
+	await page.locator('#favorite-name').fill('Respuesta tardía sintética');
+	await page.locator('.favorite-form').getByText('Introducir coordenadas', { exact: true }).click();
+	await page.locator('#favorite-latitude').fill('40'); await page.locator('#favorite-longitude').fill('-3');
+	let release, received = false;
+	const held = new Promise(resolve => { release = resolve; }); t.after(() => release());
+	await page.route('**/api/navigation/favorites*', async route => {
+		if (route.request().method() !== 'POST') { await route.continue(); return; }
+		const response = await route.fetch(); received = true; await held; await route.fulfill({ response });
+	});
+	await keyboardActivate(page.getByRole('button', { name: 'Guardar favorito', exact: true }));
+	await eventually(async () => assert.equal(received, true, await page.locator('.favorite-form').innerText()));
+	const external = page.getByRole('link', { name: 'Ver historial de estados', exact: true });
+	await external.focus(); release();
+	await page.locator('.favorite-form').waitFor({ state: 'hidden' });
+	await page.getByText('Respuesta tardía sintética', { exact: true }).waitFor();
+	await settle(page); await activeIs(page, external);
+});
+
+
+test('Manual y Demostración se leen completos en los resúmenes y meses de energía', { timeout: 20_000 }, async t => {
+	const page = await pageFor(t); await page.goto(`${origin}/energy`);
+	await page.locator('.analytics-panel').waitFor();
+	for (const width of [320, 390, 430]) {
+		await page.setViewportSize({ width, height: 844 });
+		for (const size of ['16px', '32px']) {
+			await page.evaluate(size => document.documentElement.style.setProperty('font-size', size, 'important'), size); await settle(page);
+			const items = await page.locator('.analytics-source-heading h3, .month-origin-row > span').evaluateAll(elements => elements.map(element => {
+				const range = document.createRange(); const text = [...element.childNodes].find(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim()); range.selectNodeContents(text || element);
+				return { text: element.textContent?.trim(), width: element.getBoundingClientRect().width, lines: range.getClientRects().length, overflow: element.scrollWidth > element.clientWidth + 1 };
+			}));
+			assert.ok(items.length >= 2);
+			for (const item of items) { assert.equal(item.lines, 1, `${width}/${size} ${JSON.stringify(item)}`); assert.equal(item.overflow, false, JSON.stringify(item)); }
+			assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+		}
+	}
+});
+
+async function enableSyntheticPlaces(page) {
+	await page.route('**/api/navigation/status', route => route.fulfill({ json: { enabled: true, source: 'OpenStreetMap', reason: 'ready', attribution: '© OpenStreetMap contributors', places_provider: 'photon_private', private_place_search: true } }));
+}
+const publicPlaceFixture = { id: 'synthetic-place', name: 'Museo público de prueba', latitude: 40.42, longitude: -3.69 };
+function syntheticPlaces() { return { source: 'OpenStreetMap Photon', fetched_at: new Date().toISOString(), cached: false, places: [publicPlaceFixture] }; }
+
+test('el formulario de favoritos no envía direcciones a un proveedor público o a un estado privado incoherente', { timeout: 20_000 }, async t => {
+	const page = await pageFor(t);
+	let searches = 0;
+	await page.route('**/api/navigation/places', route => { searches++; return route.fulfill({ json: syntheticPlaces() }); });
+	for (const extra of [{}, { places_provider: 'nominatim', private_place_search: false }, { places_provider: 'photon_private', private_place_search: false }]) {
+		await page.route('**/api/navigation/status', route => route.fulfill({ json: { enabled: true, source: 'OpenStreetMap', reason: 'ready', attribution: '© OpenStreetMap contributors', ...extra } }));
+		await page.goto(`${origin}/navigation`);
+		await page.locator('#favorite-add').click();
+		assert.equal(await page.locator('#favorite-query').isDisabled(), true);
+		assert.match(await page.locator('#favorite-query-help').textContent(), /búsqueda privada aún no está disponible/);
+		assert.equal(searches, 0);
+		await keyboardActivate(page.locator('.favorite-form').getByRole('button', { name: 'Guardar favorito', exact: true }));
+		await page.locator('.form-errors').waitFor();
+		assert.equal(await page.locator('#favorite-latitude').isVisible(), true);
+		assert.equal(await page.locator('#favorite-latitude').isEnabled(), true);
+		assert.equal(await page.locator('.form-errors a[href="#favorite-query"]').count(), 0, 'el error debe apuntar a campos accesibles');
+		await page.unroute('**/api/navigation/status');
+	}
+});
+
+test('la búsqueda privada identifica su procedencia y rechaza una respuesta pública sin cambiar el borrador', { timeout: 20_000 }, async t => {
+	const page = await pageFor(t); await enableSyntheticPlaces(page);
+	await page.route('**/api/navigation/places', route => route.fulfill({ json: { ...syntheticPlaces(), source: 'OpenStreetMap Nominatim' } }));
+	await page.goto(`${origin}/navigation`); await page.locator('#favorite-add').click();
+	const form = page.locator('.favorite-form');
+	assert.match(await page.locator('#favorite-query-help').textContent(), /búsqueda se realiza en tu servidor/);
+	await page.locator('#favorite-name').fill('Alias de prueba');
+	await page.locator('#favorite-query').fill('Dirección sintética');
+	await form.getByRole('button', { name: 'Buscar lugar', exact: true }).click();
+	await page.locator('#favorite-query-error').waitFor();
+	assert.equal(await page.locator('#favorite-name').inputValue(), 'Alias de prueba');
+	assert.equal(await page.locator('#favorite-latitude').inputValue(), '');
+	assert.equal(await form.locator('.lookup-results').count(), 0);
+});
+
+test('buscar y elegir un lugar obtiene coordenadas sin guardarlo; escribir o confirmar composición no envía consultas', { timeout: 20_000 }, async t => {
+	const page = await pageFor(t, { width: 390, height: 844 }); await enableSyntheticPlaces(page);
+	let searches = [], writes = [];
+	await page.route('**/api/navigation/places', async route => { searches.push(route.request().postDataJSON()); await route.fulfill({ json: syntheticPlaces() }); });
+	await page.route('**/api/navigation/favorites*', async route => { if (route.request().method() === 'POST') writes.push(route.request().postDataJSON()); await route.continue(); });
+	await page.goto(`${origin}/navigation`); await page.locator('#favorite-add').click();
+	const form = page.locator('.favorite-form'), query = page.locator('#favorite-query');
+	await eventually(async () => assert.equal(await query.isEnabled(), true));
+	assert.equal(await page.locator('#favorite-latitude').isVisible(), false);
+	await query.fill('Museo público'); await settle(page); assert.equal(searches.length, 0);
+	await query.dispatchEvent('keydown', { key: 'Enter', code: 'Enter', isComposing: true }); await settle(page); assert.equal(searches.length, 0);
+	await query.press('Enter');
+	await form.getByRole('button').filter({ hasText: publicPlaceFixture.name }).click();
+	assert.equal(await page.locator('#favorite-name').inputValue(), publicPlaceFixture.name);
+	assert.equal(await page.locator('#favorite-latitude').inputValue(), String(publicPlaceFixture.latitude));
+	assert.equal(await page.locator('#favorite-longitude').inputValue(), String(publicPlaceFixture.longitude));
+	assert.deepEqual(searches, [{ query: 'Museo público', consent: true }]); assert.equal(writes.length, 0);
+	await keyboardActivate(form.getByRole('button', { name: 'Guardar favorito', exact: true }));
+	await form.waitFor({ state: 'hidden' });
+	assert.deepEqual(writes, [{ name: publicPlaceFixture.name, latitude: publicPlaceFixture.latitude, longitude: publicPlaceFixture.longitude }]);
+	await eventually(() => activeIs(page, page.locator('#favorite-add')));
+});
+
+test('una búsqueda tardía no repone resultados al cambiar el texto y conserva el borrador al cancelar el cierre', { timeout: 20_000 }, async t => {
+	const page = await pageFor(t); await enableSyntheticPlaces(page);
+	let release, requested = false; const held = new Promise(resolve => { release = resolve; }); t.after(() => release());
+	await page.route('**/api/navigation/places', async route => { requested = true; await held; try { await route.fulfill({ json: syntheticPlaces() }); } catch {} });
+	await page.goto(`${origin}/navigation`); await page.locator('#favorite-add').click();
+	const form = page.locator('.favorite-form'), query = page.locator('#favorite-query');
+	await eventually(async () => assert.equal(await query.isEnabled(), true));
+	await query.fill('Primera consulta'); await query.press('Enter'); await eventually(() => assert.equal(requested, true));
+	await query.fill('Consulta nueva'); release(); await settle(page);
+	assert.equal(await form.locator('.lookup-result').count(), 0);
+	await keyboardActivate(form.getByRole('button', { name: 'Cancelar', exact: true }));
+	await page.locator('dialog[open]').waitFor(); await page.keyboard.press('Escape');
+	assert.equal(await query.inputValue(), 'Consulta nueva');
+	assert.equal(await page.locator('#favorite-name').inputValue(), '');
+});
+
+test('guardar coordenadas manuales sigue funcionando después de plegar el bloque opcional', { timeout: 15_000 }, async t => {
+	const page = await pageFor(t); await page.goto(`${origin}/navigation`); await page.locator('#favorite-add').click();
+	const form = page.locator('.favorite-form'), summary = form.getByText('Introducir coordenadas', { exact: true });
+	await summary.click(); await page.locator('#favorite-name').fill('Coordenadas plegadas de prueba');
+	await page.locator('#favorite-latitude').fill('40'); await page.locator('#favorite-longitude').fill('-3');
+	await summary.click(); assert.equal(await page.locator('#favorite-latitude').isVisible(), false);
+	await keyboardActivate(form.getByRole('button', { name: 'Guardar favorito', exact: true }));
+	await form.waitFor({ state: 'hidden' }); await page.getByText('Coordenadas plegadas de prueba', { exact: true }).waitFor();
 });

@@ -1,7 +1,7 @@
 """Contratos de respuesta públicos; OpenAPI describe los datos del navegador."""
 
 from typing import Any, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_serializer
 
 
 class NavigationStatus(BaseModel):
@@ -9,6 +9,16 @@ class NavigationStatus(BaseModel):
     source: Literal["OpenStreetMap"]
     reason: Literal["ready", "disabled"]
     attribution: Literal["© OpenStreetMap contributors"]
+    places_provider: Literal["nominatim", "photon_private"] = "nominatim"
+    private_place_search: bool = False
+
+    @model_serializer(mode="wrap")
+    def serialize_navigation_status(self, handler):
+        result = handler(self)
+        if self.places_provider == "nominatim" and not self.private_place_search:
+            result.pop("places_provider", None)
+            result.pop("private_place_search", None)
+        return result
 
 
 class NavigationPlace(BaseModel):
@@ -27,7 +37,7 @@ class NavigationStation(NavigationPlace):
 
 
 class NavigationSearch(BaseModel):
-    source: Literal["OpenStreetMap Nominatim"]
+    source: Literal["OpenStreetMap Nominatim", "OpenStreetMap Photon"]
     fetched_at: str
     cached: bool
     places: list[NavigationPlace] = Field(max_length=5)

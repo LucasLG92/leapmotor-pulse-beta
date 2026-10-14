@@ -62,6 +62,7 @@
 	const appleLink = $derived(selectedPlace ? mapLinks(selectedPlace)?.apple ?? '' : '');
 	const selectedStationLinks = $derived(selectedStation ? mapLinks(selectedStation) : null);
 	const canUseProviders = $derived(online && status?.enabled === true && !statusBusy);
+	const privatePlaceSearch = $derived(status?.places_provider === 'photon_private' && status.private_place_search === true);
 	const canSearchPlaces = $derived(canUseProviders && !searchBusy);
 	const centerLabel = $derived(stationCenter ? coordinateLabel(stationCenter) : currentCenter ? coordinateLabel(currentCenter) : 'Selecciona un destino');
 
@@ -135,7 +136,10 @@
 		return Boolean(value && typeof value.enabled === 'boolean'
 			&& value.source === 'OpenStreetMap'
 			&& (value.reason === 'ready' || value.reason === 'disabled')
-			&& value.attribution === '© OpenStreetMap contributors');
+			&& value.attribution === '© OpenStreetMap contributors'
+			&& ((value.places_provider === 'photon_private' && value.private_place_search === true)
+				|| ((value.places_provider === undefined || value.places_provider === 'nominatim')
+					&& (value.private_place_search === undefined || value.private_place_search === false))));
 	}
 
 	function setQuery(value: string) {
@@ -204,7 +208,7 @@
 	}
 
 	function isValidSearch(value: NavigationSearch): boolean {
-		return Boolean(value && value.source === 'OpenStreetMap Nominatim'
+		return Boolean(value && value.source === (privatePlaceSearch ? 'OpenStreetMap Photon' : 'OpenStreetMap Nominatim')
 			&& isValidTimestamp(value.fetched_at)
 			&& typeof value.cached === 'boolean'
 			&& Array.isArray(value.places)
@@ -428,7 +432,7 @@
 <section class="page-intro premium-heading navigation-intro">
 	<div class="navigation-intro-copy">
 		<h2>Mapa</h2>
-		<p>Destinos y coordenadas públicas.</p>
+		<p>Destinos y lugares guardados.</p>
 	</div>
 </section>
 
@@ -456,7 +460,7 @@
 				<div class="service-state-copy">
 					<p class="service-state-label">Lugares y mapas</p>
 					<h3 id="navigation-service-heading">Búsqueda no disponible</h3>
-					<p>Pulse tiene desactivados los servicios públicos de lugares, cargadores y mapas. Aún puedes preparar un destino con coordenadas públicas.</p>
+					<p>Los servicios de navegación aún no están activados. Puedes preparar un destino con coordenadas o consultar tus lugares guardados.</p>
 					<a class="button button-secondary" href="/settings#preparation">Revisar conexiones</a>
 				</div>
 			</section>
@@ -470,13 +474,13 @@
 				<div class="field search-field">
 					<label for="navigation-query">Lugar que quieres buscar</label>
 					<input id="navigation-query" type="search" maxlength="120" autocomplete="off" spellcheck="false" value={query} oninput={(event) => setQuery(event.currentTarget.value)} placeholder="Por ejemplo, museo del Prado" aria-describedby="search-help" disabled={!online || authExpired} />
-					<p id="search-help" class="field-hint">Al pulsar Buscar, compartirás esta consulta con OpenStreetMap. Usa solo lugares públicos.</p>
+					<p id="search-help" class="field-hint">{privatePlaceSearch ? 'La búsqueda se realiza en tu servidor. Puedes buscar una dirección en España.' : 'Al pulsar Buscar, compartirás esta consulta con OpenStreetMap. Usa solo lugares públicos.'}</p>
 				</div>
 				<button class="button button-primary search-button" type="submit" disabled={!canSearchPlaces || query.trim().length < 3 || query.trim().length > 120}>{searchBusy ? 'Buscando…' : 'Buscar lugar'}</button>
 			</form>
 			{#if searchError}<p class="inline-error" role="alert">{searchError}</p>{/if}
 			{#if submittedQuery && searchFetchedAt}
-				<p class="result-provenance">Resultados de OpenStreetMap Nominatim para «{submittedQuery}». {searchCached ? 'Respuesta guardada en la caché del servicio.' : 'Consulta reciente.'} {formatFetchedAt(searchFetchedAt)}.</p>
+				<p class="result-provenance">{privatePlaceSearch ? 'Resultados del buscador privado con datos de OpenStreetMap.' : 'Resultados de OpenStreetMap Nominatim.'} {searchCached ? 'Respuesta guardada temporalmente en el servicio.' : 'Consulta reciente.'} {formatFetchedAt(searchFetchedAt)}.</p>
 			{/if}
 			{#if places.length}
 				<ul class="place-results" aria-label="Lugares encontrados">
@@ -496,8 +500,9 @@
 				<button class="text-button clear-destination" type="button" onclick={clearDestination}>Quitar</button>
 				</div>
 				<dl class="destination-coordinates"><div><dt>Latitud</dt><dd>{selectedPlace.latitude.toFixed(6)}</dd></div><div><dt>Longitud</dt><dd>{selectedPlace.longitude.toFixed(6)}</dd></div></dl>
+				{#if status?.enabled !== false}<p id="destination-map-sharing" class="destination-sharing">Mostrar el mapa comparte el área de este destino con el servicio público de mapas de OpenStreetMap.</p>{/if}
 				<div class="destination-actions">
-					{#if status?.enabled !== false}<button class="button button-primary button-block" type="button" disabled={!canUseProviders} aria-expanded={mapOpen} aria-controls="navigation-map" onclick={toggleMap}>{mapOpen ? 'Ocultar mapa' : 'Mostrar mapa'}</button>{/if}
+					{#if status?.enabled !== false}<button class="button button-primary button-block" type="button" disabled={!canUseProviders} aria-describedby="destination-map-sharing" aria-expanded={mapOpen} aria-controls="navigation-map" onclick={toggleMap}>{mapOpen ? 'Ocultar mapa' : 'Mostrar mapa'}</button>{/if}
 					<div class="external-map-links">
 						<a class="button button-secondary" href={googleLink} target="_blank" rel="noopener noreferrer">Abrir en Google Maps</a>
 						<a class="button button-secondary" href={appleLink} target="_blank" rel="noopener noreferrer">Abrir en Apple Maps</a>
@@ -506,8 +511,8 @@
 				<p class="destination-sharing">Al abrir un mapa externo, compartirás las coordenadas de este destino con ese servicio.</p>
 				{#if status?.enabled !== false}
 					<div class="charger-center">
-						<div><h4>Cargadores públicos</h4><p>Consulta puntos en un radio de 5 km del centro actual.</p><small>Centro: {centerLabel}</small></div>
-						<button class="button button-secondary charger-search-button" type="button" disabled={!canUseProviders || !currentCenter || chargersBusy} onclick={searchChargers}>{chargersBusy ? 'Consultando…' : 'Buscar cargadores a 5 km'}</button>
+						<div><h4>Cargadores públicos</h4><p>Consulta puntos en un radio de 5 km del centro actual.</p><p id="destination-charger-sharing">Al buscar, compartirás las coordenadas del centro con el servicio público OpenStreetMap Overpass.</p><small>Centro: {centerLabel}</small></div>
+						<button class="button button-secondary charger-search-button" type="button" disabled={!canUseProviders || !currentCenter || chargersBusy} aria-describedby="destination-charger-sharing" onclick={searchChargers}>{chargersBusy ? 'Consultando…' : 'Buscar cargadores a 5 km'}</button>
 					</div>
 					{#if centerChangedNotice}<p class="center-notice" role="status">{centerChangedNotice}</p>{/if}
 					{#if chargersError}<p class="inline-error" role="alert">{chargersError}</p>{/if}
@@ -582,7 +587,7 @@
 				<p class="fine-print map-guidance">Usa los botones del mapa para acercar o alejar. La rueda del ratón sigue desplazando la página; mover el mapa no consulta cargadores.</p>
 			</section>
 		{/if}
-				<NavigationFavoritesPanel {busy} {online} {revision} {drafts} {mutate} {confirmAction} {onSessionExpired} />
+				<NavigationFavoritesPanel {busy} {online} {revision} {drafts} {mutate} {confirmAction} {onSessionExpired} {navigation} searchAvailable={canUseProviders && privatePlaceSearch} {selectedPlace} />
 				<div class="notice navigation-limit-note"><span>Los datos de lugares y cargadores vienen de OpenStreetMap. No se consulta la ubicación del vehículo y no se presenta una ruta ni disponibilidad en tiempo real.</span></div>
 	</aside>
 </div>

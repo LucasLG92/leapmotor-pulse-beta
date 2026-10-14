@@ -105,6 +105,7 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 	let updateBusy = $state(false);
 	let updateTimeout: ReturnType<typeof setTimeout> | undefined;
 	let toastTimeout: ReturnType<typeof setTimeout> | undefined;
+	let focusVisibilityFrame: number | null = null;
 	let bootMessage = $state('Estamos conectando con Pulse…');
 	let startupAttempt: ReturnType<typeof createStartupAttempt> | null = null;
 	let bootRetryButton = $state<HTMLButtonElement | undefined>();
@@ -112,6 +113,30 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 	const isBusy = $derived(busyCount > 0);
 	const appName = $derived(pulseState?.app?.name || 'Leapmotor Pulse');
 	const isDemo = $derived(pulseState?.mode === 'demo');
+
+	function revealFocusedContent() {
+		if (focusVisibilityFrame !== null) cancelAnimationFrame(focusVisibilityFrame);
+		focusVisibilityFrame = requestAnimationFrame(() => {
+			focusVisibilityFrame = null;
+			const target = document.activeElement;
+			if (!document.hasFocus() || !(target instanceof HTMLElement)
+				|| target.id === 'pulse-content' || !target.closest('.page-content')) return;
+			const navigation = document.querySelector<HTMLElement>('.mobile-navigation-shell');
+			if (!navigation?.getClientRects().length || !target.getClientRects().length) return;
+			const viewport = window.visualViewport;
+			const top = (viewport?.offsetTop ?? 0) + 12;
+			const bottom = Math.min((viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight), navigation.getBoundingClientRect().top) - 12;
+			if (bottom <= top) return;
+			const box = target.getBoundingClientRect();
+			if (box.top >= top && box.bottom <= bottom) return;
+			// A sticky navigation bar or the keyboard can cover native focus scrolling.
+			target.scrollIntoView({ block: 'center', behavior: 'instant' });
+			const positioned = target.getBoundingClientRect();
+			if (positioned.top < top || positioned.bottom > bottom) {
+				window.scrollBy({ top: positioned.top + positioned.height / 2 - (top + bottom) / 2, behavior: 'instant' });
+			}
+		});
+	}
 
 	$effect(() => {
 		const selectedRoute = route;
@@ -1029,6 +1054,8 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 		const stopServiceWorker = setupServiceWorker();
 		document.addEventListener('visibilitychange', handleVisibilityChange);
 		document.addEventListener('click', handleInternalLink);
+		document.addEventListener('focusin', revealFocusedContent);
+		window.visualViewport?.addEventListener('resize', revealFocusedContent);
 		window.addEventListener('beforeunload', handleBeforeUnload);
 		const beforeInstall = (event: Event) => {
 			event.preventDefault();
@@ -1051,6 +1078,9 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 			closeEventSource();
 			document.removeEventListener('visibilitychange', handleVisibilityChange);
 			document.removeEventListener('click', handleInternalLink);
+			document.removeEventListener('focusin', revealFocusedContent);
+			window.visualViewport?.removeEventListener('resize', revealFocusedContent);
+			if (focusVisibilityFrame !== null) cancelAnimationFrame(focusVisibilityFrame);
 			window.removeEventListener('beforeunload', handleBeforeUnload);
 			if (eventRefreshTimer) clearTimeout(eventRefreshTimer);
 			if (!nativeApp) {

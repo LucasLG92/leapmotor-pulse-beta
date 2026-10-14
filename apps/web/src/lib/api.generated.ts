@@ -2234,9 +2234,9 @@ export interface components {
         NavigationSearch: {
             /**
              * Source
-             * @constant
+             * @enum {string}
              */
-            source: "OpenStreetMap Nominatim";
+            source: "OpenStreetMap Nominatim" | "OpenStreetMap Photon";
             /** Fetched At */
             fetched_at: string;
             /** Cached */
@@ -2291,6 +2291,17 @@ export interface components {
              * @constant
              */
             attribution: "© OpenStreetMap contributors";
+            /**
+             * Places Provider
+             * @default nominatim
+             * @enum {string}
+             */
+            places_provider: "nominatim" | "photon_private";
+            /**
+             * Private Place Search
+             * @default false
+             */
+            private_place_search: boolean;
         };
         /** NavigationTile */
         NavigationTile: {

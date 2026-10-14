@@ -2,6 +2,7 @@
 	import { onDestroy, onMount, tick, untrack } from 'svelte';
 	import { ApiError, getMaintenancePlans } from './api';
 	import Glyph from './Glyph.svelte';
+	import { restoreFormFocus } from './form-focus';
 	import type { MaintenancePlan, MaintenancePlanInput, MaintenancePlanPage, PageProps } from './types';
 
 	let { active = true, busy, online, revision, drafts, mutate, confirmAction, onSessionExpired }:
@@ -32,6 +33,8 @@
 	let mounted = false, readGeneration = 0, formGeneration = 0, observedReadKey = '';
 	let readController: AbortController | null = null;
 	let errorSummary = $state<HTMLDivElement | undefined>();
+	let editorElement = $state<HTMLFormElement | undefined>();
+	let editorOpener: HTMLElement | null = null;
 
 	function snapshot(): string { return mode === 'completion' ? JSON.stringify(completion) : JSON.stringify(form); }
 	function dirty(): boolean { return mode !== null && (sent || snapshot() !== baseline); }
@@ -107,10 +110,11 @@
 		baseline = ''; sent = false; sentAttempt = ''; createRequestId = null;
 	}
 
-	async function openPlan(item?: MaintenancePlan) {
+	async function openPlan(item?: MaintenancePlan, opener: HTMLElement | null = null) {
 		if (busy || saving) return;
 		const generation = formGeneration;
 		if (!await approveDiscard() || !mounted || busy || saving || generation !== formGeneration) return;
+		editorOpener = opener;
 		resetForm(); mode = 'plan'; editing = item ?? null;
 		if (item) {
 			form = { title: item.title, intervalMonths: item.interval_months === null ? '' : String(item.interval_months),
@@ -121,10 +125,11 @@
 		await tick(); if (mounted) document.getElementById('maintenance-plan-title')?.focus();
 	}
 
-	async function openCompletion(item: MaintenancePlan) {
+	async function openCompletion(item: MaintenancePlan, opener: HTMLElement) {
 		if (busy || saving) return;
 		const generation = formGeneration;
 		if (!await approveDiscard() || !mounted || busy || saving || generation !== formGeneration) return;
+		editorOpener = opener;
 		resetForm(); mode = 'completion'; completionPlan = item; completion = emptyCompletion(); baseline = snapshot();
 		await tick(); if (mounted) document.getElementById('maintenance-plan-performed-date')?.focus();
 	}
@@ -132,7 +137,12 @@
 	async function closeForm() {
 		if (busy || saving) return;
 		const generation = formGeneration;
-		if (await approveDiscard() && mounted && !busy && !saving && generation === formGeneration) resetForm();
+		if (await approveDiscard() && mounted && !busy && !saving && generation === formGeneration) {
+			const ownedFocus = !!editorElement?.contains(document.activeElement);
+			resetForm(); const closedGeneration = formGeneration;
+			await tick();
+			if (mounted && ownedFocus && closedGeneration === formGeneration) restoreFormFocus(editorOpener, document.getElementById('maintenance-plans-heading'), editorElement);
+		}
 	}
 
 	function errorTargetId(key: string): string {
@@ -187,6 +197,8 @@
 		event.preventDefault();
 		if (!mounted || busy || saving || !online || !mode) return;
 		const generation = formGeneration, originalMode = mode, originalSnapshot = snapshot();
+		const ownedFocus = !!editorElement?.contains(document.activeElement);
+		let closedGeneration: number | null = null;
 		const values = mode === 'plan' ? validatePlan() : validateCompletion();
 		if (!values) { await tick(); if (mounted) errorSummary?.focus(); return; }
 		const edit = mode === 'plan' ? editing : completionPlan;
@@ -208,11 +220,16 @@
 				? await mutate(`/api/maintenance-plans/${edit!.id}/complete`, 'POST', payload, 'El mantenimiento realizado se ha registrado.')
 				: await mutate(edit ? `/api/maintenance-plans/${edit.id}` : '/api/maintenance-plans', editing ? 'PUT' : 'POST', payload, editing ? 'El plan de mantenimiento se ha actualizado.' : 'El plan de mantenimiento se ha creado.');
 			if (!mounted || generation !== formGeneration) return;
-			if (saved) { resetForm(); if (offset) offset = 0; else void load(); }
+			if (saved) { resetForm(); closedGeneration = formGeneration; if (offset) offset = 0; else void load(); }
 			else saveError = 'El resultado no está confirmado; el servidor pudo haber guardado el plan. Conservamos los datos y el identificador del intento. Actualiza la lista antes de decidir si reintentas.';
 		} catch {
 			if (mounted && generation === formGeneration) saveError = 'No se pudo confirmar el resultado; el servidor pudo haber guardado el plan. Conservamos los datos y el identificador del intento. Actualiza la lista antes de decidir si reenvías.';
-		} finally { if (mounted) saving = false; }
+		} finally {
+			if (mounted) {
+				saving = false; await tick();
+				if (ownedFocus && closedGeneration === formGeneration) restoreFormFocus(document.getElementById('maintenance-plan-add'), document.getElementById('maintenance-plans-heading'), editorElement);
+			}
+		}
 	}
 
 	async function remove(item: MaintenancePlan) {
@@ -247,8 +264,8 @@
 
 <section class="maintenance-panel workspace-panel" aria-labelledby="maintenance-plans-heading">
 	<header class="maintenance-header premium-heading">
-		<span class="maintenance-mark" aria-hidden="true"><Glyph name="settings" size={18} /></span><div class="maintenance-heading-copy"><h2 id="maintenance-plans-heading">Planes de mantenimiento</h2><details class="maintenance-explanation"><summary>Cómo se calculan</summary><p>Organiza revisiones por fecha y lecturas que indiques. Pulse no lee el odómetro del vehículo.</p></details></div>
-		<button class="button button-primary" type="button" disabled={busy || saving || !online || (page?.total ?? 0) >= MAX_PLANS} onclick={() => openPlan()}>
+		<span class="maintenance-mark" aria-hidden="true"><Glyph name="settings" size={18} /></span><div class="maintenance-heading-copy"><h2 id="maintenance-plans-heading" tabindex="-1">Planes de mantenimiento</h2><details class="maintenance-explanation"><summary>Cómo se calculan</summary><p>Organiza revisiones por fecha y lecturas que indiques. Pulse no lee el odómetro del vehículo.</p></details></div>
+		<button id="maintenance-plan-add" class="button button-primary" type="button" disabled={busy || saving || !online || (page?.total ?? 0) >= MAX_PLANS} onclick={(event) => openPlan(undefined, event.currentTarget)}>
 			<span aria-hidden="true">＋</span> Añadir plan
 		</button>
 	</header>
@@ -265,25 +282,25 @@
 	{#if actionError}<div class="maintenance-error" role="alert"><span>{actionError}</span><button class="button button-secondary" type="button" onclick={() => void load()} disabled={!online || loading}>Actualizar lista</button></div>{/if}
 	{#if readError}<div class="maintenance-error" role="alert"><span>{readError}</span><button class="button button-secondary" type="button" onclick={() => void load()} disabled={!online || loading}>Reintentar consulta</button></div>{/if}
 	{#if loading}<p class="maintenance-state" role="status">Consultando tus planes…</p>{/if}
-	<form class="maintenance-form" hidden={mode === null} onsubmit={save} novalidate aria-labelledby="maintenance-plan-form-heading">
+	<form class="maintenance-form" bind:this={editorElement} hidden={mode === null} onsubmit={save} novalidate aria-labelledby="maintenance-plan-form-heading">
 			<div class="form-title"><div><p class="eyebrow">{mode === 'completion' ? 'Registro manual' : editing ? 'Edición manual' : 'Nuevo registro'}</p><h3 id="maintenance-plan-form-heading">{mode === 'completion' ? `Registrar «${completionPlan?.title ?? 'mantenimiento'}» como realizado` : editing ? 'Editar plan' : 'Crear plan'}</h3></div><button class="icon-button" type="button" aria-label="Cerrar formulario" onclick={closeForm} disabled={busy || saving}>×</button></div>
 			{#if Object.keys(errors).length}<div class="form-errors" role="alert" tabindex="-1" bind:this={errorSummary}><strong>Revisa estos datos</strong><ul>{#each Object.entries(errors) as [key, message]}<li><a href={`#${errorTargetId(key)}`}>{message}</a></li>{/each}</ul></div>{/if}
 			{#if saveError}<p class="maintenance-error" role="alert" aria-atomic="true">{saveError}<button type="button" class="text-button" onclick={() => void load()} disabled={!online || loading}>Actualizar lista</button></p>{/if}
 			{#if mode === 'plan'}
 				<div class="form-grid">
-					<div class="field full"><label for="maintenance-plan-title">Nombre de la tarea</label><input id="maintenance-plan-title" maxlength="120" required bind:value={form.title} disabled={busy || saving || sent} aria-invalid={!!errors.title} />{#if errors.title}<small>{errors.title}</small>{/if}</div>
-					<fieldset class="interval-field"><legend>Repetir por calendario</legend><label for="maintenance-plan-intervalMonths">Cada</label><div class="input-with-unit"><input id="maintenance-plan-intervalMonths" type="text" inputmode="numeric" placeholder="Sin intervalo" bind:value={form.intervalMonths} disabled={busy || saving || sent} aria-invalid={!!errors.intervalMonths} /><span>meses</span></div>{#if errors.intervalMonths}<small>{errors.intervalMonths}</small>{/if}</fieldset>
-					<fieldset class="interval-field"><legend>Repetir por uso</legend><label for="maintenance-plan-intervalKm">Cada</label><div class="input-with-unit"><input id="maintenance-plan-intervalKm" type="text" inputmode="numeric" placeholder="Sin intervalo" bind:value={form.intervalKm} disabled={busy || saving || sent} aria-invalid={!!errors.intervalKm} /><span>km</span></div>{#if errors.intervalKm}<small>{errors.intervalKm}</small>{/if}</fieldset>
-					<div class="field"><label for="maintenance-plan-lastDate">Fecha de la última realización <span>(opcional)</span></label><input id="maintenance-plan-lastDate" type="date" bind:value={form.lastDate} disabled={busy || saving || sent} aria-invalid={!!errors.lastDate} />{#if errors.lastDate}<small>{errors.lastDate}</small>{/if}</div>
-					<div class="field"><label for="maintenance-plan-lastOdometer">Odómetro de referencia <span>(solo lectura manual)</span></label><div class="input-with-unit"><input id="maintenance-plan-lastOdometer" type="text" inputmode="numeric" placeholder="Sin lectura" bind:value={form.lastOdometer} disabled={busy || saving || sent} aria-invalid={!!errors.lastOdometer} /><span>km</span></div>{#if errors.lastOdometer}<small>{errors.lastOdometer}</small>{/if}</div>
-					<div class="field full"><label for="maintenance-plan-notes">Notas <span>(opcional)</span></label><textarea id="maintenance-plan-notes" maxlength="2000" rows="3" bind:value={form.notes} disabled={busy || saving || sent} aria-invalid={!!errors.notes}></textarea><small>{form.notes.length} / 2.000</small>{#if errors.notes}<small>{errors.notes}</small>{/if}</div>
+					<div class="field full"><label for="maintenance-plan-title">Nombre de la tarea</label><input id="maintenance-plan-title" maxlength="120" required bind:value={form.title} disabled={busy || saving || sent} aria-invalid={!!errors.title} aria-describedby={errors.title ? 'maintenance-plan-title-error' : undefined} />{#if errors.title}<small id="maintenance-plan-title-error">{errors.title}</small>{/if}</div>
+					<fieldset class="interval-field"><legend>Repetir por calendario</legend><label for="maintenance-plan-intervalMonths">Cada</label><div class="input-with-unit"><input id="maintenance-plan-intervalMonths" type="text" inputmode="numeric" placeholder="Sin intervalo" bind:value={form.intervalMonths} disabled={busy || saving || sent} aria-invalid={!!errors.intervalMonths} aria-describedby={errors.intervalMonths ? 'maintenance-plan-intervalMonths-error' : undefined} /><span>meses</span></div>{#if errors.intervalMonths}<small id="maintenance-plan-intervalMonths-error">{errors.intervalMonths}</small>{/if}</fieldset>
+					<fieldset class="interval-field"><legend>Repetir por uso</legend><label for="maintenance-plan-intervalKm">Cada</label><div class="input-with-unit"><input id="maintenance-plan-intervalKm" type="text" inputmode="numeric" placeholder="Sin intervalo" bind:value={form.intervalKm} disabled={busy || saving || sent} aria-invalid={!!errors.intervalKm} aria-describedby={errors.intervalKm ? 'maintenance-plan-intervalKm-error' : undefined} /><span>km</span></div>{#if errors.intervalKm}<small id="maintenance-plan-intervalKm-error">{errors.intervalKm}</small>{/if}</fieldset>
+					<div class="field"><label for="maintenance-plan-lastDate">Fecha de la última realización <span>(opcional)</span></label><input id="maintenance-plan-lastDate" type="date" bind:value={form.lastDate} disabled={busy || saving || sent} aria-invalid={!!errors.lastDate} aria-describedby={errors.lastDate ? 'maintenance-plan-lastDate-error' : undefined} />{#if errors.lastDate}<small id="maintenance-plan-lastDate-error">{errors.lastDate}</small>{/if}</div>
+					<div class="field"><label for="maintenance-plan-lastOdometer">Odómetro de referencia <span>(solo lectura manual)</span></label><div class="input-with-unit"><input id="maintenance-plan-lastOdometer" type="text" inputmode="numeric" placeholder="Sin lectura" bind:value={form.lastOdometer} disabled={busy || saving || sent} aria-invalid={!!errors.lastOdometer} aria-describedby={errors.lastOdometer ? 'maintenance-plan-lastOdometer-error' : undefined} /><span>km</span></div>{#if errors.lastOdometer}<small id="maintenance-plan-lastOdometer-error">{errors.lastOdometer}</small>{/if}</div>
+					<div class="field full"><label for="maintenance-plan-notes">Notas <span>(opcional)</span></label><textarea id="maintenance-plan-notes" maxlength="2000" rows="3" bind:value={form.notes} disabled={busy || saving || sent} aria-invalid={!!errors.notes} aria-describedby={errors.notes ? 'maintenance-plan-notes-error' : undefined}></textarea><small>{form.notes.length} / 2.000</small>{#if errors.notes}<small id="maintenance-plan-notes-error">{errors.notes}</small>{/if}</div>
 				</div>
 				<p class="form-hint">Si falta una fecha base o un odómetro, el cálculo correspondiente quedará como desconocido. No se estimará una lectura del vehículo.</p>
 			{:else}
 				<div class="form-grid">
-					<div class="field"><label for="maintenance-plan-performed-date">Fecha de realización</label><input id="maintenance-plan-performed-date" type="date" required bind:value={completion.date} disabled={busy || saving || sent} aria-invalid={!!errors.date} />{#if errors.date}<small>{errors.date}</small>{/if}</div>
-					<div class="field"><label for="maintenance-plan-odometer-completion">Odómetro de la realización <span>{completionPlan?.interval_km ? '(necesario para este plan)' : '(opcional)'}</span></label><div class="input-with-unit"><input id="maintenance-plan-odometer-completion" type="text" inputmode="numeric" placeholder="Sin lectura" bind:value={completion.odometer} disabled={busy || saving || sent} aria-invalid={!!errors.odometer} /><span>km</span></div>{#if errors.odometer}<small>{errors.odometer}</small>{/if}</div>
-					<div class="field"><label for="maintenance-plan-cost">Coste <span>(opcional)</span></label><div class="input-with-unit"><input id="maintenance-plan-cost" type="text" inputmode="decimal" placeholder="Sin dato" bind:value={completion.cost} disabled={busy || saving || sent} aria-invalid={!!errors.cost} /><span>€</span></div>{#if errors.cost}<small>{errors.cost}</small>{/if}</div>
+					<div class="field"><label for="maintenance-plan-performed-date">Fecha de realización</label><input id="maintenance-plan-performed-date" type="date" required bind:value={completion.date} disabled={busy || saving || sent} aria-invalid={!!errors.date} aria-describedby={errors.date ? 'maintenance-plan-performed-date-error' : undefined} />{#if errors.date}<small id="maintenance-plan-performed-date-error">{errors.date}</small>{/if}</div>
+					<div class="field"><label for="maintenance-plan-odometer-completion">Odómetro de la realización <span>{completionPlan?.interval_km ? '(necesario para este plan)' : '(opcional)'}</span></label><div class="input-with-unit"><input id="maintenance-plan-odometer-completion" type="text" inputmode="numeric" placeholder="Sin lectura" bind:value={completion.odometer} disabled={busy || saving || sent} aria-invalid={!!errors.odometer} aria-describedby={errors.odometer ? 'maintenance-plan-odometer-completion-error' : undefined} /><span>km</span></div>{#if errors.odometer}<small id="maintenance-plan-odometer-completion-error">{errors.odometer}</small>{/if}</div>
+					<div class="field"><label for="maintenance-plan-cost">Coste <span>(opcional)</span></label><div class="input-with-unit"><input id="maintenance-plan-cost" type="text" inputmode="decimal" placeholder="Sin dato" bind:value={completion.cost} disabled={busy || saving || sent} aria-invalid={!!errors.cost} aria-describedby={errors.cost ? 'maintenance-plan-cost-error' : undefined} /><span>€</span></div>{#if errors.cost}<small id="maintenance-plan-cost-error">{errors.cost}</small>{/if}</div>
 				</div>
 				<p class="form-hint">Al registrar el trabajo, esta fecha y, si se indica, el kilometraje pasan a ser la nueva base del intervalo.</p>
 			{/if}
@@ -306,7 +323,7 @@
 								<div class="coverage" aria-label="Cobertura del cálculo"><span>Fecha: {stateText(plan.coverage.date ?? 'unknown')}</span><span>Km: {stateText(plan.coverage.km ?? 'unknown')}</span></div>
 								{#if plan.due_reasons.length}<ul class="due-reasons">{#each plan.due_reasons as reason}<li>{reasonText(reason)}</li>{/each}</ul>{/if}
 								{#if plan.notes}<p class="plan-notes">{plan.notes}</p>{/if}
-								<div class="plan-actions"><button class="button button-secondary" type="button" disabled={busy || saving || !online} onclick={() => openPlan(plan)}>Editar plan</button><button class="button button-primary" type="button" disabled={busy || saving || !online} onclick={() => openCompletion(plan)}>Registrar realizado</button><button class="button button-quiet danger-text" type="button" disabled={busy || saving || !online} onclick={() => void remove(plan)}>Eliminar</button></div>
+								<div class="plan-actions"><button class="button button-secondary" type="button" disabled={busy || saving || !online} onclick={(event) => openPlan(plan, event.currentTarget)}>Editar plan</button><button class="button button-primary" type="button" disabled={busy || saving || !online} onclick={(event) => openCompletion(plan, event.currentTarget)}>Registrar realizado</button><button class="button button-quiet danger-text" type="button" disabled={busy || saving || !online} onclick={() => void remove(plan)}>Eliminar</button></div>
 								{#if plan.history.length}
 									<details class="history-details"><summary>Historial · {plan.history.length}{plan.history.length === 100 ? '+' : ''} registros</summary><ol class="history-list">{#each plan.history.slice(-3).reverse() as entry (entry.id)}<li><strong>{dateText(entry.performed_date)}</strong><span>{entry.odometer_km === null ? 'Odómetro sin dato' : `${formatNumber.format(entry.odometer_km)} km`}</span><span>{money(entry.cost_eur)}</span></li>{/each}</ol>{#if plan.history.length > 3}<p class="history-note">Se muestran las 3 realizaciones más recientes de esta lista.</p>{/if}</details>
 								{:else}<p class="history-empty">Aún no hay realizaciones registradas.</p>{/if}
@@ -316,7 +333,7 @@
 				{/each}
 			</ol>
 			<nav class="pagination" aria-label="Páginas de mantenimiento"><p>Mostrando {pageStart}–{pageEnd} de {formatNumber.format(page.total)}</p><div><button class="button button-secondary" type="button" disabled={offset === 0 || loading} onclick={() => { offset = Math.max(0, offset - PAGE_SIZE); }}>Anterior</button><button class="button button-secondary" type="button" disabled={offset + PAGE_SIZE >= page.total || loading} onclick={() => { offset += PAGE_SIZE; }}>Siguiente</button></div></nav>
-		{:else}<div class="empty-state"><span class="empty-mark" aria-hidden="true"><Glyph name="settings" size={20} /></span><div><h3>{page.total ? 'No hay planes en esta página' : 'Empieza por una tarea conocida'}</h3><p>{page.total ? 'La lista ha cambiado. Vuelve a consultar los planes.' : 'Añade una revisión por fecha o kilómetros usando datos que conozcas.'}</p></div>{#if !page.total}<button class="button button-primary" type="button" onclick={() => openPlan()} disabled={busy || saving || !online}>Crear primer plan</button>{/if}</div>{/if}
+		{:else}<div class="empty-state"><span class="empty-mark" aria-hidden="true"><Glyph name="settings" size={20} /></span><div><h3>{page.total ? 'No hay planes en esta página' : 'Empieza por una tarea conocida'}</h3><p>{page.total ? 'La lista ha cambiado. Vuelve a consultar los planes.' : 'Añade una revisión por fecha o kilómetros usando datos que conozcas.'}</p></div>{#if !page.total}<button class="button button-primary" type="button" onclick={(event) => openPlan(undefined, event.currentTarget)} disabled={busy || saving || !online}>Crear primer plan</button>{/if}</div>{/if}
 	{:else if !loading && !readError}<p class="maintenance-state">Conéctate para consultar los planes guardados en tu cuenta.</p>{/if}
 	{#if page?.total === MAX_PLANS}<p class="quota-note">Has alcanzado el límite de {formatNumber.format(MAX_PLANS)} planes. El historial eliminado se conserva según las reglas de la cuenta.</p>{/if}
 </section>

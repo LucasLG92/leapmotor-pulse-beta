@@ -1,4 +1,4 @@
-"""Consent-gated public place, charger and OSM tile lookups."""
+"""Consent-gated place, charger and OSM tile lookups."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ import ipaddress
 import json
 import math
 import re
+import ssl
 import time
 from email.utils import parsedate_to_datetime
 from pathlib import Path
@@ -27,6 +28,7 @@ from pulse.navigation_config import NavigationConfig
 SOURCE = "OpenStreetMap"
 ATTRIBUTION = "© OpenStreetMap contributors"
 PLACES_SOURCE = "OpenStreetMap Nominatim"
+PHOTON_PLACES_SOURCE = "OpenStreetMap Photon"
 CHARGERS_SOURCE = "OpenStreetMap Overpass"
 PLACES_MAX_BYTES = 256 * 1024
 CHARGERS_MAX_BYTES = 512 * 1024
@@ -61,11 +63,11 @@ _CONNECTOR_OUTPUT_KEYS = (
 
 _MESSAGES = {
     "disabled": "La navegación todavía no está configurada en el servidor.",
-    "consent": "Confirma el envío de esta consulta al servicio público de mapas.",
+    "consent": "Confirma el envío de esta consulta al servicio de navegación configurado.",
     "invalid": "La solicitud de navegación no es válida.",
-    "rate": "Espera antes de volver a consultar el servicio público de mapas.",
-    "upstream": "El servicio público de mapas no devolvió una respuesta válida.",
-    "timeout": "La consulta al servicio público de mapas agotó el tiempo disponible.",
+    "rate": "Espera antes de volver a consultar el servicio de navegación.",
+    "upstream": "El servicio de navegación configurado no devolvió una respuesta válida.",
+    "timeout": "La consulta al servicio de navegación agotó el tiempo disponible.",
     "cache_full": "La caché de mapas está llena; inténtalo de nuevo más tarde.",
     "cache": "No se pudo acceder a la caché local de mapas.",
     "closed": "El servicio de navegación ya se ha cerrado.",
@@ -212,6 +214,66 @@ def _places(payload: Any) -> list[dict[str, Any]]:
         seen.add(item_id)
         result.append({"id": item_id, "name": name, "latitude": latitude, "longitude": longitude})
     return result
+
+
+def _photon_places(payload: Any) -> list[dict[str, Any]]:
+    if (not isinstance(payload, dict) or payload.get("type") != "FeatureCollection"
+            or not isinstance(payload.get("features"), list)):
+        raise _fail("upstream", 502)
+    result: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    osm_types = {"N": "node", "W": "way", "R": "relation",
+                 "node": "node", "way": "way", "relation": "relation"}
+    for feature in payload["features"]:
+        if len(result) >= MAX_SEARCH_RESULTS:
+            break
+        if not isinstance(feature, dict) or feature.get("type") != "Feature":
+            continue
+        geometry = feature.get("geometry")
+        properties = feature.get("properties")
+        if (not isinstance(geometry, dict) or geometry.get("type") != "Point"
+                or not isinstance(properties, dict)):
+            continue
+        coordinates = geometry.get("coordinates")
+        if not isinstance(coordinates, list) or len(coordinates) != 2:
+            continue
+        try:
+            longitude = _finite_number(coordinates[0], -180, 180)
+            latitude = _finite_number(coordinates[1], -90, 90)
+        except ValueError:
+            continue
+        raw_osm_type = properties.get("osm_type")
+        osm_type = osm_types.get(raw_osm_type) if isinstance(raw_osm_type, str) else None
+        osm_id = _identifier(properties.get("osm_id"))
+        if osm_type is None or osm_id is None:
+            continue
+        item_id = f"{osm_type}/{osm_id}"
+        if item_id in seen:
+            continue
+
+        name = _display_text(properties.get("name"))
+        street = _display_text(properties.get("street"), maximum=120)
+        housenumber = _display_text(properties.get("housenumber"), maximum=32)
+        postcode = _display_text(properties.get("postcode"), maximum=32)
+        city = _display_text(properties.get("city"), maximum=80)
+        address_parts = [value for value in (street, housenumber, postcode, city) if value is not None]
+        if name is None and address_parts:
+            address_name = ", ".join(address_parts)
+            name = _display_text(address_name)
+        if name is None:
+            continue
+        seen.add(item_id)
+        result.append({"id": item_id, "name": name, "latitude": latitude, "longitude": longitude})
+    return result
+
+
+def _build_photon_ssl_context(config: NavigationConfig) -> ssl.SSLContext:
+    """Build the isolated, verified mTLS context used only for private Photon."""
+    context = ssl.create_default_context(cafile=config.geocoder_ca_file)
+    context.check_hostname = True
+    context.verify_mode = ssl.CERT_REQUIRED
+    context.load_cert_chain(config.geocoder_cert_file, config.geocoder_key_file)
+    return context
 
 
 def _haversine(latitude: float, longitude: float, other_latitude: float, other_longitude: float) -> int:
@@ -533,7 +595,7 @@ def _png_256(data: bytes) -> bool:
 
 
 class Navigation:
-    """Consent-gated public lookups; status and disabled paths perform no I/O."""
+    """Consent-gated map lookups; status and disabled paths perform no I/O."""
 
     def __init__(self, config: NavigationConfig, cache_dir: str | Path, transport=None):
         if not isinstance(config, NavigationConfig):
@@ -544,6 +606,7 @@ class Navigation:
         self.cache_dir = Path(cache_dir)
         self.transport = transport
         self._client: httpx2.AsyncClient | None = None
+        self._photon_client: httpx2.AsyncClient | None = None
         self._closed = False
         self._places_cache = TTLCache(64, 30 * 60)
         self._chargers_cache = TTLCache(32, 60 * 60)
@@ -557,8 +620,12 @@ class Navigation:
         self.user_agent = f"Leapmotor Pulse/1.0 (navigation; contact: {config.contact})"
 
     def status(self) -> dict[str, Any]:
-        return {"enabled": self.config.enabled, "source": SOURCE,
-                "reason": "ready" if self.config.enabled else "disabled", "attribution": ATTRIBUTION}
+        result = {"enabled": self.config.enabled, "source": SOURCE,
+                  "reason": "ready" if self.config.enabled else "disabled", "attribution": ATTRIBUTION}
+        if self.config.places_provider != "nominatim":
+            result["places_provider"] = self.config.places_provider
+            result["private_place_search"] = True
+        return result
 
     async def search(self, query: str, consent: bool) -> dict[str, Any]:
         self._guard(consent)
@@ -569,16 +636,24 @@ class Navigation:
             return {**cached, "cached": True}
         self._take_rate_slot("places", 1.0)
         try:
-            client = self._ensure_client()
-            params = {"format": "jsonv2", "q": normalized, "limit": "5", "addressdetails": "0"}
+            private_photon = self.config.places_provider == "photon_private"
+            client = self._ensure_photon_client() if private_photon else self._ensure_client()
+            if private_photon:
+                url = self.config.places_origin + "/api"
+                params = {"q": normalized, "limit": "5", "lang": "es"}
+            else:
+                url = self.config.places_origin + "/search"
+                params = {"format": "jsonv2", "q": normalized, "limit": "5", "addressdetails": "0"}
             body = await self._read_json(
-                client, "GET", self.config.places_origin + "/search", params=params,
+                client, "GET", url, params=params,
                 headers={"Accept": "application/json", "Accept-Language": "es",
                          "User-Agent": self.user_agent},
                 max_bytes=PLACES_MAX_BYTES, timeout=PLACES_TIMEOUT_SECONDS,
             )
-            places = _places(_parse_json(body))
-            result = {"source": PLACES_SOURCE, "fetched_at": _iso_utc(), "places": places}
+            payload = _parse_json(body)
+            places = _photon_places(payload) if private_photon else _places(payload)
+            result = {"source": PHOTON_PLACES_SOURCE if private_photon else PLACES_SOURCE,
+                      "fetched_at": _iso_utc(), "places": places}
             self._places_cache.set(key, result)
             return {**result, "cached": False}
         finally:
@@ -724,6 +799,9 @@ class Navigation:
         if self._client is not None:
             await self._client.aclose()
             self._client = None
+        if self._photon_client is not None:
+            await self._photon_client.aclose()
+            self._photon_client = None
 
     def _guard(self, consent: bool) -> None:
         if type(consent) is not bool or not consent:
@@ -748,6 +826,23 @@ class Navigation:
                 limits=httpx2.Limits(max_connections=2, max_keepalive_connections=2),
             )
         return self._client
+
+    def _ensure_photon_client(self) -> httpx2.AsyncClient:
+        self._guard_open()
+        if self._photon_client is None:
+            try:
+                ssl_context = _build_photon_ssl_context(self.config)
+                self._photon_client = httpx2.AsyncClient(
+                    transport=self.transport,
+                    trust_env=False,
+                    follow_redirects=False,
+                    verify=ssl_context,
+                    timeout=httpx2.Timeout(REQUEST_TIMEOUT_SECONDS, connect=3.0),
+                    limits=httpx2.Limits(max_connections=2, max_keepalive_connections=2),
+                )
+            except (OSError, ssl.SSLError, ValueError):
+                raise _fail("upstream", 502) from None
+        return self._photon_client
 
     def _take_rate_slot(self, service: str, interval: float) -> None:
         now = time.monotonic()
