@@ -6,6 +6,8 @@ Continuación del 14oct2026. Se conserva la aceptación visual confirmada por Lu
 
 Una restauración válida conciliaba el estado, pero reconstruía Perfil en Vehículo y dejaba el foco en body. Ahora mantiene Datos y enfoca el encabezado «Exportar o restaurar». Esto también funciona al haber entrado por `#preparation`; una navegación posterior a preparación recupera su prioridad habitual. El remount sigue descartando los borradores expresamente confirmados.
 
+La comprobación de GitHub detectó además un aviso de éxito que tapaba el encabezado con texto al 200% y poca altura. Se reprodujo en un navegador ralentizado: el aviso flotante cubría el foco. La confirmación de restauración ahora permanece dentro de Datos, como estado accesible, sin tapar el encabezado. La prueba mantiene su comprobación de oclusión y añade diagnóstico de geometría; no se omite el fallo.
+
 Si el servidor aplica el archivo pero falla la lectura posterior, el mensaje explica que se restauró y ofrece Reintentar conexión. El control recibe el foco; recuperar la lectura devuelve el foco al encabezado sin volver a enviar el archivo. Un foco que el usuario movió a la navegación se conserva. Si se pierde la respuesta de la restauración, el error permanece, el borrador se conserva y no hay replay automático.
 
 El cambio afecta solo a UI y tipos internos. API, autenticación, esquema SQLite21 y exportaciónJSON17 permanecen iguales. El helper de foco existente se reutiliza; no hay dependencia de producción nueva.

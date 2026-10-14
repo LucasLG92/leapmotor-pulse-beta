@@ -113,8 +113,15 @@ test('restaurar concilia los datos y conserva un destino de foco visible en Dato
 	assert.equal(await page.getByRole('button', { name: 'Datos', exact: true }).getAttribute('aria-pressed'), 'true');
 	assert.equal(await page.locator('#backup-heading').evaluate(el => el === document.activeElement), true);
 	assert.equal(await page.locator('#backup-heading').isVisible(), true);
+	assert.equal(await page.locator('.settings-card[aria-labelledby="backup-heading"] [role="status"]').textContent(), 'La copia se ha restaurado.');
 	assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), viewport.width);
-	assert.equal(await page.locator('#backup-heading').evaluate(el => { const rect = el.getBoundingClientRect(); return document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2) === el; }), true, 'el encabezado enfocado queda visible ante la navegación fija');
+	await eventually(async () => {
+		const visibility = await page.locator('#backup-heading').evaluate(el => {
+			const rect = el.getBoundingClientRect(), covering = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+			return { unobscured: covering === el, top: rect.top, bottom: rect.bottom, scrollY, covering: covering?.tagName, coveringClass: covering?.className };
+		});
+		assert.equal(visibility.unobscured, true, `el encabezado enfocado queda visible ante la navegación fija: ${JSON.stringify(visibility)}`);
+	});
 	const link = page.getByRole('link', { name: 'Energía', exact: true });
 	if (!await link.isVisible()) await page.locator('.compact-mobile-nav summary').click();
 	await link.click();

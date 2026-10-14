@@ -1130,6 +1130,7 @@
 				<button bind:this={importPickerButton} class="button button-secondary" type="button" disabled={busy || backupBusy} onclick={openImportPicker}><Glyph name="upload" size={16} /> Elegir archivo</button>
 			</div>
 			{#if backupBusy}<p class="fine-print" role="status">Procesando la copia…</p>{/if}
+			{#if settingsSection === 'data'}<p class="fine-print" role="status">La copia se ha restaurado.</p>{/if}
 			{#if backupError}<p class="form-error" role="alert">{backupError}</p>{/if}
 			<p class="fine-print">No cargues archivos que contengan claves, contraseñas o datos que no quieras importar. No es posible restaurar un archivo SQL.</p>
 		</section>

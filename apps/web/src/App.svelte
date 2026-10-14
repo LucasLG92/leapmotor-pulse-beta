@@ -947,7 +947,9 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 			);
 			if (confirmed) {
 				const beforeRefresh = pulseState;
-				if (await mutate('/api/import', 'POST', { confirmed: true, data }, 'La copia se ha restaurado.')) {
+				if (await mutate('/api/import', 'POST', { confirmed: true, data }, '')) {
+					// The restored panel (or recovery error) announces the outcome without covering its focus target.
+					showToast('', 'success');
 					drafts.clear();
 					restoredSettingsData = route === 'settings';
 					formContextRevision += 1;

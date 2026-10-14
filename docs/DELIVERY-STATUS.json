@@ -1709,7 +1709,7 @@
     "both_phones_available_user_confirmed": true,
     "phase2_may_start": false,
     "sequential_gate": "No avanzar hasta aceptación completa de fase1.",
-    "runtime_image": "sha256:219616851f59e86d6805fc8cbd0ba69e9e0ea5bd0c2bb77733359120176b4b52",
+    "runtime_image": "sha256:4fb4213ced7c75c5235310621e1cc787438ed0809f6c038c790aefa8c82c2b90",
     "backend_unchanged": false,
     "compose_files_preserved": 5,
     "strict_https_assets_verified": 63,
