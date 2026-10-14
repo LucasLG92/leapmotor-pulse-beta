@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-14",
-  "objective_status": "blocked",
+  "updated_at": "2026-10-14T21:49:23Z",
+  "objective_status": "active",
   "objective_acceptance": "A0-A12, las siete puertas reales y la aceptación final siguen vigentes. Un registro estructuralmente válido o una fase de software completada no cierra por sí mismo el objetivo.",
   "source_publication": {
     "status": "published",
@@ -590,20 +590,17 @@
     {
       "id": "phase-1",
       "name": "Coherencia y experiencia de usuario",
-      "status": "in_progress",
+      "status": "accepted",
       "software_criteria": [
         "Registro único y documentos sincronizados.",
         "Preparación sin desplegables anidados, accesos contextuales, causas de controles bloqueados y errores/reintentos accesibles.",
         "Tipos/build y QA sintética de flujos al cerrar software."
       ],
       "real_criteria": [
-        "Mantener abierta la aceptación física y de accesibilidad aplicable.",
-        "Conservar criterios A0-A12 y las siete puertas reales."
+        "Aceptación de UI/UX y accesibilidad en iPhone y Android, incluidos borradores y recepción de archivos.",
+        "Conservar los criterios A0-A12 y las siete puertas reales de las fases siguientes."
       ],
-      "remaining_software_checks": [
-        "Recepción de copia descargada y restauración en navegador pendientes por permisos; no eludir denegaciones.",
-        "Login y recepción de prueba Push en iPhone confirmados el14Oct en fase8. Renovación de avisos, enlace nativo, conexión intermitente y accesibilidad física con lectores de pantalla siguen pendientes."
-      ],
+      "remaining_software_checks": [],
       "local_increment_in_progress": {
         "name": "Cuadro de instrumentos y herramientas manuales",
         "status": "web_deployed_native_physical_pending",
@@ -614,8 +611,37 @@
       },
       "local_increment": "Entrega web13oct del cuadro de instrumentos y herramientas manuales verificada. Los recibos de incrementos y CI anteriores conservan su alcance histórico; las siete puertas reales permanecen abiertas.",
       "current_local_increment_reference": "docs/EVOLUTION-QUALIFICATION.json",
-      "latest_local_progress": "14Oct: errores asociados a20campos; cierres/guardados con foco visible y respetando foco externo; barra móvil/teclado y fechas de trayectos corregidos. 74web/11E2E+1tardío y36estados móviles sintéticos. iPhone/Android/VoiceOver/TalkBack y gates del roadmap abiertos.",
-      "current_accessibility_reference": "docs/PHASE1-ACCESSIBILITY-20261014.md"
+      "latest_local_progress": "14Oct: fase1 aceptada por Lucas en iPhone y Android; lectores en seis pantallas, errores/foco del favorito vacío, borrador tras corte/recuperación de red y recepción JSON. Revisión visual/texto/teclado ya confirmada. Fase2 puede empezar; firma/OAuth/widgets y restauración productiva mantienen sus gates.",
+      "current_accessibility_reference": "docs/PHASE1-ACCESSIBILITY-20261014.md",
+      "real_acceptance": {
+        "source": "explicit_user_confirmation",
+        "confirmed_at": "2026-10-14T21:49:23Z",
+        "reply": "Funciona todo en ambos",
+        "checks": {
+          "visual_text_keyboard": {
+            "iphone": "user_confirmed",
+            "android": "user_confirmed"
+          },
+          "screen_readers_six_screens": {
+            "iphone": "user_confirmed",
+            "android": "user_confirmed"
+          },
+          "favorite_empty_validation_and_focus": {
+            "iphone": "user_confirmed",
+            "android": "user_confirmed"
+          },
+          "draft_network_recovery": {
+            "iphone": "user_confirmed",
+            "android": "user_confirmed"
+          },
+          "json_download_received": {
+            "iphone": "user_confirmed",
+            "android": "user_confirmed"
+          }
+        },
+        "scope": "Interfaz/PWA actual: confirmación final más revisión visual anterior. No acredita firma, OAuth/widgets nativos ni restauración productiva.",
+        "phone_models_and_os_versions_provided": false
+      }
     },
     {
       "id": "phase-2",
@@ -1698,17 +1724,17 @@
     "authenticated_ui_checked": true
   },
   "current_phase1_accessibility": {
-    "status": "web_deployed_physical_acceptance_pending",
+    "status": "accepted_by_user_on_both_phones",
     "document": "docs/PHASE1-ACCESSIBILITY-20261014.md",
     "web_unit_tests_passed": 74,
     "e2e_flows_passed": 28,
     "additional_late_save_focus_test_passed": 1,
     "synthetic_focus_checks_passed": 36,
-    "physical_iphone": false,
-    "physical_android": false,
+    "physical_iphone": true,
+    "physical_android": true,
     "both_phones_available_user_confirmed": true,
-    "phase2_may_start": false,
-    "sequential_gate": "No avanzar hasta aceptación completa de fase1.",
+    "phase2_may_start": true,
+    "sequential_gate": "Fase1 aceptada por Lucas; continuar únicamente con fase2 hasta su aceptación completa.",
     "runtime_image": "sha256:f87c326690dfae4586bfb403002f773578e71e78daf12661e1656bd5599ddac4",
     "backend_unchanged": false,
     "compose_files_preserved": 5,
@@ -1736,7 +1762,7 @@
     "physical_ui_iphone_user_confirmed": true,
     "physical_ui_android_user_confirmed": true,
     "phone_models_and_os_versions_provided": false,
-    "physical_screen_reader_check_current_form": "not_run_user_reported",
+    "physical_screen_reader_check_current_form": "user_confirmed_both_phones",
     "network_increment": {
       "status": "web_deployed_physical_acceptance_pending",
       "document": "docs/PHASE1-NETWORK-20261014.md",
@@ -1765,6 +1791,46 @@
       "compose_files_preserved": 5,
       "private_geocoder_installation": "prepared_only_by_user_choice",
       "phase2_may_start": false
-    }
+    },
+    "real_acceptance": {
+      "source": "explicit_user_confirmation",
+      "confirmed_at": "2026-10-14T21:49:23Z",
+      "reply": "Funciona todo en ambos",
+      "checks": {
+        "visual_text_keyboard": {
+          "iphone": "user_confirmed",
+          "android": "user_confirmed"
+        },
+        "screen_readers_six_screens": {
+          "iphone": "user_confirmed",
+          "android": "user_confirmed"
+        },
+        "favorite_empty_validation_and_focus": {
+          "iphone": "user_confirmed",
+          "android": "user_confirmed"
+        },
+        "draft_network_recovery": {
+          "iphone": "user_confirmed",
+          "android": "user_confirmed"
+        },
+        "json_download_received": {
+          "iphone": "user_confirmed",
+          "android": "user_confirmed"
+        }
+      },
+      "scope": "Interfaz/PWA actual: confirmación final más revisión visual anterior. No acredita firma, OAuth/widgets nativos ni restauración productiva.",
+      "phone_models_and_os_versions_provided": false
+    },
+    "physical_draft_network_recovery_user_confirmed": true,
+    "physical_json_download_user_confirmed": true
+  },
+  "current_phase2_delivery": {
+    "status": "in_progress",
+    "phase1_accepted": true,
+    "phase3_may_start": false,
+    "document": "docs/PHASE2-DELIVERY-20261014.md",
+    "android": "current_configured_pilot_build_pending",
+    "ios": "current_exact_source_ci_pending",
+    "physical_acceptance": "pending"
   }
 }

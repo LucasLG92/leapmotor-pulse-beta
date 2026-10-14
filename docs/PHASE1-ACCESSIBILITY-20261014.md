@@ -1,5 +1,8 @@
 # Fase 1: accesibilidad y aceptación de la interfaz
 
+> Estado vigente: fase1 aceptada por Lucas el14oct en iPhone y Android. Las referencias a pendientes de las secciones inferiores describen la evidencia histórica previa a esta confirmación. Firma, widgets y restauración productiva conservan sus requisitos propios.
+
+
 Incremento del 14 de octubre de 2026. La fase continúa abierta hasta validar los teléfonos reales; no se empieza la fase 2 mientras la fase 1 no esté totalmente terminada.
 
 La interfaz conserva el coche protagonista y los temas actuales. Favoritos, trayectos y planes de mantenimiento recuperan el foco al cancelar; guardar vuelve a un control estable aunque la lista se actualice después. La restauración respeta el foco que el usuario haya movido fuera del editor. Veinte mensajes de error quedan asociados a sus campos, conservando las indicaciones de las fechas UTC. El foco dentro del contenido se mantiene visible ante la barra inferior y los cambios de altura del teclado; su comportamiento físico aún debe comprobarse. Las fechas de trayectos manuales vuelven a ocupar una fila legible en móvil.
@@ -48,3 +51,9 @@ A la propuesta del LXC privado respondió «Mantenerlo preparado sin instalar».
 ## Recuperación de copias en la interfaz
 
 Se corrigió el foco/contexto tras restauración válida y tras recuperar una lectura fallida, conservando foco externo y evitando replay.26E2E/74web pasan; archivosJSON recibidos/restaurados en laboratorio con datos sintéticos.63recursosHTTPS exactos y62backend preservados. [Evidencia y límites](PHASE1-RECOVERY-20261014.md). Las pruebas físicas de lectores y archivos siguen pendientes; esto no valida restauración operativa de producción ni cierra fase1.
+
+## Aceptación final de fase1
+
+Lucas respondió «Funciona todo en ambos» a las comprobaciones de VoiceOver/TalkBack en seis pantallas y errores/foco de Mapa → Añadir lugar → Guardar vacío, conservación del borrador tras cortar/recuperar red y recepción JSON desde Perfil → Datos. Junto con la revisión visual, texto grande y teclado confirmada antes, cierra la aceptación de fase1 en ambos teléfonos. Es evidencia humana; no se presenta como una ejecución automatizada en dispositivos. No se proporcionaron modelos/versiones.
+
+La confirmación permite continuar fase2. No acredita instalación/firma/OAuth/widgets nativos, consumo prolongado, restauración productiva o Photon instalado; esas comprobaciones mantienen su alcance y pendientes.

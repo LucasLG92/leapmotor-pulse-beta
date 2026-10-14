@@ -1,5 +1,8 @@
 # Fase 1: copias y recuperación de la interfaz
 
+> Estado vigente: fase1 aceptada por Lucas el14oct en iPhone y Android. Las referencias a pendientes de las secciones inferiores describen la evidencia histórica previa a esta confirmación. Firma, widgets y restauración productiva conservan sus requisitos propios.
+
+
 Continuación del 14oct2026. Se conserva la aceptación visual confirmada por Lucas en ambos teléfonos. VoiceOver/TalkBack y recepción de archivos en los teléfonos siguen sin acreditación; la fase 1 permanece abierta y no habilita empezar la fase 2. Photon queda preparado sin instalar por elección de Lucas.
 
 ## Problemas reproducidos y correcciones
@@ -25,3 +28,9 @@ En ambos teléfonos: comprobar recepción de una exportación JSON desde Perfil 
 ## Entrega web
 
 Web entregada y comprobada mediante HTTPS estricto:37recursos sin comprimir y26gzip exactos. Los62archivos backend,5Compose,SQLite21/JSON17 y configuración se conservan. Tres timers de copias activos y dos informes sanos. Se guarda rollback de imagen sin rebobinar datos. No se ejecutó ninguna restauración de producción.
+
+## Aceptación final de fase1
+
+Lucas respondió «Funciona todo en ambos» a las comprobaciones de VoiceOver/TalkBack en seis pantallas y errores/foco de Mapa → Añadir lugar → Guardar vacío, conservación del borrador tras cortar/recuperar red y recepción JSON desde Perfil → Datos. Junto con la revisión visual, texto grande y teclado confirmada antes, cierra la aceptación de fase1 en ambos teléfonos. Es evidencia humana; no se presenta como una ejecución automatizada en dispositivos. No se proporcionaron modelos/versiones.
+
+La confirmación permite continuar fase2. No acredita instalación/firma/OAuth/widgets nativos, consumo prolongado, restauración productiva o Photon instalado; esas comprobaciones mantienen su alcance y pendientes.
