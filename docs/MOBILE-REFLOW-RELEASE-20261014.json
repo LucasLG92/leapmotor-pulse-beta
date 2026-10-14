@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-14",
+  "increment": "mobile-reflow-20261014",
+  "web": {
+    "status": "delivered",
+    "origin": "https://pulse.srvlucas.duckdns.org",
+    "image": "sha256:e5298bc1a4c067ddbcd2825576210be478f782cedc3bd05522835cc0d3e9214d",
+    "previous_image": "sha256:e088135886ae80f574ec19acc824c4ea638f327ced16c5446d33e5c0beb4eaed",
+    "health": "healthy",
+    "strict_https": true,
+    "plain_assets_verified": 37,
+    "gzip_assets_verified": 26,
+    "mismatches": 0,
+    "backend_files_unchanged": 62,
+    "storage_schema": 21,
+    "export_schema": 17,
+    "configuration_preserved": true,
+    "online_backup_before_activation": true,
+    "only_image_pin_changed": true,
+    "unauthenticated_private_api": 401,
+    "invalid_synthetic_token": 401,
+    "authenticated_production_ui_tested": false,
+    "physical_iphone_tested": false
+  },
+  "source": {
+    "public": {
+      "repository": "LucasLG92/leapmotor-pulse-beta",
+      "pr": 20,
+      "head": "801a19b48bf2992523d0ce1830a0112b013089e2",
+      "code_main": "730feac9b1395adcec8ecd79dc72ec23a287b9cf",
+      "code_paths": 6
+    },
+    "private": {
+      "repository": "LucasLG92/leapmotor-pulse",
+      "pr": 19,
+      "head": "252426ef42c64a7e43eff8472c4d7899fa1f56ea",
+      "code_main": "9de343485d68d4f74939395d9b4175b90eecf413",
+      "code_paths": 16
+    },
+    "all_unrelated_files_preserved": true,
+    "private_extras_copied_to_public": false,
+    "ci_exact_code_heads_passed": true
+  },
+  "qualification": {
+    "python_passed": 1415,
+    "python_optional_sdk_skips": 34,
+    "subtests": 131,
+    "svelte_errors": 0,
+    "svelte_warnings": 0,
+    "browser_flows": 6,
+    "published_monitor_layout_checks": 42,
+    "deploy_guard_tests": 15
+  },
+  "android": {
+    "version": "0.1.1",
+    "version_code": 2,
+    "bytes": 6621421,
+    "sha256": "500828a9cf54e58f9c8b892fa13dfa8b92a43b729c8f45195b91f4fb8473aad2",
+    "assets_exact": 46,
+    "empty_generated_bridges": 2,
+    "native_tests_on_unchanged_native_inputs": 104,
+    "signed": false,
+    "configured": false,
+    "installed": false,
+    "pilot_update": false
+  },
+  "ios": {
+    "head": "801a19b48bf2992523d0ce1830a0112b013089e2",
+    "run_id": 38487389431,
+    "run_url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38487389431",
+    "app_and_widget_compiled": true,
+    "simulator_startup_verified": true,
+    "source_inputs_exact": 108,
+    "bytes": 1480891,
+    "sha256": "87b77aa55db77c75375135584076dfcdbb0458758e796074f718b8de208db431",
+    "signed": false,
+    "configured": false,
+    "physical_installation": false,
+    "widget_runtime": false
+  },
+  "limits": [
+    "Physical Safari, VoiceOver, TalkBack and device keyboard acceptance pending",
+    "Unsigned generic native candidates do not update installed pilots",
+    "Vehicle, charger, external service and physical command acceptance remain open",
+    "Sentinel and cameras remain the final phase"
+  ],
+  "privacy": {
+    "runtime_env_values_read": false,
+    "operational_database_copied_to_workspace": false,
+    "signing_keys_published": false,
+    "publication_allowlist_reviewed": true
+  },
+  "rollback": {
+    "image_only": true,
+    "data_rewind": false,
+    "protected_server_backup": true
+  }
+}
