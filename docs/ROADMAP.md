@@ -36,7 +36,7 @@ Las marcas completadas de esta lista describen únicamente trabajo del candidato
 
 ### 1. Coherencia y UI/UX
 
-Incremento vigente: [accesibilidad14oct](PHASE1-ACCESSIBILITY-20261014.md). Se han comprobado cierres, guardados y errores, barra móvil y fechas legibles con registros sintéticos. Lucas dispone de ambos teléfonos; su aceptación física aún está pendiente.
+Incrementos vigentes: [accesibilidad](PHASE1-ACCESSIBILITY-20261014.md), [copias](PHASE1-RECOVERY-20261014.md) y [conexión intermitente](PHASE1-NETWORK-20261014.md). Lucas confirma la revisión visual en ambos teléfonos; lectores y recepción de archivos físicos siguen pendientes.
 
 - [x] Implementar la dirección «cuadro de instrumentos y cuaderno de viaje» en las seis pantallas; render1280×720 CSS Claro/Charcoal sin overflow, borrador del simulador y actualización PWA local comprobados. [Dirección y límites](VISUAL-DIRECTION.md).
 - [ ] Cualificar el rediseño en iPhone real: reflujo móvil, escala de texto, VoiceOver, recepción de la PWA y uso habitual.
@@ -54,10 +54,12 @@ Incremento vigente: [accesibilidad14oct](PHASE1-ACCESSIBILITY-20261014.md). Se h
 - [x] Mantener el error de exportación y el estado de operación en el panel de copias; comprobar HTTP503, foco, borrador externo y reflujo390claro/oscuro. Restauración devuelve resultado estructurado, conserva confirmación y trata el resultado incierto; revisión estática, sin aceptación de ese flujo en navegador.
 - [x] Bloquear acciones Push/nativas durante consultas y conciliar un enlace rechazado con una lectura sin replay. Error de acción separado, código borrado, caché apagada y foco al control o título estable; fixture en memoria sin permisos, grants ni API reales.
 - [x] Corregir ABRP, cambio de demo, eliminación de perfil y revocación de dispositivo: error incierto persistente, controles liberados ante rechazo, guardas tras confirmar y foco que respeta borradores. QA en memoria: false/throw, cancelación, cambios de revisión/modo y eliminación con refresco demorado; encabezado estable cuando desaparece la fila. Reflujo390 claro/oscuro; no consentimientos ni dispositivos reales.
-- [ ] Completar activación y renovación de avisos, enlace real y conexión intermitente. Recepción del JSON descargado y restauración en navegador pendientes por permisos de carga/descarga denegados; sin elusión. La simulación offline por CDP tampoco se ejecutó por denegación; accesibilidad física pendiente.
+- [ ] Completar activación y renovación de avisos, enlace real y conexión intermitente. Las denegaciones históricas del navegador productivo se conservan. Descarga/restauración y conexión intermitente se cualifican ahora en el laboratorio aislado; no acreditan archivos ni accesibilidad de los teléfonos reales.
 - [x] Corregir texto/iconos reportados en iPhone y preparar favoritos por nombre/dirección con búsqueda privada cerrada por defecto; 18E2E Chromium y regresiones backend. Servicio privado/aceptación física pendientes.
 - [x] Comprobar descarga JSON, cancelación y restauración en navegador aislado, errores y recuperación sin replay; corregir contexto/foco con26E2E, incluido320×450/200%. [Límites físicos](PHASE1-RECOVERY-20261014.md).
-- [ ] Entregar el candidato y comprobar accesibilidad en los teléfonos.
+- [x] Entregar la web corregida y publicar la fuente revisada en ambos repositorios; la entrega se registra separada de su aceptación física.
+- [x] Verificar pérdida/recuperación de red con borrador y descarga, sin repetir guardados; corregir el foco perdido tras recuperar automáticamente un arranque interrumpido.28E2E Chromium. [Evidencia y límites](PHASE1-NETWORK-20261014.md).
+- [ ] Comprobar accesibilidad y recepción de archivos en los teléfonos.
 
 Ciclo Push sintético comprobado en la continuación: inspección local fallida visible, baja verificada antes del reemplazo, recuperación local sin repetir revocación y guardas tras desmontaje. La recepción de una prueba Push en iPhone fue confirmada en fase8 el14oct; la renovación, accesibilidad completa y restantes gates siguen pendientes. [Evidencia](VALIDATION.md#ciclo-push-y-publicacion-de-fuentes).
 
