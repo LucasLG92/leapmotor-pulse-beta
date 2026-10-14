@@ -2,7 +2,7 @@
 
 El formulario puede obtener coordenadas por nombre o dirección, elegir un resultado y editar el alias. Buscar y seleccionar no crean un favorito: Guardar realiza la persistencia por propietario. Las coordenadas manuales permanecen como alternativa.
 
-Para direcciones privadas, el formulario exige un estado coherente de `photon_private`; un proveedor público o desconocido deja su búsqueda deshabilitada. Photon privado está preparado, pero todavía no está instalado ni activado. No interpretar los tests con transporte simulado como una conexión TLS real.
+Para direcciones privadas, el formulario exige un estado coherente de `photon_private`; un proveedor público o desconocido deja su búsqueda deshabilitada. Photon privado está preparado. Lucas ha elegido mantenerlo sin instalar: no se crea el LXC ni se activa el proveedor. No interpretar los tests con transporte simulado como una conexión TLS real.
 
 ## Configuración externa
 

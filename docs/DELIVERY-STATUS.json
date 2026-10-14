@@ -1723,14 +1723,19 @@
       "private_geocoder_installed": false,
       "private_geocoder_active": false,
       "user_requires_private_addresses": true,
-      "new_lxc_approval_pending": true,
+      "new_lxc_approval_pending": false,
       "physical_acceptance_complete": false,
       "phase2_may_start": false,
-      "document": "docs/PRIVATE-PLACE-SEARCH.md"
+      "document": "docs/PRIVATE-PLACE-SEARCH.md",
+      "private_geocoder_installation": "prepared_only_by_user_choice"
     },
     "backend_modules_changed_since_initial_delivery": 3,
     "e2e_total_includes_late_save_focus": true,
     "synthetic_focus_checks_reference": "initial_delivery",
-    "source_publication": "reviewed_source_in_both_repositories"
+    "source_publication": "reviewed_source_in_both_repositories",
+    "physical_ui_iphone_user_confirmed": true,
+    "physical_ui_android_user_confirmed": true,
+    "phone_models_and_os_versions_provided": false,
+    "physical_screen_reader_check_current_form": "not_run_user_reported"
   }
 }
