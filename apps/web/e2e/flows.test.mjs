@@ -188,6 +188,70 @@ test('un JSON inválido y una copia rechazada muestran errores persistentes sin 
 	assert.equal(await page.locator('#backup-file').inputValue(), '');
 });
 
+test('perder la conexión conserva el borrador y permite guardar y descargar explícitamente al recuperar la red', { timeout: 30_000 }, async t => {
+	const page = await pageFor(t, { width: 390, height: 844 });
+	await settings(page, 'Estado sintético previo a perder conexión');
+	await page.goto(`${origin}/settings`);
+	await page.locator('#vehicle-name').fill('Borrador sintético durante la desconexión');
+	let writes = 0;
+	page.on('request', request => { if (request.method() === 'PUT' && new URL(request.url()).pathname === '/api/settings') writes++; });
+	await page.context().setOffline(true);
+	await page.waitForFunction(() => !navigator.onLine);
+	await keyboardActivate(page.getByRole('button', { name: 'Guardar ajustes', exact: true }));
+	await page.locator('#settings-general-error').waitFor();
+	assert.match(await page.locator('#settings-general-error').textContent(), /Tus cambios siguen en el formulario/);
+	assert.equal(await page.locator('#vehicle-name').inputValue(), 'Borrador sintético durante la desconexión');
+	assert.equal((await (await fetch(`${origin}/api/state`)).json()).settings.vehicle_name, 'Estado sintético previo a perder conexión');
+	const failedWrites = writes;
+	await page.getByRole('button', { name: 'Datos', exact: true }).click();
+	const exportButton = page.getByRole('button', { name: 'Exportar JSON', exact: true });
+	await keyboardActivate(exportButton);
+	const error = page.locator('.settings-card[aria-labelledby="backup-heading"] .form-error');
+	await error.waitFor(); assert.match(await error.textContent(), /Comprueba la conexión/);
+	await eventually(async () => assert.equal(await exportButton.isEnabled(), true));
+	await activeIs(page, exportButton);
+	await page.context().setOffline(false);
+	await page.waitForFunction(() => navigator.onLine);
+	await page.getByRole('button', { name: 'Vehículo', exact: true }).click();
+	assert.equal(await page.locator('#vehicle-name').inputValue(), 'Borrador sintético durante la desconexión');
+	assert.equal(writes, failedWrites, 'recuperar la red no repite el guardado');
+	await keyboardActivate(page.getByRole('button', { name: 'Guardar ajustes', exact: true }));
+	await eventually(async () => assert.equal((await (await fetch(`${origin}/api/state`)).json()).settings.vehicle_name, 'Borrador sintético durante la desconexión'));
+	assert.equal(writes, failedWrites + 1);
+	await page.getByRole('button', { name: 'Datos', exact: true }).click();
+	const downloadEvent = page.waitForEvent('download');
+	await keyboardActivate(exportButton);
+	const download = await downloadEvent;
+	assert.equal(await download.failure(), null);
+	assert.equal(download.suggestedFilename(), 'leapmotor-pulse-backup.json');
+	const data = JSON.parse(await readFile(await download.path(), 'utf8'));
+	assert.equal(data.settings.vehicle_name, 'Borrador sintético durante la desconexión');
+});
+
+test('la recuperación automática del arranque repone solo el foco que se perdió con Reintentar', { timeout: 30_000 }, async t => {
+	for (const focused of [true, false]) {
+		const page = await pageFor(t, { width: 390, height: 844 });
+		let first = true, held = false, release;
+		const blocked = new Promise(resolve => { release = resolve; }); t.after(() => release());
+		await page.route('**/api/state', async route => {
+			if (first) { first = false; held = true; await blocked; }
+			await route.continue();
+		});
+		await page.goto(`${origin}/settings`);
+		await eventually(() => assert.equal(held, true));
+		await page.context().setOffline(true); release();
+		const retry = page.getByRole('button', { name: 'Reintentar conexión', exact: true }); await retry.waitFor();
+		assert.match(await page.getByRole('alert').textContent(), /Pulse está sin conexión/);
+		if (focused) await retry.focus();
+		await page.context().setOffline(false);
+		await page.locator('#vehicle-name').waitFor(); await settle(page);
+		if (focused) {
+			await activeIs(page, page.locator('#page-title'));
+			assert.equal(await page.locator('#page-title').isVisible(), true);
+		} else assert.equal(await page.evaluate(() => document.activeElement === document.body), true, 'sin foco perdido activo no debe enfocar otro control');
+	}
+});
+
 test('las seis secciones conservan el reflujo móvil y los controles con texto al 200 %', { timeout: 60_000 }, async t => {
 	const page = await pageFor(t);
 	for (const width of [320, 390, 430]) {

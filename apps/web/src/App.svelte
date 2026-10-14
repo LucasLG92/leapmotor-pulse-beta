@@ -826,7 +826,7 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 	function handleOnlineChange() {
 		online = navigator.onLine;
 		if (!online) return;
-		if (bootStatus === 'error') void startSession();
+		if (bootStatus === 'error') void retryStartup();
 		else if (bootStatus === 'ready') void openEventSource();
 	}
 
