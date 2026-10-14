@@ -1489,4 +1489,9 @@
 		.vehicle-identity-fields { grid-template-columns: minmax(0, 1fr); gap: 10px; }
 	}
 
+.settings-profile { container-type: inline-size; container-name: profile; }
+@container profile (max-width: 20rem) {
+ .settings-section-switcher { grid-template-columns: minmax(0, 1fr); }
+ .settings-section-switcher button { overflow-wrap: normal; }
+}
 </style>

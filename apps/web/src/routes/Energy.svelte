@@ -1370,4 +1370,11 @@
 		.demo-total-disclosure > summary { align-items: flex-start; flex-direction: column; justify-content: center; gap: 2px; }
 		.demo-total-disclosure > summary small { text-align: left; }
 	}
+.energy-view { container-type: inline-size; container-name: energy; }
+@container energy (max-width: 15rem) {
+ .energy-total-metrics, .demo-total-content .energy-total-metrics, .analytics-metrics, .coverage-metrics { grid-template-columns: minmax(0, 1fr); }
+ .month-origin-row { grid-template-columns: minmax(0, 1fr); gap: 5px; }
+ .month-origin-row > strong { text-align: left; }
+ .month-origin-metrics { grid-template-columns: minmax(0, 1fr); padding-left: 0; }
+}
 </style>

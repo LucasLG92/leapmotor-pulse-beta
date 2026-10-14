@@ -122,7 +122,12 @@
 				stops: item.stops.map(stop => ({ started: localJourneyTime(stop.started_at, 'utc'), ended: localJourneyTime(stop.ended_at, 'utc') })) };
 			tagDraft = ''; baseline = fingerprint();
 		}
-		await tick(); if (mounted) document.getElementById('journey-started')?.focus();
+		await tick();
+		if (mounted) {
+			const initialField = document.getElementById('journey-started');
+			initialField?.focus({ preventScroll: true });
+			initialField?.scrollIntoView({ block: 'center', behavior: 'instant' });
+		}
 	}
 	async function cancel() {
 		if (busy || saving) return;
@@ -489,8 +494,8 @@
 	.panel-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 48px; }
 	.journey-count { grid-column: 1; margin: 0; color: var(--muted-strong); font-size: .8125rem; }
 	.journey-count strong { color: var(--ink); font-variant-numeric: tabular-nums; }
-	.panel-actions { display: flex; grid-column: 2; align-items: center; gap: 8px; }
-	.panel-actions .button { min-height: 44px; white-space: nowrap; }
+	.panel-actions { display: flex; grid-column: 2; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
+	.panel-actions .button { min-width: 0; min-height: 44px; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 	.journey-form { gap: 16px; padding: clamp(18px, 3vw, 26px); border: 1px solid var(--line); border-radius: 24px; background: var(--surface); }
 	.journey-form input, .journey-form select, .journey-form textarea { border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface-raised); color: var(--ink); }
 	.form-intro { align-items: flex-start; }

@@ -52,6 +52,71 @@ async function pageFor(t) {
 	return page;
 }
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+
+test('las seis secciones conservan el reflujo móvil y los controles con texto al 200 %', { timeout: 60_000 }, async t => {
+	const page = await pageFor(t);
+	for (const width of [320, 390, 430]) {
+		await page.setViewportSize({ width, height: 844 });
+		for (const route of ['/', '/energy', '/activity', '/protection', '/navigation', '/settings']) {
+			await page.goto(`${origin}${route}`);
+			await page.locator('main[aria-busy="false"]').waitFor();
+			await settle(page);
+			assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width, `${route}, ${width}px`);
+		}
+	}
+	await page.setViewportSize({ width: 320, height: 844 });
+	for (const theme of ['Claro', 'Oscuro']) {
+		await page.goto(`${origin}/settings`);
+		await page.getByRole('button', { name: 'Preferencias', exact: true }).click();
+		await page.getByRole('button', { name: theme, exact: true }).click();
+		for (const route of ['/', '/energy', '/activity', '/protection', '/navigation', '/settings']) {
+			await page.goto(`${origin}${route}`);
+			await page.locator('main[aria-busy="false"]').waitFor();
+			await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
+			assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).fontSize), '32px');
+			await settle(page);
+			assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 320, `${route}, ${theme}, texto200%`);
+			if (route === '/activity') {
+				const buttons = await page.locator('.panel-actions button').evaluateAll(items => items.map(el => {
+					const rect = el.getBoundingClientRect();
+					return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, clipped: el.scrollWidth > el.clientWidth + 1 };
+				}));
+				assert.equal(buttons.length, 2);
+				assert.ok(buttons.every(b => !b.clipped && b.left >= 0 && b.right <= 320));
+				assert.ok(buttons[0].right <= buttons[1].left || buttons[1].right <= buttons[0].left || buttons[0].bottom <= buttons[1].top || buttons[1].bottom <= buttons[0].top, 'acciones sin solapamiento');
+			}
+			const selector = route === '/' ? '.control-actions' : route === '/settings' ? '.settings-section-switcher' : route === '/energy' ? '.energy-total-metrics' : null;
+			if (selector) {
+				const columns = await page.locator(selector).first().evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length);
+				assert.equal(columns, 1, `${route}, rejilla adaptada al texto grande`);
+			}
+		}
+	}
+});
+
+test('el campo inicial permanece accesible con poca altura y el descarte conserva el borrador al cancelar', { timeout: 30_000 }, async t => {
+	const page = await pageFor(t);
+	await page.setViewportSize({ width: 320, height: 450 });
+	await page.goto(`${origin}/activity`);
+	await page.evaluate(() => document.documentElement.style.setProperty('font-size', '32px', 'important'));
+	await page.getByRole('button', { name: 'Añadir trayecto', exact: true }).click();
+	await settle(page);
+	const field = await page.locator('#journey-started').evaluate(el => {
+		const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+		return { focused: document.activeElement === el, reached: document.elementFromPoint(x, y) === el };
+	});
+	assert.deepEqual(field, { focused: true, reached: true }, 'la navegación fija no tapa el campo enfocado');
+	await page.locator('#journey-notes').fill('Borrador con texto grande');
+	await page.locator('.compact-mobile-nav summary').click();
+	await page.locator('.compact-mobile-nav').getByRole('link', { name: 'Energía', exact: true }).click();
+	const dialog = page.getByRole('dialog');
+	await dialog.waitFor();
+	assert.equal(await dialog.evaluate(el => el.matches(':modal')), true);
+	await page.keyboard.press('Escape');
+	await dialog.waitFor({ state: 'hidden' });
+	assert.equal(await page.locator('#journey-notes').inputValue(), 'Borrador con texto grande');
+	assert.equal(new URL(page.url()).pathname, '/activity');
+});
 async function settings(page, name) {
 	const session = await (await page.request.get(`${origin}/api/session`)).json();
 	const response = await page.request.put(`${origin}/api/settings`, {
