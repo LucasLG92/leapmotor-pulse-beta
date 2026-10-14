@@ -84,8 +84,17 @@ jobs:
             printf '%s\n' 'No se encontró el contenedor de Pulse beta tras detenerlo.' >&2
             exit 1
           fi
-          running="$(docker ps --filter "$project_filter" --filter "$service_filter" --format '{{.ID}}')"
+          # Allow bounded convergence after stop; never repeat the stop operation.
+          # Require the listing to settle, then independently inspect every container.
+          for attempt in {1..20}; do
+            running="$(docker ps --filter "$project_filter" --filter "$service_filter" --format '{{.ID}}')"
+            [[ -z "$running" ]] && break
+            sleep 0.25
+          done
           if [[ -n "$running" ]]; then
+            for container in "${containers[@]}"; do
+              docker inspect --format '{{.State.Status}} {{.State.Running}}' "$container" >&2
+            done
             printf '%s\n' 'El servicio Pulse beta sigue ejecutándose después de --stop.' >&2
             exit 1
           fi
