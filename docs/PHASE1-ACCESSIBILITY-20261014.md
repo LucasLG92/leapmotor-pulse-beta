@@ -12,7 +12,7 @@ La entrega web cambia recursos de interfaz, conserva los 62 archivos de backend,
 
 ## Pruebas físicas pendientes
 
-Lucas confirma disponibilidad de iPhone y Android; todavía no ha realizado esta aceptación de la versión nueva. Registrar modelo, versión de sistema, navegador/PWA y resultados, sin información privada.
+Lucas confirma disponibilidad de iPhone y Android. En la entrega inicial informó de palabras partidas en Energía y respondió que el flujo propuesto con lectores funciona; la aceptación completa y las superficies modificadas siguen pendientes. Registrar modelo, versión de sistema, navegador/PWA y resultados, sin información privada.
 
 | Comprobación | Resultado esperado | iPhone | Android |
 | --- | --- | --- | --- |
@@ -26,3 +26,15 @@ Lucas confirma disponibilidad de iPhone y Android; todavía no ha realizado esta
 Para activar y practicar los lectores: [guía de Apple](https://support.apple.com/es-us/guide/iphone/iph3e2e415f/ios) y [guía de Google](https://support.google.com/accessibility/answer/6007100?hl=ES). Las pruebas de distribución, widgets y conexión nativa de fase 2 conservan sus requisitos propios.
 
 El login y una notificación de prueba en iPhone ya fueron confirmados por Lucas en el incremento anterior de fase 8. La renovación de avisos, la conexión intermitente y la accesibilidad completa no se consideran aprobadas por esa recepción.
+
+## Correcciones tras la revisión del iPhone
+
+El candidato posterior corrige el corte de «Manual» y «Demostración» en los resúmenes y meses de Energía, también con texto ampliado; Climatización utiliza un copo de nieve y Ajustes un engranaje convencional. Los SVG son originales del proyecto.
+
+Añadir lugar ofrece búsqueda por nombre/dirección, selección y alias editable. La selección rellena el borrador y Guardar persiste. Coordenadas manuales quedan plegadas como alternativa; siguen siendo válidas al volver a plegarlas. Enter durante composición no busca; consultas viejas/canceladas no reponen resultados y los borradores se conservan al cancelar el cierre.
+
+Lucas solicita también direcciones privadas. El formulario solo permite buscar con estado coherente de Photon privado y rechaza respuestas públicas. El adaptador mTLS original está preparado y desactivado; no hay fallback público. La instalación aislada del geocodificador necesita aprobación específica y después pruebas de TLS/recursos reales. Mapas/cargadores y Apple/Google mantienen servicios públicos con avisos visibles antes de sus acciones. [Contrato y límites](PRIVATE-PLACE-SEARCH.md).
+
+Validación local del candidato: 74 pruebas web, 18 E2E Chromium, 1426 pruebas Python y 131 subcasos; 34 pruebas Python omitidas por sus gates de entorno. Tipado Svelte 0 errores/0 avisos y build. La suite acotada de navegación aporta 68 pruebas con transporte falso; no acredita handshake TLS real. La fuente actual conserva SQLite21/JSON17 y cambia exactamente tres módulos de navegación/contrato frente a la imagen inicial. El operador exige manifiestos base/candidato, cinco Compose preservados y rollback sin rebobinar datos.
+
+Este apartado describe el candidato cualificado; no acredita todavía su despliegue, el geocodificador instalado ni nueva aceptación física. La fase 1 permanece abierta y no habilita avanzar a la fase 2.

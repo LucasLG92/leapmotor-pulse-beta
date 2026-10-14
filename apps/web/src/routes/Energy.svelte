@@ -1377,4 +1377,15 @@
  .month-origin-row > strong { text-align: left; }
  .month-origin-metrics { grid-template-columns: minmax(0, 1fr); padding-left: 0; }
 }
+	.analytics-source-heading { flex-wrap: wrap; }
+	.analytics-source-heading h3 { overflow-wrap: normal; word-break: normal; }
+	.month-origin-row { grid-template-columns: max-content minmax(0, 1fr) max-content; }
+	.month-origin-row > span, .month-origin-row > strong { white-space: nowrap; }
+	@container energy (max-width: 20rem) {
+		.analytics-source-grid { grid-template-columns: minmax(0, 1fr); }
+		.analytics-source-card + .analytics-source-card { padding-left: 0; border-left: 0; padding-top: 14px; border-top: 1px solid var(--line); }
+		.month-origin-row { grid-template-columns: minmax(0, 1fr); gap: 5px; }
+		.month-origin-row > strong { text-align: left; }
+		.month-origin-metrics { grid-template-columns: minmax(0, 1fr); padding-left: 0; }
+	}
 </style>

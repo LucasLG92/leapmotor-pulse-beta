@@ -283,6 +283,7 @@ test('los errores de favoritos, mantenimiento y simulación forman parte de la d
 	const page = await pageFor(t, { width: 390, height: 844 });
 	await page.goto(`${origin}/navigation`);
 	await page.getByRole('button', { name: 'Añadir lugar', exact: true }).click();
+	await keyboardActivate(page.locator('.favorite-form').getByText('Introducir coordenadas', { exact: true }));
 	await keyboardActivate(page.getByRole('button', { name: 'Guardar favorito', exact: true }));
 	for (const id of ['favorite-name', 'favorite-latitude', 'favorite-longitude']) await describedError(page, id);
 	await page.goto(`${origin}/activity`);
@@ -317,6 +318,7 @@ test('guardar devuelve el foco a un control estable aunque el refresco de la lis
 		await keyboardActivate(kind !== 'journey' && await emptyOpener.isVisible() ? emptyOpener : page.locator(stableId));
 		if (kind === 'favorite') {
 			await page.locator('#favorite-name').fill(name);
+			await page.locator('.favorite-form').getByText('Introducir coordenadas', { exact: true }).click();
 			await page.locator('#favorite-latitude').fill('40'); await page.locator('#favorite-longitude').fill('-3');
 		} else if (kind === 'maintenance') {
 			await page.locator('#maintenance-plan-title').fill(name); await page.locator('#maintenance-plan-intervalMonths').fill('12');
@@ -394,6 +396,7 @@ test('una respuesta tardía de guardado respeta el foco que el usuario movió fu
 	await page.goto(`${origin}/navigation`);
 	await page.locator('#favorite-add').click();
 	await page.locator('#favorite-name').fill('Respuesta tardía sintética');
+	await page.locator('.favorite-form').getByText('Introducir coordenadas', { exact: true }).click();
 	await page.locator('#favorite-latitude').fill('40'); await page.locator('#favorite-longitude').fill('-3');
 	let release, received = false;
 	const held = new Promise(resolve => { release = resolve; }); t.after(() => release());
@@ -408,4 +411,108 @@ test('una respuesta tardía de guardado respeta el foco que el usuario movió fu
 	await page.locator('.favorite-form').waitFor({ state: 'hidden' });
 	await page.getByText('Respuesta tardía sintética', { exact: true }).waitFor();
 	await settle(page); await activeIs(page, external);
+});
+
+
+test('Manual y Demostración se leen completos en los resúmenes y meses de energía', { timeout: 20_000 }, async t => {
+	const page = await pageFor(t); await page.goto(`${origin}/energy`);
+	await page.locator('.analytics-panel').waitFor();
+	for (const width of [320, 390, 430]) {
+		await page.setViewportSize({ width, height: 844 });
+		for (const size of ['16px', '32px']) {
+			await page.evaluate(size => document.documentElement.style.setProperty('font-size', size, 'important'), size); await settle(page);
+			const items = await page.locator('.analytics-source-heading h3, .month-origin-row > span').evaluateAll(elements => elements.map(element => {
+				const range = document.createRange(); const text = [...element.childNodes].find(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim()); range.selectNodeContents(text || element);
+				return { text: element.textContent?.trim(), width: element.getBoundingClientRect().width, lines: range.getClientRects().length, overflow: element.scrollWidth > element.clientWidth + 1 };
+			}));
+			assert.ok(items.length >= 2);
+			for (const item of items) { assert.equal(item.lines, 1, `${width}/${size} ${JSON.stringify(item)}`); assert.equal(item.overflow, false, JSON.stringify(item)); }
+			assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+		}
+	}
+});
+
+async function enableSyntheticPlaces(page) {
+	await page.route('**/api/navigation/status', route => route.fulfill({ json: { enabled: true, source: 'OpenStreetMap', reason: 'ready', attribution: '© OpenStreetMap contributors', places_provider: 'photon_private', private_place_search: true } }));
+}
+const publicPlaceFixture = { id: 'synthetic-place', name: 'Museo público de prueba', latitude: 40.42, longitude: -3.69 };
+function syntheticPlaces() { return { source: 'OpenStreetMap Photon', fetched_at: new Date().toISOString(), cached: false, places: [publicPlaceFixture] }; }
+
+test('el formulario de favoritos no envía direcciones a un proveedor público o a un estado privado incoherente', { timeout: 20_000 }, async t => {
+	const page = await pageFor(t);
+	let searches = 0;
+	await page.route('**/api/navigation/places', route => { searches++; return route.fulfill({ json: syntheticPlaces() }); });
+	for (const extra of [{}, { places_provider: 'nominatim', private_place_search: false }, { places_provider: 'photon_private', private_place_search: false }]) {
+		await page.route('**/api/navigation/status', route => route.fulfill({ json: { enabled: true, source: 'OpenStreetMap', reason: 'ready', attribution: '© OpenStreetMap contributors', ...extra } }));
+		await page.goto(`${origin}/navigation`);
+		await page.locator('#favorite-add').click();
+		assert.equal(await page.locator('#favorite-query').isDisabled(), true);
+		assert.match(await page.locator('#favorite-query-help').textContent(), /búsqueda privada aún no está disponible/);
+		assert.equal(searches, 0);
+		await page.unroute('**/api/navigation/status');
+	}
+});
+
+test('la búsqueda privada identifica su procedencia y rechaza una respuesta pública sin cambiar el borrador', { timeout: 20_000 }, async t => {
+	const page = await pageFor(t); await enableSyntheticPlaces(page);
+	await page.route('**/api/navigation/places', route => route.fulfill({ json: { ...syntheticPlaces(), source: 'OpenStreetMap Nominatim' } }));
+	await page.goto(`${origin}/navigation`); await page.locator('#favorite-add').click();
+	const form = page.locator('.favorite-form');
+	assert.match(await page.locator('#favorite-query-help').textContent(), /búsqueda se realiza en tu servidor/);
+	await page.locator('#favorite-name').fill('Alias de prueba');
+	await page.locator('#favorite-query').fill('Dirección sintética');
+	await form.getByRole('button', { name: 'Buscar lugar', exact: true }).click();
+	await page.locator('#favorite-query-error').waitFor();
+	assert.equal(await page.locator('#favorite-name').inputValue(), 'Alias de prueba');
+	assert.equal(await page.locator('#favorite-latitude').inputValue(), '');
+	assert.equal(await form.locator('.lookup-results').count(), 0);
+});
+
+test('buscar y elegir un lugar obtiene coordenadas sin guardarlo; escribir o confirmar composición no envía consultas', { timeout: 20_000 }, async t => {
+	const page = await pageFor(t, { width: 390, height: 844 }); await enableSyntheticPlaces(page);
+	let searches = [], writes = [];
+	await page.route('**/api/navigation/places', async route => { searches.push(route.request().postDataJSON()); await route.fulfill({ json: syntheticPlaces() }); });
+	await page.route('**/api/navigation/favorites*', async route => { if (route.request().method() === 'POST') writes.push(route.request().postDataJSON()); await route.continue(); });
+	await page.goto(`${origin}/navigation`); await page.locator('#favorite-add').click();
+	const form = page.locator('.favorite-form'), query = page.locator('#favorite-query');
+	await eventually(async () => assert.equal(await query.isEnabled(), true));
+	assert.equal(await page.locator('#favorite-latitude').isVisible(), false);
+	await query.fill('Museo público'); await settle(page); assert.equal(searches.length, 0);
+	await query.dispatchEvent('keydown', { key: 'Enter', code: 'Enter', isComposing: true }); await settle(page); assert.equal(searches.length, 0);
+	await query.press('Enter');
+	await form.getByRole('button').filter({ hasText: publicPlaceFixture.name }).click();
+	assert.equal(await page.locator('#favorite-name').inputValue(), publicPlaceFixture.name);
+	assert.equal(await page.locator('#favorite-latitude').inputValue(), String(publicPlaceFixture.latitude));
+	assert.equal(await page.locator('#favorite-longitude').inputValue(), String(publicPlaceFixture.longitude));
+	assert.deepEqual(searches, [{ query: 'Museo público', consent: true }]); assert.equal(writes.length, 0);
+	await keyboardActivate(form.getByRole('button', { name: 'Guardar favorito', exact: true }));
+	await form.waitFor({ state: 'hidden' });
+	assert.deepEqual(writes, [{ name: publicPlaceFixture.name, latitude: publicPlaceFixture.latitude, longitude: publicPlaceFixture.longitude }]);
+	await eventually(() => activeIs(page, page.locator('#favorite-add')));
+});
+
+test('una búsqueda tardía no repone resultados al cambiar el texto y conserva el borrador al cancelar el cierre', { timeout: 20_000 }, async t => {
+	const page = await pageFor(t); await enableSyntheticPlaces(page);
+	let release, requested = false; const held = new Promise(resolve => { release = resolve; }); t.after(() => release());
+	await page.route('**/api/navigation/places', async route => { requested = true; await held; try { await route.fulfill({ json: syntheticPlaces() }); } catch {} });
+	await page.goto(`${origin}/navigation`); await page.locator('#favorite-add').click();
+	const form = page.locator('.favorite-form'), query = page.locator('#favorite-query');
+	await eventually(async () => assert.equal(await query.isEnabled(), true));
+	await query.fill('Primera consulta'); await query.press('Enter'); await eventually(() => assert.equal(requested, true));
+	await query.fill('Consulta nueva'); release(); await settle(page);
+	assert.equal(await form.locator('.lookup-result').count(), 0);
+	await keyboardActivate(form.getByRole('button', { name: 'Cancelar', exact: true }));
+	await page.locator('dialog[open]').waitFor(); await page.keyboard.press('Escape');
+	assert.equal(await query.inputValue(), 'Consulta nueva');
+	assert.equal(await page.locator('#favorite-name').inputValue(), '');
+});
+
+test('guardar coordenadas manuales sigue funcionando después de plegar el bloque opcional', { timeout: 15_000 }, async t => {
+	const page = await pageFor(t); await page.goto(`${origin}/navigation`); await page.locator('#favorite-add').click();
+	const form = page.locator('.favorite-form'), summary = form.getByText('Introducir coordenadas', { exact: true });
+	await summary.click(); await page.locator('#favorite-name').fill('Coordenadas plegadas de prueba');
+	await page.locator('#favorite-latitude').fill('40'); await page.locator('#favorite-longitude').fill('-3');
+	await summary.click(); assert.equal(await page.locator('#favorite-latitude').isVisible(), false);
+	await keyboardActivate(form.getByRole('button', { name: 'Guardar favorito', exact: true }));
+	await form.waitFor({ state: 'hidden' }); await page.getByText('Coordenadas plegadas de prueba', { exact: true }).waitFor();
 });

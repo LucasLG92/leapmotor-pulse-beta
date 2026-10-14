@@ -6441,7 +6441,10 @@
         "properties": {
           "source": {
             "type": "string",
-            "const": "OpenStreetMap Nominatim",
+            "enum": [
+              "OpenStreetMap Nominatim",
+              "OpenStreetMap Photon"
+            ],
             "title": "Source"
           },
           "fetched_at": {
@@ -6601,6 +6604,20 @@
             "type": "string",
             "const": "© OpenStreetMap contributors",
             "title": "Attribution"
+          },
+          "places_provider": {
+            "type": "string",
+            "enum": [
+              "nominatim",
+              "photon_private"
+            ],
+            "title": "Places Provider",
+            "default": "nominatim"
+          },
+          "private_place_search": {
+            "type": "boolean",
+            "title": "Private Place Search",
+            "default": false
           }
         },
         "type": "object",

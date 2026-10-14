@@ -1712,6 +1712,21 @@
     "runtime_image": "sha256:e66e761894811b9d1e71eb640c9f8a803657b8d3642118eeb0d16b519daaa235",
     "backend_unchanged": true,
     "compose_files_preserved": 5,
-    "strict_https_assets_verified": 65
+    "strict_https_assets_verified": 65,
+    "iphone_followup": {
+      "status": "software_qualified_delivery_pending",
+      "web_unit_tests_passed": 74,
+      "e2e_flows_passed": 18,
+      "python_tests_passed": 1426,
+      "python_tests_skipped": 34,
+      "python_subtests_passed": 131,
+      "private_geocoder_installed": false,
+      "private_geocoder_active": false,
+      "user_requires_private_addresses": true,
+      "new_lxc_approval_pending": true,
+      "physical_acceptance_complete": false,
+      "phase2_may_start": false,
+      "document": "docs/PRIVATE-PLACE-SEARCH.md"
+    }
   }
 }
