@@ -2,6 +2,7 @@
 	import { onMount, onDestroy, tick, untrack } from 'svelte';
 	import { ApiError, getManualJourneys, getManualJourneyReport } from './api';
 	import { count } from './format';
+	import { restoreFormFocus } from './form-focus';
 	import Glyph from './Glyph.svelte';
 	import { getNativeBridge, isNativeApp } from './native';
 	import { exportNativeJourneyReport, journeyReportExportError } from './journey-report-export';
@@ -32,6 +33,8 @@
 	let mounted = false, readGeneration = 0, editGeneration = 0, observedReadKey = '';
 	let reads: AbortController | null = null;
 	let summaryElement = $state<HTMLDivElement | undefined>();
+	let editorElement = $state<HTMLFormElement | undefined>();
+	let editorOpener: HTMLElement | null = null;
 	const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 	const native = isNativeApp();
 	const pageSize = 20;
@@ -108,10 +111,11 @@
 			? 'El trayecto podría haberse guardado. Revisa el diario antes de descartarlo o registrar otro. ¿Quieres descartar este formulario?'
 			: 'Se descartarán los cambios de este formulario.', 'Descartar formulario');
 	}
-	async function open(item?: ManualJourney) {
+	async function open(item?: ManualJourney, opener: HTMLElement | null = null) {
 		if (busy || saving) return;
 		const generation = editGeneration;
 		if (!await approveChange() || !mounted || busy || saving || generation !== editGeneration) return;
+		editorOpener = opener;
 		reset(); editing = item ?? null; editorOpen = true;
 		if (item) {
 			form = { timeBasis: 'utc', started: localJourneyTime(item.started_at, 'utc'), ended: localJourneyTime(item.ended_at, 'utc'),
@@ -132,7 +136,12 @@
 	async function cancel() {
 		if (busy || saving) return;
 		const generation = editGeneration;
-		if (await approveChange() && mounted && !busy && !saving && generation === editGeneration) reset();
+		if (await approveChange() && mounted && !busy && !saving && generation === editGeneration) {
+			const ownedFocus = !!editorElement?.contains(document.activeElement);
+			reset(); const closedGeneration = editGeneration;
+			await tick();
+			if (mounted && ownedFocus && closedGeneration === editGeneration) restoreFormFocus(editorOpener, document.getElementById('manual-journey-add'), editorElement);
+		}
 	}
 	function clearError(key: string) {
 		if (errors[key]) { const next = { ...errors }; delete next[key]; errors = next; }
@@ -194,6 +203,7 @@
 			saveError = 'El guardado anterior no está confirmado. Vuelve a esos datos para reintentarlo o revisa el diario antes de descartar el formulario.'; return;
 		}
 		const draft = fingerprint(), generation = editGeneration;
+		let closedGeneration: number | null = null;
 		saving = true;
 		try {
 			if (!edit && !reservation) {
@@ -208,7 +218,7 @@
 				edit ? { ...payload, revision: edit.revision } : { ...payload, request_id: reservation!.id },
 				edit ? 'El trayecto manual se ha actualizado.' : 'El trayecto manual se ha guardado.');
 			if (!mounted || generation !== editGeneration) return;
-			if (saved) { reset(); if (offset) offset = 0; else void load(); }
+			if (saved) { reset(); closedGeneration = editGeneration; if (offset) offset = 0; else void load(); }
 			else saveError = 'No se pudo confirmar el guardado. Conservamos el formulario: revisa el diario o repite el mismo intento.';
 		} catch {
 			if (!mounted || generation !== editGeneration) return;
@@ -217,6 +227,7 @@
 		} finally {
 			if (mounted) {
 				saving = false; await tick();
+				if (mounted && previousFocus && closedGeneration === editGeneration) restoreFormFocus(document.getElementById('manual-journey-add'), null, editorElement);
 				if (mounted && saveError && document.hasFocus() && document.activeElement === document.body && previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
 			}
 		}
@@ -281,10 +292,10 @@
 		{/if}
 		<div class="panel-actions">
 			{#if page}<button class="button button-quiet" disabled={busy || saving || !online} onclick={load}>Actualizar</button>{/if}
-			<button class="button button-primary" disabled={busy || saving || !online} onclick={() => open()}>Añadir trayecto</button>
+			<button id="manual-journey-add" class="button button-primary" disabled={busy || saving || !online} onclick={(event) => open(undefined, event.currentTarget)}>Añadir trayecto</button>
 		</div>
 	</div>
-	<form class="journey-form" hidden={!editorOpen} onsubmit={save} novalidate aria-labelledby="journey-form-heading">
+	<form class="journey-form" bind:this={editorElement} hidden={!editorOpen} onsubmit={save} novalidate aria-labelledby="journey-form-heading">
 			<div class="form-intro"><div><span class="eyebrow">{editing ? 'ACTUALIZAR REGISTRO' : 'NUEVO REGISTRO'}</span><h3 id="journey-form-heading">{editing ? 'Editar trayecto manual' : 'Registrar un trayecto terminado'}</h3></div><p>Incluye solo los datos que conoces. No completamos información que no hayas indicado.</p></div>
 			<div class="field"><label for="journey-time-basis">Zona de las fechas</label><select id="journey-time-basis" value={form.timeBasis} onchange={changeBasis} disabled={busy || saving}><option value="local">Hora del dispositivo ({timezone})</option><option value="utc">UTC</option></select></div>
 			<p class="muted">Fechas en {form.timeBasis === 'utc' ? 'UTC' : timezone}. Si cambias la zona, se convierten las horas válidas. Distancia y energía son opcionales: vacío significa que no tienes ese dato.</p>
@@ -331,7 +342,7 @@
 							<dl class="journey-metrics"><div><dt>Distancia</dt><dd>{item.distance_km === null ? 'Sin dato' : `${number(item.distance_km)} km`}</dd></div><div><dt>Energía declarada</dt><dd>{item.energy_kwh === null ? 'Sin dato' : `${number(item.energy_kwh)} kWh`}</dd></div><div><dt>Duración total</dt><dd>{number(item.duration_min)} min</dd></div><div><dt>Paradas declaradas</dt><dd>{number(item.paused_min)} min</dd></div><div><dt>Tiempo sin esas paradas</dt><dd>{number(item.active_min)} min</dd></div><div><dt>Consumo con tus datos</dt><dd>{item.consumption_kwh_100km === null ? 'Sin datos suficientes' : `${number(item.consumption_kwh_100km)} kWh/100 km`}</dd></div></dl>
 							<p class="journey-period">Hasta {dateTime(item.ended_at)} · Introducido por ti</p>
 							{#if item.notes}<section class="journey-note" aria-label="Nota del trayecto"><h4>Nota</h4><p>{item.notes}</p></section>{/if}
-							<div class="actions"><button class="button button-secondary" disabled={busy || saving || !online} onclick={() => open(item)} aria-label={`Editar trayecto de ${item.from_label ?? 'origen sin indicar'} a ${item.to_label ?? 'destino sin indicar'}`}>Editar</button><button class="button button-quiet danger-action" disabled={busy || saving || !online} onclick={() => remove(item)} aria-label={`Eliminar trayecto de ${item.from_label ?? 'origen sin indicar'} a ${item.to_label ?? 'destino sin indicar'}`}>Eliminar</button></div>
+							<div class="actions"><button class="button button-secondary" disabled={busy || saving || !online} onclick={(event) => open(item, event.currentTarget)} aria-label={`Editar trayecto de ${item.from_label ?? 'origen sin indicar'} a ${item.to_label ?? 'destino sin indicar'}`}>Editar</button><button class="button button-quiet danger-action" disabled={busy || saving || !online} onclick={() => remove(item)} aria-label={`Eliminar trayecto de ${item.from_label ?? 'origen sin indicar'} a ${item.to_label ?? 'destino sin indicar'}`}>Eliminar</button></div>
 						</div>
 					</details>
 					{#if item.tags?.length}<ul class="tag-list journey-tags" aria-label="Etiquetas del trayecto">{#each item.tags as tag}<li><button type="button" class="tag-chip tag-filter" aria-pressed={appliedTag === tag} aria-label={`Filtrar por etiqueta ${tag}`} onclick={() => filterByTag(tag)}>{tag}</button></li>{/each}</ul>{/if}
@@ -515,6 +526,10 @@
 	.journey-details summary strong { font-size: 1rem; font-weight: 620; }
 	.journey-brief { font-size: .8125rem; }
 	.details-hint { font-size: .75rem; }
+	@media (max-width: 580px) {
+		.journey-details summary { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+		.details-hint { grid-column: 1; grid-row: auto; justify-self: start; }
+	}
 	.journey-expanded { padding-top: 14px; }
 	.journey-filter-details, .report-details { padding-block: 1px; }
 	.journey-filter-details > summary, .report-details > summary { color: var(--muted-strong); text-decoration: none; }

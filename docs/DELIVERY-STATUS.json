@@ -6,103 +6,103 @@
   "source_publication": {
     "status": "published",
     "source_only": true,
-    "scope_note": "Fuentes de optimización publicadas en ambos repositorios. La entrega web se acredita por separado; no se entregan nuevos APK/IPA ni se cierra la aceptación física.",
+    "scope_note": "Interfaz móvil publicada en ambos repositorios; relevo de copias candidato solo en privado. Web entregada; nativos compilados genéricos sin firma/configuración y sin aceptación física.",
     "repositories": [
       {
         "repository": "LucasLG92/leapmotor-pulse-beta",
         "visibility": "public",
         "branch": "main",
-        "commit_sha": "a1fe9b0ee6c13c0d383d1a26b1304c736bc91c9f",
-        "commit_url": "https://github.com/LucasLG92/leapmotor-pulse-beta/commit/a1fe9b0ee6c13c0d383d1a26b1304c736bc91c9f",
-        "code_commit_sha": "a1fe9b0ee6c13c0d383d1a26b1304c736bc91c9f",
+        "commit_sha": "730feac9b1395adcec8ecd79dc72ec23a287b9cf",
+        "commit_url": "https://github.com/LucasLG92/leapmotor-pulse-beta/commit/730feac9b1395adcec8ecd79dc72ec23a287b9cf",
+        "code_commit_sha": "730feac9b1395adcec8ecd79dc72ec23a287b9cf",
         "original_license_preserved": true
       },
       {
         "repository": "LucasLG92/leapmotor-pulse",
         "visibility": "private",
         "branch": "main",
-        "commit_sha": "ef84661b7b469e3bd002a3032fa342af5841f28d",
-        "commit_url": "https://github.com/LucasLG92/leapmotor-pulse/commit/ef84661b7b469e3bd002a3032fa342af5841f28d",
-        "code_commit_sha": "ef84661b7b469e3bd002a3032fa342af5841f28d",
+        "commit_sha": "9de343485d68d4f74939395d9b4175b90eecf413",
+        "commit_url": "https://github.com/LucasLG92/leapmotor-pulse/commit/9de343485d68d4f74939395d9b4175b90eecf413",
+        "code_commit_sha": "9de343485d68d4f74939395d9b4175b90eecf413",
         "original_license_preserved": true
       }
     ]
   },
   "external_ci": {
     "status": "passed",
-    "scope_note": "CI verify y dependency-security correctas sobre los heads exactos de PR19 pública y PR18 privada; incluye flujos de navegador con SQLite de producción y conserva lifecycle del instalador público. No acredita aceptación física.",
+    "scope_note": "Verify y dependency-security correctas sobre heads exactos de PR20 pública y PR19 privada; la segunda conserva fallback de productor genérico sin skips nuevos. CI iOS38487389431 sobre801a19b compiló App/Widget y arranque; no acredita dispositivos físicos.",
     "repositories": [
       {
         "repository": "LucasLG92/leapmotor-pulse-beta",
         "visibility": "public",
-        "published_commit_sha": "a1fe9b0ee6c13c0d383d1a26b1304c736bc91c9f",
-        "code_head_sha": "442c4084930b26c29287d9c177ecd85089315e8f",
-        "pr_verify_run": 38481182602,
-        "pr_security_run": 38481182620,
+        "published_commit_sha": "730feac9b1395adcec8ecd79dc72ec23a287b9cf",
+        "code_head_sha": "801a19b48bf2992523d0ce1830a0112b013089e2",
+        "pr_verify_run": 38487295336,
+        "pr_security_run": 38487297434,
         "runs": [
           {
-            "id": 38481182620,
+            "id": 38487297434,
             "name": "dependency-security",
             "event": "pull_request",
-            "head_sha": "442c4084930b26c29287d9c177ecd85089315e8f",
+            "head_sha": "801a19b48bf2992523d0ce1830a0112b013089e2",
             "status": "completed",
             "conclusion": "success",
-            "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38481182620"
+            "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38487297434"
           },
           {
-            "id": 38481182602,
+            "id": 38487295336,
             "name": "verify",
             "event": "pull_request",
-            "head_sha": "442c4084930b26c29287d9c177ecd85089315e8f",
+            "head_sha": "801a19b48bf2992523d0ce1830a0112b013089e2",
             "status": "completed",
             "conclusion": "success",
-            "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38481182602"
+            "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38487295336"
           },
           {
-            "id": 38481177001,
+            "id": 38487269598,
             "name": "verify",
             "event": "push",
-            "head_sha": "442c4084930b26c29287d9c177ecd85089315e8f",
+            "head_sha": "801a19b48bf2992523d0ce1830a0112b013089e2",
             "status": "completed",
             "conclusion": "success",
-            "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38481177001"
+            "url": "https://github.com/LucasLG92/leapmotor-pulse-beta/actions/runs/38487269598"
           }
         ]
       },
       {
         "repository": "LucasLG92/leapmotor-pulse",
         "visibility": "private",
-        "published_commit_sha": "ef84661b7b469e3bd002a3032fa342af5841f28d",
-        "code_head_sha": "fdff350b8ce7220ad8a38221bd55ad1c7609158b",
-        "pr_verify_run": 38481186348,
-        "pr_security_run": 38481186272,
+        "published_commit_sha": "9de343485d68d4f74939395d9b4175b90eecf413",
+        "code_head_sha": "252426ef42c64a7e43eff8472c4d7899fa1f56ea",
+        "pr_verify_run": 38488550906,
+        "pr_security_run": 38488550914,
         "runs": [
           {
-            "id": 38481186272,
+            "id": 38488550914,
             "name": "dependency-security",
             "event": "pull_request",
-            "head_sha": "fdff350b8ce7220ad8a38221bd55ad1c7609158b",
+            "head_sha": "252426ef42c64a7e43eff8472c4d7899fa1f56ea",
             "status": "completed",
             "conclusion": "success",
-            "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38481186272"
+            "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38488550914"
           },
           {
-            "id": 38481186348,
+            "id": 38488550906,
             "name": "verify",
             "event": "pull_request",
-            "head_sha": "fdff350b8ce7220ad8a38221bd55ad1c7609158b",
+            "head_sha": "252426ef42c64a7e43eff8472c4d7899fa1f56ea",
             "status": "completed",
             "conclusion": "success",
-            "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38481186348"
+            "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38488550906"
           },
           {
-            "id": 38481181615,
+            "id": 38488546226,
             "name": "verify",
             "event": "push",
-            "head_sha": "fdff350b8ce7220ad8a38221bd55ad1c7609158b",
+            "head_sha": "252426ef42c64a7e43eff8472c4d7899fa1f56ea",
             "status": "completed",
             "conclusion": "success",
-            "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38481181615"
+            "url": "https://github.com/LucasLG92/leapmotor-pulse/actions/runs/38488546226"
           }
         ]
       }
@@ -130,11 +130,11 @@
   },
   "latest_delivered": {
     "web": {
-      "increment": "optimization-20261014",
+      "increment": "mobile-reflow-20261014",
       "delivered_at": "2026-10-14",
       "status": "delivered",
-      "scope": "Sincronización y carga de pestañas bajo demanda, tres módulos backend optimizados, SQLite21/JSON17 sin migración. Salud y 37assets/26gzip contrastados por HTTPS; sin otro binario nativo.",
-      "evidence": "docs/OPTIMIZATION-RELEASE-20261014.json"
+      "scope": "Reflujo con texto200%, rejillas por espacio disponible y foco visible con altura reducida. Backend62 sin cambios/SQLite21/JSON17. HTTPS37assets+26gzip exactos. Aceptación física pendiente.",
+      "evidence": "docs/MOBILE-REFLOW-RELEASE-20261014.json"
     },
     "android": {
       "increment": "brand-continuity-r14-20261011",
@@ -146,14 +146,14 @@
       "evidence": "docs/DELIVERY-EVIDENCE.json: android; resumen histórico y límites en docs/ACCEPTANCE.md."
     },
     "ios": {
-      "increment": "brand-continuity-ios-20261011",
-      "delivered_at": "2026-10-11",
+      "increment": "mobile-reflow-ios-20261014",
+      "delivered_at": "2026-10-14",
       "status": "compiled_and_simulator_startup_verified",
       "app_and_widgetkit_compiled": true,
       "simulator_startup_verified": true,
       "signed_distribution": false,
       "phone_acceptance": false,
-      "evidence": "docs/DELIVERY-EVIDENCE.json: ios; resumen histórico y límites en docs/ACCEPTANCE.md."
+      "evidence": "docs/MOBILE-REFLOW-RELEASE-20261014.json:ios; IPA genérica unsigned no instalada."
     },
     "operations": {
       "increment": "monitor-install-20261012T082407Z",
@@ -169,7 +169,7 @@
       "version_name": "0.1.1",
       "version_code": 2,
       "evidence": "docs/CANDIDATE-QUALIFICATION.json",
-      "source_scope_note": "Current generic phase5 unsigned APK includes manual journey UI and exact native paths;77JUnit/0skip, Lint0errors17warnings,44mobileassets+2emptybridges. No configuration/signing/install/physical acceptance.",
+      "source_scope_note": "Candidato14Oct R4: interfaz actual con correcciones200%/campoenfocado;46assets exactos+2stubs. Build/Lint y104tests nativos sobre fuentes nativas sin cambios. Genérico/sin firma: no actualiza piloto r14 ni acredita instalación.",
       "phase8_artifact": {
         "apk": "outputs/pulse-phase8-unsigned-20261013.apk",
         "apk_sha256": "8618a4bc87530214bb3e44d14c50f6a46224480c00557bc7ac70cdf791c6eff4",
@@ -215,6 +215,15 @@
         "signed": false,
         "installed": false,
         "physical_acceptance": false
+      },
+      "current_mobile_artifact": {
+        "path": "outputs/leapmotor-pulse-android-phase2-current-20261014.apk",
+        "sha256": "500828a9cf54e58f9c8b892fa13dfa8b92a43b729c8f45195b91f4fb8473aad2",
+        "bytes": 6621421,
+        "signed": false,
+        "configured": false,
+        "delivered": false,
+        "receipt": "evidence/phase2-current-package-20261014/delivery-receipt-final-r4.json"
       }
     },
     "ios": {
@@ -222,7 +231,7 @@
       "marketing_version": "0.1.1",
       "build_number": 2,
       "evidence": "docs/CANDIDATE-QUALIFICATION.json",
-      "source_scope_note": "Phase5 App/Widget compiled and generic startup validated on public053cf1f/run38356488993;38packageXCTest plus reported UI method, PNG pixel/visual pass, generic unsigned IPA audited. No phone/OAuth/WidgetKit runtime acceptance.",
+      "source_scope_note": "14Oct:801a19b/run38487389431 App/Widget simulador e iPhoneOS compilados; arranqueXCTest/píxeles/captura aceptados;108entradas fuente exactas eIPAunsigned auditada. Firma/configuración/teléfono/widgets físicos pendientes.",
       "phase8_artifact": {
         "commit": "8c4aa1c581473590ec462836f41735b4510ae0eb",
         "run_id": 38324253913,
@@ -455,6 +464,40 @@
             "bytes": 1633
           }
         ]
+      },
+      "current_published_source_artifact": {
+        "commit": "801a19b48bf2992523d0ce1830a0112b013089e2",
+        "run_id": 38487389431,
+        "platform": "iPhoneOS",
+        "version": "0.1.1",
+        "build": 2,
+        "ipa_sha256": "87b77aa55db77c75375135584076dfcdbb0458758e796074f718b8de208db431",
+        "ipa_bytes": 1480891,
+        "ipa": "outputs/pulse-ios-reflow-unsigned-20261014-801a19b.ipa",
+        "files": 72,
+        "assets": 48,
+        "all_file_hashes_verified": true,
+        "native": {
+          "App": {
+            "arm64_iphone": true,
+            "no_code_signature_command": true
+          },
+          "PulseWidget": {
+            "arm64_iphone": true,
+            "no_code_signature_command": true
+          }
+        },
+        "cancellation_binary_markers": true,
+        "unconfigured": true,
+        "signed": false,
+        "physical_installation": false,
+        "widget_runtime": false,
+        "current_source_matches": 108,
+        "new_local_mobile_changes_not_in_this_ipa": [],
+        "scope": "Current published mobile corrections; all 108 web/mobile/iOS source inputs match; Linux/macOS bundle byte identity is not asserted.",
+        "simulator_startup_verified": true,
+        "simulator_visual_review": "Generic Pulse login and unconfigured notice visible, no private content",
+        "spm_advisory_status": "no_matched_known_commit_advisories"
       }
     },
     "web": {
@@ -559,7 +602,7 @@
       ],
       "remaining_software_checks": [
         "Recepción de copia descargada y restauración en navegador pendientes por permisos; no eludir denegaciones.",
-        "Activación/renovación y entrega Push reales, enlace nativo, red intermitente en dispositivos y accesibilidad con lectores de pantalla pendientes. El ciclo Push sintético local sí está verificado."
+        "Login y recepción de prueba Push en iPhone confirmados el14Oct en fase8. Renovación de avisos, enlace nativo, conexión intermitente y accesibilidad física con lectores de pantalla siguen pendientes."
       ],
       "local_increment_in_progress": {
         "name": "Cuadro de instrumentos y herramientas manuales",
@@ -570,7 +613,9 @@
         "validation": "1370backend/131subcasos/34SDKskip,65web/8puente; seis pantallas y dos temas a1280×720CSS; 35archivos HTTPS exactos. iPhone, reflujo móvil nuevo y VoiceOver pendientes."
       },
       "local_increment": "Entrega web13oct del cuadro de instrumentos y herramientas manuales verificada. Los recibos de incrementos y CI anteriores conservan su alcance histórico; las siete puertas reales permanecen abiertas.",
-      "current_local_increment_reference": "docs/EVOLUTION-QUALIFICATION.json"
+      "current_local_increment_reference": "docs/EVOLUTION-QUALIFICATION.json",
+      "latest_local_progress": "14Oct: errores asociados a20campos; cierres/guardados con foco visible y respetando foco externo; barra móvil/teclado y fechas de trayectos corregidos. 74web/11E2E+1tardío y36estados móviles sintéticos. iPhone/Android/VoiceOver/TalkBack y gates del roadmap abiertos.",
+      "current_accessibility_reference": "docs/PHASE1-ACCESSIBILITY-20261014.md"
     },
     {
       "id": "phase-2",
@@ -589,7 +634,8 @@
         "Firma/distribución e instalación física iOS; cualificación de App Groups/Keychain/OAuth/widgets. Arranque genérico actual del simulador pasa en run38346256969 con píxeles y revisión visual, sin aceptación de dispositivo o servicios reales."
       ],
       "local_increment": "Arranque genérico iOS aceptado por XCTest y captura del run38335055825; App/Widget simulador y iPhoneOS, nuevaIPA sin firma auditada.59pruebas/46subcasos fuente/stages y36XCTest Apple. PR11/10 en borrador, heads937833c/1c134d7, CI general/dependencias correcto. Firma/teléfono/OAuth/widgets reales pendientes; no se cierra fase2. Cualificación actual del incremento fase4: run38346256969,37XCTest y guardia de píxeles/captura revisada; APK/IPA actuales sin firma auditados. No cierra los criterios físicos.",
-      "current_local_increment_reference": "docs/EVOLUTION-QUALIFICATION.json"
+      "current_local_increment_reference": "docs/EVOLUTION-QUALIFICATION.json",
+      "latest_local_progress": "14Oct: APKunsigned R4 yIPAunsigned801a19b con las4correcciones;App/Widget/startupMacCI y108fuentes exactas. Firma/configuración/entrega física pendientes."
     },
     {
       "id": "phase-3",
@@ -696,13 +742,14 @@
       "local_increment": "Consumidor local de avisos genéricos de copias: consentimiento por dispositivo, journal durable, lectura protegida, deduplicación y reservas protegidas frente a restore. SQLite18/JSON15; suite completa, builds compartidas, QA390 y revisión independiente comprobados. Sin despliegue ni entrega física. Monitor anterior instalado el12oct; no se le atribuye el nuevo formato. Fuentes genéricas revisadas en PR pública10 y privada9, general/seguridad CI en ambos commits y build Apple del público correctos. APK e IPA actuales cualificados; sin despliegue o recepción física.",
       "qualification": "docs/SECURITY-QUALIFICATION.json",
       "remaining_software_checks": [
-        "Desplegar productor formato2 y consumidor con transferencia protegida de metadatos al UID de Pulse.",
+        "Mantener sesión/consentimiento vigentes; iPhone probado, otros dispositivos y recepción de fallo-recuperación natural pendientes.",
         "Comprobar recepción real de alerta/recuperación y caducidad/ausencia del monitor con consentimiento y sesión vigentes.",
         "Observar ciclos naturales y supervisión externa de la caída del consumidor/host.",
         "Completar copia fuera del servidor y restauración integral; seguridad, rendimiento y aceptación física siguen abiertos."
       ],
       "backup_alerts_qualification": "docs/BACKUP-ALERTS-QUALIFICATION.json",
-      "current_web_delivery": "Migración15→21 conservando recuentos y copia previa; recuperación de imagen sin rebobinar datos tras arranque. No acredita restauración integral ni nueva recepción real de alertas."
+      "current_web_delivery": "Migración15→21 conservando recuentos y copia previa; recuperación de imagen sin rebobinar datos tras arranque. No acredita restauración integral ni nueva recepción real de alertas.",
+      "latest_local_progress": "14Oct: productoresv2/relevo60s/consumidor/inboxRO activos;2informes/observaciones sanos. iPhone con consentimiento activo; pruebaPush aceptada y recepción confirmada porLucas. Sesión8h por defecto;fallo-recuperación real y otras puertas operativas pendientes."
     },
     {
       "id": "sentinel9final",
@@ -1613,5 +1660,58 @@
       "Backup and rollback material remain protected on the server; rollback changes image only without rewinding data.",
       "The initial staging mount syntax was corrected before activation; no failed image was activated."
     ]
+  },
+  "current_continuation": {
+    "date": "2026-10-14",
+    "classification": "web_delivered_native_candidates_operational_handoff_pending",
+    "web_deployed": true,
+    "new_sources_published": true,
+    "ui": "Reflujo y foco entregados;check0/0,build,6E2E y63recursos HTTPS exactos. Teléfonos y lectores reales pendientes.",
+    "backup_handoff": "Instalado:productoresv2/relevo60s/consumidor/ROmount,2informes/observaciones sanos. iPhone activo,pruebaPush aceptada y recepción confirmada;sesión limitada yfallo-recuperación real pendiente.",
+    "qualification": "docs/CONTINUATION-20261014.md",
+    "external_backup_destination": "none_selected; same Proxmox host only",
+    "physical_vehicle_available": false,
+    "apple_developer_account_available": false,
+    "public_pr": "https://github.com/LucasLG92/leapmotor-pulse-beta/pull/20",
+    "private_pr": "https://github.com/LucasLG92/leapmotor-pulse/pull/19",
+    "receipt": "docs/MOBILE-REFLOW-RELEASE-20261014.json"
+  },
+  "current_phase8_activation": {
+    "date": "2026-10-14",
+    "status": "infrastructure_active_iphone_consent_and_test_received",
+    "monitor_format": 2,
+    "handoff_installed": true,
+    "handoff_natural_cycle_verified": true,
+    "consumer_enabled": true,
+    "readonly_metadata_mount": true,
+    "healthy_reports": 2,
+    "matching_persisted_observations": 2,
+    "original_backup_units_preserved": true,
+    "image_unchanged": true,
+    "device_consent_enabled_count": 1,
+    "actual_push_test_sent": true,
+    "physical_notification_received": true,
+    "qualification": "docs/PHASE8-ACTIVATION-20261014.md",
+    "offsite_destination_available": false,
+    "push_test_service_accepted": true,
+    "physical_reception_evidence": "explicit user confirmation",
+    "authenticated_ui_checked": true
+  },
+  "current_phase1_accessibility": {
+    "status": "web_deployed_physical_acceptance_pending",
+    "document": "docs/PHASE1-ACCESSIBILITY-20261014.md",
+    "web_unit_tests_passed": 74,
+    "e2e_flows_passed": 11,
+    "additional_late_save_focus_test_passed": 1,
+    "synthetic_focus_checks_passed": 36,
+    "physical_iphone": false,
+    "physical_android": false,
+    "both_phones_available_user_confirmed": true,
+    "phase2_may_start": false,
+    "sequential_gate": "No avanzar hasta aceptación completa de fase1.",
+    "runtime_image": "sha256:e66e761894811b9d1e71eb640c9f8a803657b8d3642118eeb0d16b519daaa235",
+    "backend_unchanged": true,
+    "compose_files_preserved": 5,
+    "strict_https_assets_verified": 65
   }
 }

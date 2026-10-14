@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { onDestroy, onMount, untrack } from 'svelte';
+	import { onDestroy, onMount, tick, untrack } from 'svelte';
+	import { restoreFormFocus } from './form-focus';
 	import { ApiError, getNavigationFavorites } from './api';
 	import Glyph from './Glyph.svelte';
 	import { mapLinks } from './navigation';
@@ -19,6 +20,8 @@
 	let mounted = false, requestGeneration = 0, formGeneration = 0, observedKey = '';
 	let controller: AbortController | null = null;
 	let errorSummary = $state<HTMLDivElement | undefined>();
+	let editorElement = $state<HTMLFormElement | undefined>();
+	let editorOpener: HTMLElement | null = null;
 
 	function fingerprint(): string { return JSON.stringify(form); }
 	function dirty(): boolean { return formOpen && (sent || fingerprint() !== baseline); }
@@ -67,11 +70,13 @@
 		} finally { if (mounted && request === requestGeneration) loading = false; }
 	}
 
-	async function openForm() {
+	async function openForm(event: MouseEvent) {
+		const opener = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
 		if (busy || saving || !online) return;
 		const generation = formGeneration;
 		if (dirty() && !await confirmDiscard()) return;
 		if (!mounted || busy || saving || generation !== formGeneration) return;
+		editorOpener = opener;
 		formGeneration++; form = emptyForm(); errors = {}; saveError = ''; sent = false; sentAttempt = '';
 		formOpen = true; baseline = fingerprint();
 		requestAnimationFrame(() => { if (mounted) document.getElementById('favorite-name')?.focus(); });
@@ -87,7 +92,11 @@
 		if (busy || saving) return;
 		const generation = formGeneration;
 		if (!await confirmDiscard() || !mounted || busy || saving || generation !== formGeneration) return;
+		const ownedFocus = !!editorElement?.contains(document.activeElement);
 		formGeneration++; formOpen = false; form = emptyForm(); baseline = fingerprint(); errors = {}; saveError = ''; sent = false; sentAttempt = '';
+		const closedGeneration = formGeneration;
+		await tick();
+		if (mounted && ownedFocus && closedGeneration === formGeneration) restoreFormFocus(editorOpener, document.getElementById('favorites-heading'), editorElement);
 	}
 
 	function validate(): { name: string; latitude: number; longitude: number } | null {
@@ -117,16 +126,23 @@
 			if (!checked || !mounted) return;
 		}
 		if (!mounted || generation !== formGeneration || originalForm !== fingerprint()) return;
+		const ownedFocus = !!editorElement?.contains(document.activeElement);
+		let closedGeneration: number | null = null;
 		saving = true; saveError = '';
 		try {
 			sent = true; sentAttempt = attempt;
 			const created = await mutate('/api/navigation/favorites', 'POST', values, 'El lugar se ha añadido a tus favoritos.');
 			if (!mounted || generation !== formGeneration) return;
-			if (created) { formGeneration++; formOpen = false; form = emptyForm(); baseline = fingerprint(); sent = false; sentAttempt = ''; errors = {}; void load(); }
+			if (created) { formGeneration++; closedGeneration = formGeneration; formOpen = false; form = emptyForm(); baseline = fingerprint(); sent = false; sentAttempt = ''; errors = {}; void load(); }
 			else saveError = 'No se confirmó la creación. Conservamos los datos: actualiza la lista antes de decidir si reenvías esta alta.';
 		} catch {
 			if (mounted && generation === formGeneration) saveError = 'No se confirmó la creación. Conservamos los datos; revisa la lista antes de decidir si reenvías esta alta.';
-		} finally { if (mounted) saving = false; }
+		} finally {
+			if (mounted) {
+				saving = false; await tick();
+				if (ownedFocus && closedGeneration === formGeneration) restoreFormFocus(document.getElementById('favorite-add'), document.getElementById('favorites-heading'), editorElement);
+			}
+		}
 	}
 
 	async function remove(favorite: NavigationFavorite) {
@@ -149,20 +165,20 @@
 </script>
 
 <section class="favorites-panel" aria-labelledby="favorites-heading">
-	<header class="favorites-header"><div><h2 id="favorites-heading">Lugares guardados</h2></div><button class="button button-primary" type="button" disabled={busy || saving || !online} onclick={openForm}><Glyph name="plus" size={16} /> Añadir lugar</button></header>
+	<header class="favorites-header"><div><h2 id="favorites-heading" tabindex="-1">Lugares guardados</h2></div><button id="favorite-add" class="button button-primary" type="button" disabled={busy || saving || !online} onclick={openForm}><Glyph name="plus" size={16} /> Añadir lugar</button></header>
 	{#if actionError}<div class="favorite-error" role="alert"><span>{actionError}</span><button class="button button-secondary" type="button" onclick={() => void load()} disabled={!online || loading}>Actualizar lista</button></div>{/if}
 	{#if readError}<div class="favorite-error" role="alert"><span>{readError}</span><button class="button button-secondary" type="button" onclick={() => void load()} disabled={!online || loading}>Reintentar</button></div>{/if}
 	{#if loading}<p class="state-message" role="status">Consultando favoritos…</p>{/if}
 	{#if formOpen}
-		<form class="favorite-form" onsubmit={save} novalidate aria-labelledby="favorite-form-heading">
+		<form class="favorite-form" bind:this={editorElement} onsubmit={save} novalidate aria-labelledby="favorite-form-heading">
 			<div class="form-heading"><div><p class="eyebrow">Entrada manual</p><h3 id="favorite-form-heading">Añadir lugar</h3></div><button class="icon-button" type="button" aria-label="Cerrar formulario" onclick={closeForm} disabled={busy || saving}>×</button></div>
 			<p class="form-intro">Introduce nombre y coordenadas en esta pantalla. No se activa la ubicación del dispositivo ni se envía una búsqueda automática.</p>
 			{#if Object.keys(errors).length}<div class="form-errors" role="alert" tabindex="-1" bind:this={errorSummary}><strong>Revisa estos campos</strong><ul>{#each Object.entries(errors) as [key, message]}<li><a href={`#favorite-${key}`}>{message}</a></li>{/each}</ul></div>{/if}
 			{#if saveError}<div class="favorite-error" role="alert" aria-atomic="true"><span>{saveError}</span><button class="button button-secondary" type="button" onclick={() => void load()} disabled={!online || loading}>Actualizar lista</button></div>{/if}
 			<div class="favorite-fields">
-				<div class="field full"><label for="favorite-name">Nombre del lugar</label><input id="favorite-name" maxlength="160" autocomplete="off" placeholder="Por ejemplo, aparcamiento habitual" bind:value={form.name} disabled={busy || saving} aria-invalid={!!errors.name} />{#if errors.name}<small>{errors.name}</small>{/if}</div>
-				<div class="field"><label for="favorite-latitude">Latitud</label><input id="favorite-latitude" type="text" inputmode="decimal" placeholder="Coordenada manual" bind:value={form.latitude} disabled={busy || saving} aria-invalid={!!errors.latitude} />{#if errors.latitude}<small>{errors.latitude}</small>{/if}</div>
-				<div class="field"><label for="favorite-longitude">Longitud</label><input id="favorite-longitude" type="text" inputmode="decimal" placeholder="Coordenada manual" bind:value={form.longitude} disabled={busy || saving} aria-invalid={!!errors.longitude} />{#if errors.longitude}<small>{errors.longitude}</small>{/if}</div>
+				<div class="field full"><label for="favorite-name">Nombre del lugar</label><input id="favorite-name" maxlength="160" autocomplete="off" placeholder="Por ejemplo, aparcamiento habitual" bind:value={form.name} disabled={busy || saving} aria-invalid={!!errors.name} aria-describedby={errors.name ? 'favorite-name-error' : undefined} />{#if errors.name}<small id="favorite-name-error">{errors.name}</small>{/if}</div>
+				<div class="field"><label for="favorite-latitude">Latitud</label><input id="favorite-latitude" type="text" inputmode="decimal" placeholder="Coordenada manual" bind:value={form.latitude} disabled={busy || saving} aria-invalid={!!errors.latitude} aria-describedby={errors.latitude ? 'favorite-latitude-error' : undefined} />{#if errors.latitude}<small id="favorite-latitude-error">{errors.latitude}</small>{/if}</div>
+				<div class="field"><label for="favorite-longitude">Longitud</label><input id="favorite-longitude" type="text" inputmode="decimal" placeholder="Coordenada manual" bind:value={form.longitude} disabled={busy || saving} aria-invalid={!!errors.longitude} aria-describedby={errors.longitude ? 'favorite-longitude-error' : undefined} />{#if errors.longitude}<small id="favorite-longitude-error">{errors.longitude}</small>{/if}</div>
 			</div>
 			<div class="form-actions"><button class="button button-secondary" type="button" onclick={closeForm} disabled={busy || saving}>Cancelar</button><button class="button button-primary" type="submit" disabled={busy || saving || !online}>{saving ? 'Guardando…' : sent ? 'Revisar y reintentar' : 'Guardar favorito'}</button></div>
 		</form>

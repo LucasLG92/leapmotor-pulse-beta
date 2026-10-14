@@ -2,7 +2,7 @@
 
 El estado por fase y el registro de entregas están en [DELIVERY-STATUS.json](DELIVERY-STATUS.json), la fuente única de estado. Esta hoja mantiene el alcance y la aceptación esperada. [ACCEPTANCE.md](ACCEPTANCE.md) conserva debajo de su cabecera los recibos históricos con sus fechas y límites.
 
-El trabajo sigue nueve fases en orden: coherencia/UI, clientes móviles, B10, cargas/energía, trayectos/informes, integraciones/navegación, controles/rutinas, estabilidad/recuperación y, al final, centinela/cámaras. Las fases pueden tener trabajo de software mientras esperan una puerta real, respetando dependencias. Una entrega, build, CI, fixture o checker correcto no declara terminado el objetivo.
+El trabajo sigue nueve fases en orden: coherencia/UI, clientes móviles, B10, cargas/energía, trayectos/informes, integraciones/navegación, controles/rutinas, estabilidad/recuperación y, al final, centinela/cámaras. Desde el14oct, por instrucción de Lucas, no se avanza a la siguiente fase hasta terminar y aceptar completamente la anterior. Se conservan los incrementos previos. Una entrega, build, CI, fixture o checker correcto no declara terminado el objetivo.
 
 ## Criterios que se conservan
 
@@ -36,6 +36,13 @@ Las marcas completadas de esta lista describen únicamente trabajo del candidato
 
 ### 1. Coherencia y UI/UX
 
+Incremento vigente: [accesibilidad14oct](PHASE1-ACCESSIBILITY-20261014.md). Se han comprobado cierres, guardados y errores, barra móvil y fechas legibles con registros sintéticos. Lucas dispone de ambos teléfonos; su aceptación física aún está pendiente.
+
+- [x] Implementar la dirección «cuadro de instrumentos y cuaderno de viaje» en las seis pantallas; render1280×720 CSS Claro/Charcoal sin overflow, borrador del simulador y actualización PWA local comprobados. [Dirección y límites](VISUAL-DIRECTION.md).
+- [ ] Cualificar el rediseño en iPhone real: reflujo móvil, escala de texto, VoiceOver, recepción de la PWA y uso habitual.
+
+- [x] Renovar composición compartida: coche protagonista, navegación responsive, Claro/Charcoal, líneas temporales, filas abiertas y métricas. Candidato local del [incremento13oct](EVOLUTION-20261013.md); aceptación física y lectores de pantalla pendientes.
+
 - [x] Registrar entregas históricas y candidatos con sus versiones, límites y resúmenes de recibos verificables.
 - [x] Simplificar «Preparar Pulse» a un desplegable, explicar configuración frente a comprobación real y destacar el siguiente paso.
 - [x] Abrir preparación desde Coche y desde el diario vacío, con foco y protección de borradores.
@@ -50,11 +57,17 @@ Las marcas completadas de esta lista describen únicamente trabajo del candidato
 - [ ] Completar activación y renovación de avisos, enlace real y conexión intermitente. Recepción del JSON descargado y restauración en navegador pendientes por permisos de carga/descarga denegados; sin elusión. La simulación offline por CDP tampoco se ejecutó por denegación; accesibilidad física pendiente.
 - [ ] Entregar el candidato y comprobar accesibilidad en los teléfonos.
 
+Ciclo Push sintético comprobado en la continuación: inspección local fallida visible, baja verificada antes del reemplazo, recuperación local sin repetir revocación y guardas tras desmontaje. La recepción de una prueba Push en iPhone fue confirmada en fase8 el14oct; la renovación, accesibilidad completa y restantes gates siguen pendientes. [Evidencia](VALIDATION.md#ciclo-push-y-publicacion-de-fuentes).
+
 ### 2. PWA, aplicaciones y widgets
 
-- [x] Incorporar la recuperación compartida del arranque y las correcciones actuales a un APK Android genérico local con Lint activo.
+- [x] Incorporar la recuperación compartida del arranque y el incremento Push anterior a un APK Android genérico local con Lint activo. El incremento de avisos de copias ya está incorporado a un nuevo APK genérico cualificado, sin firma o instalación física.
 - [ ] Preparar el APK operativo con configuración y firma autorizadas.
-- [ ] Cualificar App y WidgetKit iOS de la revisión final, completar firma y distribución.
+- [x] Cualificar App/WidgetKit en Xcode: Debug/Release simulador y Release iPhoneOS con IPA arm64 auditada. CI38315636834 y38324253913 conservan revisiones anteriores; la captura vacía de la segunda permanece como evidencia histórica. El head937833c pasa compilación y arranque genérico semántico en CI38335055825. No acredita widget runtime o teléfono.
+- [x] Añadir observador XCTest independiente y diagnóstico protegido: 55pruebas/46subcasos locales y revisión sin P1/P2; compila en Apple. PR pública11/privada10 en borrador, sin cambios de producto o firma.
+- [x] Dar a XCTest la responsabilidad del arranque y etiquetar la PNG inicial como pretest. 59pruebas/46subcasos y revisión4fuentes; Apple run38332785977 fallido por opción CLI; corregido, run38335055825 termina success con método/UI y captura auditados.
+- [x] Cualificar la observación automática del acceso visible en run38335055825: método XCTest, protocolo/PNG internos y revisión visual confirmados. Tres fallos anteriores conservados: comando UI sin causa retenida (run38329155408), timeout de launch antes de XCTest (run38330388042) y opción CLI rechazada (run38332785977), con cleanup correcto. El éxito actual no demuestra retrospectivamente la causa de la captura vacía o del error descartado.
+- [ ] Completar firma, distribución e instalación física iOS, App Groups/Keychain/OAuth/widgets.
 - [ ] Verificar actualización de Android desde r14 con la misma identidad y firma, sin pérdida de datos; conservar una recuperación adecuada a las restricciones de downgrade.
 - [ ] Verificar retorno OAuth, caducidad y revocación en ambos teléfonos.
 - [ ] Verificar actualización de la PWA instalada, offline, recuperación, avisos con bloqueo y sesión/push tras reiniciar el servidor.
@@ -69,12 +82,13 @@ Las marcas completadas de esta lista describen únicamente trabajo del candidato
 - [ ] Investigar y mapear únicamente señales demostradas: carga/cable, cierre, climatización, puertas/maletero, temperaturas, neumáticos y ubicación.
 - [ ] Comprobar desconexiones, reinicio, reposo y convivencia con la app oficial; ajustar consultas sin prometer cobertura durante sueño profundo.
 
-Este incremento sigue siendo un candidato local, documentado en [PHASE3-QUALIFICATION.json](PHASE3-QUALIFICATION.json) y [TELEMETRY.md](TELEMETRY.md). No demuestra que estas señales estén disponibles ni cualificadas físicamente en el B10 objetivo; la fase 3 sigue abierta.
+Este incremento sigue siendo un candidato local, documentado en [PHASE3-QUALIFICATION.json](PHASE3-QUALIFICATION.json) y [TELEMETRY.md](TELEMETRY.md). No demuestra que estas señales estén disponibles ni cualificadas físicamente en el B10 de Lucas; la fase 3 sigue abierta.
 
 ### 4. Cargas y energía
 
-- [x] Reservar altas manuales por propietario, persistir intención/carga atómicamente y reintentar sin duplicar; conflictos, caducidad, restore y fallo de respuesta comprobados localmente. La UI conserva el borrador y reconoce guardados sin confirmar al salir. SQLite19/JSON15; compatibilidad sin reserva no ofrece deduplicación. [Cualificación](CHARGE-SAVE-QUALIFICATION.json).
+- [x] Comparativa mensual de registros manuales y simulador informativo con tarifas/eficiencia explícitas, huecos y energía insuficiente; ningún control del coche/cargador. [Límites](EVOLUTION-20261013.md).
 
+- [x] Reservar altas manuales por propietario, persistir intención/carga atómicamente y reintentar sin duplicar; conflictos, caducidad, restore y fallo de respuesta comprobados localmente. La UI conserva el borrador y reconoce guardados sin confirmar al salir. SQLite19/JSON15; compatibilidad sin reserva no ofrece deduplicación. [Cualificación](CHARGE-SAVE-QUALIFICATION.json).
 
 - [ ] Conectar el cargador real y contrastar inicio, fin, pausas, reanudaciones y kWh.
 - [ ] Implementar el adaptador concreto de intervalos vinculado inequívocamente a la sesión; evitar duplicados y conservar huecos.
@@ -87,22 +101,25 @@ La revisión del origen confirma que los buckets de evcc no comparten ID de sesi
 
 ### 5. Trayectos, historial e informes
 
+- [x] Notas/etiquetas/búsqueda, CSV y vista imprimible en PWA; planes por fecha/km, historial y costes manuales. SQLite21/JSON17, importación1–16 y guardas de replay/restore. Los formatos nuevos no amplían el puente nativo de archivos.
+
 - [x] Implementar alternativa manual privada: fechas/paradas, distancia y energía opcionales, reintentos sin duplicar, revisión al editar, paginación, informe30/90/365d y meses. SQLite20/JSON16, copia/restauración por propietario.
 - [x] Comprobar UI compartida con SQLite y HTTP reales propios, fallos sintéticos, borradores y datos ausentes; compilar y auditar APK genérico sin firma. El nuevo build Apple y la recepción del JSON descargado tienen su evidencia separada.
-
 
 - [ ] Implementar recepción y persistencia de trayectos reales.
 - [ ] Detectar inicio/fin/paradas con señales verificadas; conservar distancia y duración, origen/destino y recorrido si existe ubicación.
 - [ ] Calcular consumo y eficiencia solo con muestras suficientes; explicar cobertura y ausencia de datos.
 - [ ] Resolver recorridos cortos, huecos, reinicios y cambios de día; completar agregados y exportación sin mezclar demo.
 
-Notas/etiquetas, unión reversible de trayectos, informes mensuales ampliados, recordatorios por odómetro y salud/capacidad estimada de batería son mejoras propuestas. Una estimación de salud requiere método y límites propios.
+Notas/etiquetas, informes manuales y planes por odómetro están implementados en el candidato local13oct. La unión reversible de trayectos, informes automáticos ampliados y salud/capacidad estimada de batería siguen propuestos. Una estimación de salud requiere método y límites propios.
 
 El SDK fijado conserva registros crudos de kilometraje sin un esquema tipado de viaje B10 ni unidades definidas. La paginación completa no acredita cobertura de todos los viajes. Los campos y la muestra autorizada necesarios para avanzar se detallan en [SOURCE-QUALIFICATION.md](SOURCE-QUALIFICATION.md).
 
 La referencia LPB10 revisada en un commit fijado reconstruye segmentos por odómetro/SoC y fecha las muestras con el reloj del cliente. No acredita frescura física, identidad remota del viaje o energía medida; no se adopta como cierre de la ingestión real.
 
 ### 6. Home Assistant, ABRP y navegación
+
+- [x] Favoritos privados con coordenadas manuales, deduplicación y apertura explícita de mapas externos; sin GPS ni envío al coche.
 
 - [x] Admitir la selección explícita de dos temperaturas y cuatro presiones ya normalizadas, con clases/unidades Home Assistant, rangos estrictos, disponibilidad/caducidad y limpieza limitada a entidades propias. Defaults y selecciones previas conservados; software comprobado con transporte sintético, HTTP y UI a 390 px en ambos temas.
 - [ ] Comprobar recepción real y descubrimiento MQTT en Home Assistant, permisos, caducidad y reconexión del broker.
@@ -111,7 +128,7 @@ La referencia LPB10 revisada en un commit fijado reconstruye segmentos por odóm
 - [ ] Completar rutas por carretera y autonomía prevista si se mantiene esa función, con datos y modelo cualificados.
 - [ ] Comprobar consentimiento, privacidad y desconexión de cada integración.
 
-Favoritos, destinos frecuentes y dirección legible del coche son mejoras propuestas. Enviar un destino al vehículo pertenece a la fase 7.
+Los favoritos manuales están implementados en el candidato local13oct. Destinos frecuentes automáticos y dirección legible del coche siguen propuestos. Enviar un destino al vehículo pertenece a la fase 7.
 
 Este incremento de fase 6 no activa ninguna integración, no añade consultas al coche y no comparte campos que el operador no haya seleccionado. Detalle en [MQTT.md](MQTT.md) y [MQTT-QUALIFICATION.json](MQTT-QUALIFICATION.json). En aquel incremento SQLite16/JSON14 no cambiaron; la evolución posterior a SQLite17/JSON15 corresponde al diagnóstico de fase 9. Se conserva la planificación externa documentada mientras se espera la preferencia solicitada sobre rutas internas; el pendiente condicional de rutas/autonomía permanece visible.
 
@@ -126,13 +143,12 @@ Las rutinas y los horarios son ampliaciones propuestas, sujetas a capacidades re
 
 ### 8. Estabilidad y recuperación
 
-- [x] Comprobar los seis locks del candidato con OSV fijado, conservar informe/procedencia/resumen y fallar ante errores, avisos o inventario incompleto. Pruebas focales y ejecución real local; la retención en CI está preparada, sin ejecución externa de esta revisión. [Cualificación acotada](SECURITY-QUALIFICATION.json).
+- [x] Comprobar los seis locks del candidato con OSV fijado, conservar informe/procedencia/resumen y fallar ante errores, avisos o inventario incompleto. Los workflows externos `dependency-security` y `verify` finalizaron correctamente en ambos commits publicados; su alcance y enlaces están en [el registro de entrega](DELIVERY-STATUS.json). Los commits actuales de PR pública10/privada9 también pasan general/seguridad; no cierra la revisión integral de seguridad. [Cualificación acotada](SECURITY-QUALIFICATION.json).
 - [ ] Cerrar revisión integral de dependencias, imagen, componentes nativos y toolchains sobre el artefacto final.
-- [x] Mantener el monitor comunitario metadata-only y ampliar el estado con journal formato 2, hasta 64 transiciones por perfil. La suite focal registró 32 pruebas y 54 subcasos; no comprueba contenido, restauración ni instalación real.
+- [x] Preparar checker de copias ausentes/antiguas/fallidas, metadata/tamaño/permisos/disco y estado local protegido con transiciones alerta/recuperación. 29tests/45subcasos y verificación estática de unidades. Monitor instalado con autorización en Proxmox/CT107 el12oct: ambas comprobaciones reales saludables dentro de sus servicios, timers horarios activos y OnFailure cargado. Reversión protegida; no integridad de contenido/restore ni aviso entregado.
 - [x] Instalar y observar el monitor con autorización; hashes, permisos y visibilidad del montaje real verificados; Pulse y scripts de copia conservados, sin ejecutar copias.
-- [x] Preparar un consumidor Push separado, desactivado por defecto, con consentimiento por dispositivo y payload genérico; el productor comunitario nunca envía avisos.
-- [ ] Transferir los metadatos al UID del consumidor mediante un canal protegido y comprobar recepción/ausencia/caducidad con una instancia autorizada; observar ciclos naturales y cualificar recuperación operativa.
-- [ ] Antes de cualquier actualización real, preservar el esquema efectivamente desplegado y su artefacto compatible; la migración local 17→18 no identifica el esquema instalado.
+- [x] Implementar consumidor Web Push de metadatos con consentimiento por dispositivo, mensajes genéricos, journal durable, deduplicación y guardas frente a restauración. SQLite18/JSON15, 1241 pruebas/118subcasos, 46web/7móvil, builds compartidas y QA efectiva390 en ambos temas. Revisión independiente sin P1/P2 pendientes; fuentes genéricas publicadas en borradores de PR, CI y paquetes actuales cualificados. Sin despliegue o avisos reales. [Contrato y límites](BACKUP-ALERTS.md), [cualificación](BACKUP-ALERTS-QUALIFICATION.json).
+- [ ] Desplegar journal formato2 y consumidor, con transferencia protegida de metadatos al UID de Pulse; comprobar recepción de fallo/recuperación, ausencia/caducidad del monitor y ciclos naturales. El monitor instalado anteriormente no se actualiza en este incremento. La caída de Pulse/host necesita supervisión externa.
 - [ ] Actualizar recuperación y rollback; completar copia fuera del servidor y restauración integral.
 - [ ] Comprobar rechazo de otra cuenta real y recuperación conjunta de host, Pulse, proxy y autenticación con acceso humano posterior.
 - [ ] Medir rendimiento, tráfico y batería con teléfonos e integraciones reales.
@@ -150,7 +166,9 @@ Las rutinas y los horarios son ampliaciones propuestas, sujetas a capacidades re
 
 ## Referencias funcionales y opcionales
 
-[Leapmotor Mate](https://github.com/ProtossBlaster/leapmotor-mate) y [LPB10](https://github.com/txurtxil/LPB10) orientan las posibilidades y los flujos; no acreditan capacidades del B10 objetivo ni autorizan copiar su implementación. Android Auto/CarPlay, otros modelos, varios vehículos e idiomas adicionales quedan fuera del cierre actual salvo decisión expresa.
+[Leapmotor Mate](https://github.com/ProtossBlaster/leapmotor-mate) y [LPB10](https://github.com/txurtxil/LPB10) orientan las posibilidades y los flujos; no acreditan capacidades del B10 de Lucas ni autorizan copiar su implementación. Android Auto/CarPlay, otros modelos, varios vehículos e idiomas adicionales quedan fuera del cierre actual salvo decisión expresa.
+
+- [x] Verificar arranque genérico en XCTestApple run38335055825 y revisar PNG interna; nuevaIPAarm64App/Widget sin firma auditada. Este hito no acepta teléfono, firma, OAuth o widgets físicos.
 
 El diario manual es un incremento de software, no una recepción del vehículo. [Contrato](MANUAL-JOURNEYS.md) y [cualificación con límites](MANUAL-JOURNEY-QUALIFICATION.json).
 
@@ -160,24 +178,3 @@ El diario manual es un incremento de software, no una recepción del vehículo. 
 - [ ] Cualificar compilación y entrega física de este nuevo cliente según [NATIVE-REPORT-EXPORT-QUALIFICATION.json](NATIVE-REPORT-EXPORT-QUALIFICATION.json); firma, proveedores de archivos y recepción en teléfonos siguen separados.
 
 No cierra la ingestión automática de trayectos ni modifica nueve fases, siete puertas reales o A0–A12. Centinela/cámaras permanece al final.
-
-## Incremento candidato de interfaz y herramientas manuales — 13 de octubre de 2026
-
-El candidato local incorpora la composición cuadro de instrumentos/cuaderno de viaje, registros y simulación informativa de energía, trayectos y planes manuales, favoritos explícitos y ajustes agrupados. La cualificación de software y el QA visual constan en [EVOLUTION-QUALIFICATION.json](EVOLUTION-QUALIFICATION.json). Estos hitos describen código candidato, no una entrega.
-
-### Fase 1: experiencia de usuario
-
-- [x] Aplicar jerarquía del coche y sus lecturas, cronología de Actividad/Estados y filas abiertas para tareas manuales; conservar Claro/Charcoal y estados de borrador/error.
-- [x] Revisar las seis rutas a 1280×720 CSS en ambos temas, borrador del simulador y actualización local de PWA.
-- [ ] Cualificar reflujo de esta revisión en teléfonos, VoiceOver, escala del sistema y uso físico.
-
-### Incrementos candidatos relacionados
-
-- [x] Comparar registros manuales por mes y mantener el simulador como herramienta informativa bajo demanda.
-- [x] Añadir historial de trayectos manuales y planes de mantenimiento con referencias introducidas por la persona.
-- [x] Añadir favoritos con coordenadas manuales y enlaces externos explícitos, sin GPS.
-- [ ] Recibir y validar datos reales de B10, cargador, trayectos e integraciones; aceptar servicios y dispositivos reales.
-- [ ] Completar firma/distribución nativa, autenticación, widgets, accesibilidad y las siete puertas reales pendientes.
-
-El estado global permanece bloqueado, con nueve fases y siete puertas reales abiertas. Consultar [estado de entrega](DELIVERY-STATUS.json); no inferir finalización del producto a partir de pruebas sintéticas o builds.
-
