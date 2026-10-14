@@ -1,7 +1,7 @@
 import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
@@ -18,7 +18,8 @@ async function eventually(assertion, timeout = 5000) {
 }
 before(async () => {
 	directory = await mkdtemp(join(tmpdir(), 'pulse-browser-tests-'));
-	server = spawn(process.env.PULSE_E2E_PYTHON || 'python', ['e2e/server.py', directory], { stdio: ['ignore', 'pipe', 'inherit'] });
+	const syntheticEnvironment = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith('PULSE_')));
+	server = spawn(process.env.PULSE_E2E_PYTHON || 'python', ['e2e/server.py', directory], { env: syntheticEnvironment, stdio: ['ignore', 'pipe', 'inherit'] });
 	origin = await new Promise((resolve, reject) => {
 		const timer = setTimeout(() => reject(new Error('El servidor sintético no arrancó')), 10_000);
 		let output = '';
@@ -52,6 +53,133 @@ async function pageFor(t, viewport = { width: 1280, height: 800 }) {
 	return page;
 }
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+
+async function openBackupPanel(page, path = '/settings') {
+	await page.goto(`${origin}${path}`);
+	await page.getByRole('button', { name: 'Datos', exact: true }).click();
+	await page.getByRole('button', { name: 'Exportar JSON', exact: true }).waitFor();
+}
+async function selectSyntheticBackup(page, data) {
+	const chooser = page.waitForEvent('filechooser');
+	await keyboardActivate(page.getByRole('button', { name: 'Elegir archivo', exact: true }));
+	await (await chooser).setFiles({ name: 'copia-sintetica.json', mimeType: 'application/json', buffer: Buffer.from(typeof data === 'string' ? data : JSON.stringify(data)) });
+}
+
+test('exportar recibe una copia JSON válida del servidor sintético sin perder el contexto de Datos', { timeout: 20_000 }, async t => {
+	const page = await pageFor(t, { width: 390, height: 844 });
+	await settings(page, 'Copia de prueba de interfaz'); await openBackupPanel(page);
+	const downloadEvent = page.waitForEvent('download');
+	await keyboardActivate(page.getByRole('button', { name: 'Exportar JSON', exact: true }));
+	const download = await downloadEvent;
+	assert.equal(download.suggestedFilename(), 'leapmotor-pulse-backup.json');
+	assert.equal(await download.failure(), null);
+	const data = JSON.parse(await readFile(await download.path(), 'utf8'));
+	assert.equal(data.schema_version, 17); assert.equal(data.settings.vehicle_name, 'Copia de prueba de interfaz');
+	await eventually(async () => assert.equal(await page.getByRole('button', { name: 'Exportar JSON', exact: true }).isEnabled(), true));
+	assert.equal(await page.getByRole('button', { name: 'Datos', exact: true }).getAttribute('aria-pressed'), 'true');
+	await activeIs(page, page.getByRole('button', { name: 'Exportar JSON', exact: true }));
+});
+
+test('cancelar una restauración conserva el borrador y no envía el archivo al servidor', { timeout: 20_000 }, async t => {
+	const page = await pageFor(t); await page.goto(`${origin}/settings`);
+	const backup = await (await page.request.get(`${origin}/api/export`)).json(); let imports = 0;
+	page.on('request', request => { if (new URL(request.url()).pathname === '/api/import') imports++; });
+	await page.locator('#vehicle-name').fill('Borrador anterior a la copia');
+	await page.getByRole('button', { name: 'Datos', exact: true }).click();
+	await selectSyntheticBackup(page, backup);
+	await page.getByRole('dialog').waitFor(); await page.keyboard.press('Escape');
+	await page.getByRole('dialog').waitFor({ state: 'hidden' });
+	await eventually(() => activeIs(page, page.getByRole('button', { name: 'Elegir archivo', exact: true })));
+	assert.equal(imports, 0); assert.equal(await page.locator('#backup-file').inputValue(), '');
+	await page.getByRole('button', { name: 'Vehículo', exact: true }).click();
+	assert.equal(await page.locator('#vehicle-name').inputValue(), 'Borrador anterior a la copia');
+});
+
+test('restaurar concilia los datos y conserva un destino de foco visible en Datos', { timeout: 20_000 }, async t => {
+	for (const { path, viewport, fontSize } of [{ path: '/settings', viewport: { width: 390, height: 844 }, fontSize: 16 }, { path: '/settings#preparation', viewport: { width: 320, height: 450 }, fontSize: 32 }]) {
+	const page = await pageFor(t, viewport);
+	await settings(page, 'Nombre de la copia restaurada');
+	const backup = await (await page.request.get(`${origin}/api/export`)).json();
+	await settings(page, 'Nombre antes de restaurar'); await openBackupPanel(page, path);
+	await page.evaluate(size => document.documentElement.style.fontSize = `${size}px`, fontSize);
+	await page.getByRole('button', { name: 'Vehículo', exact: true }).click();
+	await page.locator('#vehicle-name').fill('Borrador que se descartará al confirmar');
+	await page.getByRole('button', { name: 'Datos', exact: true }).click();
+	await selectSyntheticBackup(page, backup);
+	await page.getByRole('dialog').getByRole('button', { name: 'Restaurar datos', exact: true }).click();
+	await eventually(async () => assert.equal(await page.locator('#vehicle-name').inputValue(), 'Nombre de la copia restaurada'));
+	await settle(page);
+	t.diagnostic(JSON.stringify(await page.evaluate(() => ({ active: document.activeElement?.tagName, id: document.activeElement?.id, dataSelected: document.querySelector('button[aria-controls="settings-panel-data"]')?.getAttribute('aria-pressed') }))));
+	assert.equal(await page.getByRole('button', { name: 'Datos', exact: true }).getAttribute('aria-pressed'), 'true');
+	assert.equal(await page.locator('#backup-heading').evaluate(el => el === document.activeElement), true);
+	assert.equal(await page.locator('#backup-heading').isVisible(), true);
+	assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), viewport.width);
+	assert.equal(await page.locator('#backup-heading').evaluate(el => { const rect = el.getBoundingClientRect(); return document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2) === el; }), true, 'el encabezado enfocado queda visible ante la navegación fija');
+	const link = page.getByRole('link', { name: 'Energía', exact: true });
+	if (!await link.isVisible()) await page.locator('.compact-mobile-nav summary').click();
+	await link.click();
+	await eventually(() => assert.equal(new URL(page.url()).pathname, '/energy'));
+	assert.equal(await page.getByRole('dialog').count(), 0, 'el borrador descartado no deja una guarda antigua');
+	}
+});
+
+test('restaurar respeta el foco que el usuario ha movido a la navegación mientras esperaba', { timeout: 20_000 }, async t => {
+	const page = await pageFor(t); await settings(page, 'Copia con foco externo');
+	const backup = await (await page.request.get(`${origin}/api/export`)).json(); await openBackupPanel(page);
+	let release, fetched = false; const held = new Promise(resolve => { release = resolve; }); t.after(() => release());
+	await page.route('**/api/import', async route => { const response = await route.fetch(); fetched = true; await held; await route.fulfill({ response }); });
+	await selectSyntheticBackup(page, backup); await page.getByRole('dialog').getByRole('button', { name: 'Restaurar datos', exact: true }).click();
+	await eventually(() => assert.equal(fetched, true));
+	const link = page.getByRole('link', { name: 'Energía', exact: true }); await link.focus();
+	release();
+	await eventually(async () => assert.equal(await page.getByRole('button', { name: 'Elegir archivo', exact: true }).isEnabled(), true));
+	await settle(page); await activeIs(page, link);
+});
+
+test('una restauración aplicada con lectura fallida permite recuperar la vista sin reenviar el archivo', { timeout: 20_000 }, async t => {
+	const page = await pageFor(t); await settings(page, 'Copia para recuperar lectura');
+	const backup = await (await page.request.get(`${origin}/api/export`)).json(); await openBackupPanel(page);
+	let imports = 0, applied = false, readsReleased = false;
+	await page.route('**/api/import', async route => { imports++; const response = await route.fetch(); applied = true; await route.fulfill({ response }); });
+	await page.route('**/api/state', route => applied && !readsReleased ? route.fulfill({ status: 503, json: { detail: 'Lectura sintética no disponible' } }) : route.continue());
+	await selectSyntheticBackup(page, backup); await page.getByRole('dialog').getByRole('button', { name: 'Restaurar datos', exact: true }).click();
+	const retry = page.getByRole('button', { name: 'Reintentar conexión', exact: true }); await retry.waitFor();
+	assert.match(await page.getByRole('alert').textContent(), /se restauró, pero no se pudo leer/);
+	await eventually(() => activeIs(page, retry));
+	readsReleased = true; await keyboardActivate(retry);
+	await page.getByRole('button', { name: 'Elegir archivo', exact: true }).waitFor();
+	assert.equal(imports, 1); assert.equal(await page.getByRole('button', { name: 'Datos', exact: true }).getAttribute('aria-pressed'), 'true');
+	await eventually(() => activeIs(page, page.locator('#backup-heading')));
+});
+
+test('una respuesta perdida de restauración conserva el borrador y no repite el POST automáticamente', { timeout: 20_000 }, async t => {
+	const page = await pageFor(t); await page.goto(`${origin}/settings`);
+	const backup = await (await page.request.get(`${origin}/api/export`)).json();
+	await page.locator('#vehicle-name').fill('Borrador pendiente del resultado'); await page.getByRole('button', { name: 'Datos', exact: true }).click();
+	let imports = 0; await page.route('**/api/import', async route => { imports++; await route.fetch(); await route.abort('failed'); });
+	await selectSyntheticBackup(page, backup); await page.getByRole('dialog').getByRole('button', { name: 'Restaurar datos', exact: true }).click();
+	const error = page.locator('.settings-card[aria-labelledby="backup-heading"] .form-error');
+	await eventually(async () => assert.match(await error.textContent(), /No se ha podido confirmar/));
+	assert.equal(await page.getByRole('button', { name: 'Elegir archivo', exact: true }).isEnabled(), true);
+	await page.getByRole('button', { name: 'Vehículo', exact: true }).click(); await settle(page);
+	assert.equal(await page.locator('#vehicle-name').inputValue(), 'Borrador pendiente del resultado'); assert.equal(imports, 1);
+});
+
+test('un JSON inválido y una copia rechazada muestran errores persistentes sin sustituir los datos', { timeout: 20_000 }, async t => {
+	const page = await pageFor(t); await settings(page, 'Datos que deben conservarse'); await openBackupPanel(page);
+	let imports = 0; page.on('request', request => { if (new URL(request.url()).pathname === '/api/import') imports++; });
+	await selectSyntheticBackup(page, '{json inválido');
+	const error = page.locator('.settings-card[aria-labelledby="backup-heading"] .form-error');
+	await eventually(async () => assert.match(await error.textContent(), /JSON válido/));
+	assert.equal(imports, 0); assert.equal(await page.getByRole('dialog').count(), 0);
+	await selectSyntheticBackup(page, { schema_version: 999 });
+	await page.getByRole('dialog').getByRole('button', { name: 'Restaurar datos', exact: true }).click();
+	await eventually(async () => assert.match(await error.textContent(), /No se ha podido confirmar/));
+	assert.equal(imports, 1);
+	assert.equal((await (await page.request.get(`${origin}/api/export`)).json()).settings.vehicle_name, 'Datos que deben conservarse');
+	assert.equal(await page.getByRole('button', { name: 'Elegir archivo', exact: true }).isEnabled(), true);
+	assert.equal(await page.locator('#backup-file').inputValue(), '');
+});
 
 test('las seis secciones conservan el reflujo móvil y los controles con texto al 200 %', { timeout: 60_000 }, async t => {
 	const page = await pageFor(t);

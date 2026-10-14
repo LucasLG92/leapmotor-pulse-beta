@@ -19,7 +19,7 @@
 	let { pulseState, busy, online, revision, user, theme, canInstall, mutate, createWidgetPairing, notifications, runNotificationAction, confirmAction, setTheme, onLogout, onExport, onImport, onInstall, drafts, settingsSection }: PageProps = $props();
 	type SettingsSection = 'vehicle' | 'connections' | 'preferences' | 'data';
 	let settingsSectionOverride = $state<SettingsSection | null>(null);
-	let activeSettingsSection = $derived(settingsSectionOverride ?? (settingsSection === 'preparation' ? 'connections' : 'vehicle'));
+	let activeSettingsSection = $derived(settingsSectionOverride ?? (settingsSection === 'preparation' ? 'connections' : settingsSection === 'data' ? 'data' : 'vehicle'));
 	$effect(() => { if (settingsSection === 'preparation') settingsSectionOverride = null; });
 	function selectSettingsSection(section: SettingsSection) { settingsSectionOverride = section; }
 	let vehicleName = $state('');
@@ -1119,7 +1119,7 @@
 	<section id="settings-panel-data" class="workspace-panel settings-section-panel" aria-labelledby="settings-panel-data-heading" hidden={activeSettingsSection !== 'data'}>
 		<h2 id="settings-panel-data-heading" class="sr-only">Datos guardados</h2>
 				<section class="settings-card" aria-labelledby="backup-heading">
-			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="download" size={18} /></span><div><h2 id="backup-heading">Exportar o restaurar</h2><p>Los archivos se procesan en esta sesión y se envían al servidor solo al restaurar.</p></div></div>
+			<div class="settings-card-heading"><span class="settings-icon"><Glyph name="download" size={18} /></span><div><h2 id="backup-heading" tabindex="-1">Exportar o restaurar</h2><p>Los archivos se procesan en esta sesión y se envían al servidor solo al restaurar.</p></div></div>
 			<div class="backup-actions">
 				<div><strong>Descargar una copia</strong><span>El servidor prepara un JSON versionado con tus datos de Pulse.</span></div>
 				<button class="button button-secondary" type="button" disabled={busy || backupBusy} onclick={downloadBackup}><Glyph name="download" size={16} /> Exportar JSON</button>
