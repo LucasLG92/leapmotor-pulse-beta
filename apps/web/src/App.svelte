@@ -3,6 +3,7 @@
 	import { ApiError, getSession, getState, mutateApi, queryNavigation, requestApi } from './lib/api';
 	import { getNativeBridge, isNativeApp, type NativeBridgeStatus } from './lib/native';
 	import { DraftGuard } from './lib/draft-guard';
+	import { restoreFormFocus } from './lib/form-focus';
 	import { observeServiceWorkerUpdate } from './lib/pwa-update';
 	import { createStartupAttempt } from './lib/startup-read';
 	import { createStateRefresh } from './lib/state-refresh';
@@ -60,7 +61,8 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 	const historyScope = `pulse-${Date.now()}-${Math.random()}`;
 	let historyIndex = 0;
 	let currentLocation = $state(window.location.pathname + window.location.search + window.location.hash);
-	const settingsSection = $derived(preparationSection(currentLocation));
+	let restoredSettingsData = $state(false);
+	const settingsSection = $derived(restoredSettingsData ? 'data' : preparationSection(currentLocation));
 	let restoringHistoryIndex: number | null = null;
 	let navigationPending = false;
 	let navigationGeneration = 0;
@@ -496,12 +498,12 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 	async function retryStartup() {
 		const restoreFocus = document.activeElement === bootRetryButton;
 		await startSession();
-		if (!restoreFocus || bootStatus !== 'error') return;
+		if (!restoreFocus || (bootStatus !== 'error' && bootStatus !== 'ready')) return;
 		await tick();
 		// Restore only the focus lost with the retry control, never another interaction.
-		if (document.hasFocus() && document.activeElement === document.body) {
-			bootRetryButton?.focus({ preventScroll: true });
-		}
+		const target = bootStatus === 'error' ? bootRetryButton
+			: restoredSettingsData ? document.getElementById('backup-heading') : pageTitle;
+		restoreFormFocus(null, target ?? null);
 	}
 
 	async function mutate(path: string, method: HttpMethod, data?: MutationPayload, success = 'Cambios guardados.') {
@@ -729,6 +731,7 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 
 	function showRoute(path: string) {
 		compactNavigationOpen = false;
+		restoredSettingsData = false;
 		const nextRoute = routeFromPath(new URL(path, window.location.origin).pathname);
 		if (route !== nextRoute || preparationSection(path)) routeFocusPending = true;
 		else pageTitle?.focus({ preventScroll: true });
@@ -944,8 +947,11 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 			);
 			if (confirmed) {
 				const beforeRefresh = pulseState;
-				if (await mutate('/api/import', 'POST', { confirmed: true, data }, 'La copia se ha restaurado.')) {
+				if (await mutate('/api/import', 'POST', { confirmed: true, data }, '')) {
+					// The restored panel (or recovery error) announces the outcome without covering its focus target.
+					showToast('', 'success');
 					drafts.clear();
+					restoredSettingsData = route === 'settings';
 					formContextRevision += 1;
 					if (pulseState === beforeRefresh) {
 						closeEventSource();
@@ -953,6 +959,8 @@ import type { BackupActionResult, ChargeCreationRequest, ChargeQuote, ChargeQuot
 						bootStatus = 'error';
 						bootMessage = 'La copia se restauró, pero no se pudo leer el estado nuevo. Pulsa «Reintentar» para continuar.';
 					}
+					await tick();
+					if (route === 'settings') restoreFormFocus(null, pulseState ? document.getElementById('backup-heading') : bootRetryButton ?? null);
 					return { status: 'success' };
 				}
 				return { status: 'error', message: 'No se ha podido confirmar la restauración. Revisa los datos actuales antes de reintentarlo.' };

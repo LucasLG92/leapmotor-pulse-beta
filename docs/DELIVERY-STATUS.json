@@ -1701,7 +1701,7 @@
     "status": "web_deployed_physical_acceptance_pending",
     "document": "docs/PHASE1-ACCESSIBILITY-20261014.md",
     "web_unit_tests_passed": 74,
-    "e2e_flows_passed": 19,
+    "e2e_flows_passed": 26,
     "additional_late_save_focus_test_passed": 1,
     "synthetic_focus_checks_passed": 36,
     "physical_iphone": false,
@@ -1709,10 +1709,10 @@
     "both_phones_available_user_confirmed": true,
     "phase2_may_start": false,
     "sequential_gate": "No avanzar hasta aceptación completa de fase1.",
-    "runtime_image": "sha256:7ce0dc584a79806e0712d948994c11ad0a0ed83b998cb6b7c765b3aae6782237",
+    "runtime_image": "sha256:4fb4213ced7c75c5235310621e1cc787438ed0809f6c038c790aefa8c82c2b90",
     "backend_unchanged": false,
     "compose_files_preserved": 5,
-    "strict_https_assets_verified": 65,
+    "strict_https_assets_verified": 63,
     "iphone_followup": {
       "status": "web_deployed_private_search_inactive",
       "web_unit_tests_passed": 74,
@@ -1736,6 +1736,21 @@
     "physical_ui_iphone_user_confirmed": true,
     "physical_ui_android_user_confirmed": true,
     "phone_models_and_os_versions_provided": false,
-    "physical_screen_reader_check_current_form": "not_run_user_reported"
+    "physical_screen_reader_check_current_form": "not_run_user_reported",
+    "recovery_increment": {
+      "status": "web_deployed_physical_acceptance_pending",
+      "document": "docs/PHASE1-RECOVERY-20261014.md",
+      "web_unit_tests_passed": 74,
+      "e2e_flows_passed": 26,
+      "backup_scenarios_passed": 7,
+      "synthetic_download_and_restore": true,
+      "production_restore_tested": false,
+      "physical_phone_files_verified": false,
+      "physical_screen_readers_verified": false,
+      "backend_unchanged": true,
+      "compose_files_preserved": 5,
+      "private_geocoder_installation": "prepared_only_by_user_choice",
+      "phase2_may_start": false
+    }
   }
 }

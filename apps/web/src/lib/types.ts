@@ -115,7 +115,7 @@ export interface PageProps {
 	busy: boolean;
 	online: boolean;
 	revision: number;
-	settingsSection?: 'preparation' | null;
+	settingsSection?: 'preparation' | 'data' | null;
 	user: string | null;
 	theme: ThemePreference;
 	canInstall: boolean;

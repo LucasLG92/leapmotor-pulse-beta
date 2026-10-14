@@ -44,3 +44,7 @@ La versión corregida ya está entregada en la web: 65 recursos HTTPS exactos, c
 Lucas confirma que «Se ve bien en ambos» al revisar iPhone y Android: palabras de Energía, iconos y pantallas con texto grande y teclado. No facilitó modelos/versiones. Esta confirma la revisión visual propuesta; no sustituye la prueba específica con lectores: a la pregunta sobre VoiceOver/TalkBack en el formulario actualizado respondió «no he podido comprobarlo». La aceptación del lector y los demás flujos físicos detallados permanecen pendientes.
 
 A la propuesta del LXC privado respondió «Mantenerlo preparado sin instalar». No hay aprobación pendiente ni se repetirá esa solicitud sin nuevo encargo. La búsqueda privada queda desactivada por esta elección; no se consultan domicilios en servicios públicos. La fase 1 permanece abierta para sus comprobaciones pendientes; no avanzar a fase 2.
+
+## Recuperación de copias en la interfaz
+
+Se corrigió el foco/contexto tras restauración válida y tras recuperar una lectura fallida, conservando foco externo y evitando replay.26E2E/74web pasan; archivosJSON recibidos/restaurados en laboratorio con datos sintéticos.63recursosHTTPS exactos y62backend preservados. [Evidencia y límites](PHASE1-RECOVERY-20261014.md). Las pruebas físicas de lectores y archivos siguen pendientes; esto no valida restauración operativa de producción ni cierra fase1.
