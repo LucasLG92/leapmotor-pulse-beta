@@ -2,7 +2,11 @@
 
 Aplicación independiente y experimental para consultar y organizar información de movilidad y carga desde un servidor propio. Pulse no es una aplicación oficial de Leapmotor. La ilustración del vehículo es orientativa; la conexión a un coche y sus controles físicos requieren validación específica.
 
-![Pantalla Coche de Pulse en tema oscuro y modo de demostración](docs/screenshots/01-coche-oscuro.jpg)
+| Escritorio | Móvil |
+| --- | --- |
+| <img src="docs/screenshots/01-coche-oscuro.jpg" alt="Pulse: Coche en escritorio, tema oscuro y datos de demostración" width="640"> | <img src="docs/screenshots/mobile/01-coche-oscuro.jpg" alt="Pulse: Coche con ancho móvil, tema oscuro y datos de demostración" width="220"> |
+
+[Ver las seis secciones en escritorio y móvil, con los temas claro y oscuro de Coche](docs/SCREENSHOTS.md).
 
 ## Estado actual
 
