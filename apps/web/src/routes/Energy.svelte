@@ -1378,7 +1378,7 @@
  .month-origin-metrics { grid-template-columns: minmax(0, 1fr); padding-left: 0; }
 }
 	.analytics-source-heading { flex-wrap: wrap; }
-	.analytics-source-heading h3 { overflow-wrap: normal; word-break: normal; }
+	.analytics-source-heading h3, .energy-total-group-heading h3, .charge-row > .badge, .chart-legend > span { overflow-wrap: normal; word-break: normal; }
 	.month-origin-row { grid-template-columns: max-content minmax(0, 1fr) max-content; }
 	.month-origin-row > span, .month-origin-row > strong { white-space: nowrap; }
 	@container energy (max-width: 20rem) {

@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-14",
-  "objective_status": "blocked",
+  "updated_at": "2026-10-15",
+  "objective_status": "active",
   "objective_acceptance": "A0-A12, las siete puertas reales y la aceptación final siguen vigentes. Un registro estructuralmente válido o una fase de software completada no cierra por sí mismo el objetivo.",
   "source_publication": {
     "status": "published",
     "source_only": true,
-    "scope_note": "Interfaz móvil publicada en ambos repositorios; relevo de copias candidato solo en privado. Web entregada; nativos compilados genéricos sin firma/configuración y sin aceptación física.",
+    "scope_note": "Interfaz móvil publicada en ambos repositorios; relevo de copias candidato solo en privado. Web entregada; nativos compilados genéricos sin firma/configuración y sin aceptación física. La corrección de Manual del 15 de octubre, la documentación móvil y la galería se incluyen en esta revisión; las referencias de commits anteriores se conservan como históricas.",
     "repositories": [
       {
         "repository": "LucasLG92/leapmotor-pulse-beta",
@@ -130,30 +130,37 @@
   },
   "latest_delivered": {
     "web": {
-      "increment": "mobile-reflow-20261014",
-      "delivered_at": "2026-10-14",
-      "status": "delivered",
-      "scope": "Reflujo con texto200%, rejillas por espacio disponible y foco visible con altura reducida. Backend62 sin cambios/SQLite21/JSON17. HTTPS37assets+26gzip exactos. Aceptación física pendiente.",
-      "evidence": "docs/MOBILE-REFLOW-RELEASE-20261014.json"
+      "increment": "phase1-energy-manual-20261015",
+      "delivered_at": "2026-10-15",
+      "status": "delivered_specific_iphone_acceptance_pending",
+      "runtime_image": "sha256:e2e92cf5dbef8e0cd1f83384c2098242ba4621188d517156e8b299253a446cef",
+      "scope": "Corrección CSS de Manual en Energía entregada y cualificada en Chrome sintético normal/200%; aceptación previa conservada como histórica. Esta corrección aún no está confirmada en Safari físico. APK/IPA anteriores no reconstruidos.",
+      "evidence": "docs/PHASE1-ENERGY-MANUAL-20261015.md"
     },
     "android": {
-      "increment": "brand-continuity-r14-20261011",
-      "delivered_at": "2026-10-11",
-      "status": "delivered",
-      "revision": "r14",
-      "version_name": "0.1.0",
-      "version_code": 1,
-      "evidence": "docs/DELIVERY-EVIDENCE.json: android; resumen histórico y límites en docs/ACCEPTANCE.md."
+      "increment": "phase2-current-20261014",
+      "delivered_at": "2026-10-14T22:15Z",
+      "status": "pilot_delivered_partial_physical_acceptance",
+      "version_name": "0.1.1",
+      "version_code": 2,
+      "signed_pilot_debug": true,
+      "same_certificate_as_previous_pilot": true,
+      "apk_sha256": "095e25f0750dc451666cf45b454fe33fcec056914d43ccdaa30fdc738e078e79",
+      "physical_update_login_widget_initial_checks_user_confirmed": true,
+      "evidence": "docs/PHASE2-DELIVERY-20261014.json:android"
     },
     "ios": {
-      "increment": "mobile-reflow-ios-20261014",
-      "delivered_at": "2026-10-14",
+      "increment": "phase2-current-ios-20261015",
+      "qualified_at": "2026-10-15",
       "status": "compiled_and_simulator_startup_verified",
+      "source_commit": "876c45158d8abcc7efe33207f26a50bb914dbfb4",
+      "run_id": 38646413599,
       "app_and_widgetkit_compiled": true,
       "simulator_startup_verified": true,
       "signed_distribution": false,
       "phone_acceptance": false,
-      "evidence": "docs/MOBILE-REFLOW-RELEASE-20261014.json:ios; IPA genérica unsigned no instalada."
+      "ipa_sha256": "31cbe14937738616844c4036760717fb677ba83ba42030f4ba6c63d633d7d88c",
+      "evidence": "docs/PHASE2-DELIVERY-20261014.json:ios; genérica sin firma/configuración, no instalada en iPhone."
     },
     "operations": {
       "increment": "monitor-install-20261012T082407Z",
@@ -169,7 +176,7 @@
       "version_name": "0.1.1",
       "version_code": 2,
       "evidence": "docs/CANDIDATE-QUALIFICATION.json",
-      "source_scope_note": "Candidato14Oct R4: interfaz actual con correcciones200%/campoenfocado;46assets exactos+2stubs. Build/Lint y104tests nativos sobre fuentes nativas sin cambios. Genérico/sin firma: no actualiza piloto r14 ni acredita instalación.",
+      "source_scope_note": "Los artefactos genéricos anteriores de este apartado se conservan como candidatos históricos sin distribución física. La entrega/cualificación vigente está en latest_delivered.android y docs/PHASE2-DELIVERY-20261014.json; no reinterpretar recibos anteriores como aceptación actual.",
       "phase8_artifact": {
         "apk": "outputs/pulse-phase8-unsigned-20261013.apk",
         "apk_sha256": "8618a4bc87530214bb3e44d14c50f6a46224480c00557bc7ac70cdf791c6eff4",
@@ -216,7 +223,7 @@
         "installed": false,
         "physical_acceptance": false
       },
-      "current_mobile_artifact": {
+      "historical_unsigned_r4_artifact": {
         "path": "outputs/leapmotor-pulse-android-phase2-current-20261014.apk",
         "sha256": "500828a9cf54e58f9c8b892fa13dfa8b92a43b729c8f45195b91f4fb8473aad2",
         "bytes": 6621421,
@@ -224,14 +231,15 @@
         "configured": false,
         "delivered": false,
         "receipt": "evidence/phase2-current-package-20261014/delivery-receipt-final-r4.json"
-      }
+      },
+      "current_delivery_reference": "latest_delivered.android"
     },
     "ios": {
       "status": "local_candidate_not_delivered",
       "marketing_version": "0.1.1",
       "build_number": 2,
       "evidence": "docs/CANDIDATE-QUALIFICATION.json",
-      "source_scope_note": "14Oct:801a19b/run38487389431 App/Widget simulador e iPhoneOS compilados; arranqueXCTest/píxeles/captura aceptados;108entradas fuente exactas eIPAunsigned auditada. Firma/configuración/teléfono/widgets físicos pendientes.",
+      "source_scope_note": "Los artefactos genéricos anteriores de este apartado se conservan como candidatos históricos sin distribución física. La entrega/cualificación vigente está en latest_delivered.ios y docs/PHASE2-DELIVERY-20261014.json; no reinterpretar recibos anteriores como aceptación actual.",
       "phase8_artifact": {
         "commit": "8c4aa1c581473590ec462836f41735b4510ae0eb",
         "run_id": 38324253913,
@@ -498,7 +506,8 @@
         "simulator_startup_verified": true,
         "simulator_visual_review": "Generic Pulse login and unconfigured notice visible, no private content",
         "spm_advisory_status": "no_matched_known_commit_advisories"
-      }
+      },
+      "current_delivery_reference": "latest_delivered.ios"
     },
     "web": {
       "status": "local_candidate_not_delivered",
@@ -590,20 +599,17 @@
     {
       "id": "phase-1",
       "name": "Coherencia y experiencia de usuario",
-      "status": "in_progress",
+      "status": "accepted",
       "software_criteria": [
         "Registro único y documentos sincronizados.",
         "Preparación sin desplegables anidados, accesos contextuales, causas de controles bloqueados y errores/reintentos accesibles.",
         "Tipos/build y QA sintética de flujos al cerrar software."
       ],
       "real_criteria": [
-        "Mantener abierta la aceptación física y de accesibilidad aplicable.",
-        "Conservar criterios A0-A12 y las siete puertas reales."
+        "Aceptación de UI/UX y accesibilidad en iPhone y Android, incluidos borradores y recepción de archivos.",
+        "Conservar los criterios A0-A12 y las siete puertas reales de las fases siguientes."
       ],
-      "remaining_software_checks": [
-        "Recepción de copia descargada y restauración en navegador pendientes por permisos; no eludir denegaciones.",
-        "Login y recepción de prueba Push en iPhone confirmados el14Oct en fase8. Renovación de avisos, enlace nativo, conexión intermitente y accesibilidad física con lectores de pantalla siguen pendientes."
-      ],
+      "remaining_software_checks": [],
       "local_increment_in_progress": {
         "name": "Cuadro de instrumentos y herramientas manuales",
         "status": "web_deployed_native_physical_pending",
@@ -614,8 +620,37 @@
       },
       "local_increment": "Entrega web13oct del cuadro de instrumentos y herramientas manuales verificada. Los recibos de incrementos y CI anteriores conservan su alcance histórico; las siete puertas reales permanecen abiertas.",
       "current_local_increment_reference": "docs/EVOLUTION-QUALIFICATION.json",
-      "latest_local_progress": "14Oct: errores asociados a20campos; cierres/guardados con foco visible y respetando foco externo; barra móvil/teclado y fechas de trayectos corregidos. 74web/11E2E+1tardío y36estados móviles sintéticos. iPhone/Android/VoiceOver/TalkBack y gates del roadmap abiertos.",
-      "current_accessibility_reference": "docs/PHASE1-ACCESSIBILITY-20261014.md"
+      "latest_local_progress": "14Oct: fase1 aceptada por Lucas en iPhone y Android; lectores en seis pantallas, errores/foco del favorito vacío, borrador tras corte/recuperación de red y recepción JSON. Revisión visual/texto/teclado ya confirmada. Fase2 puede empezar; firma/OAuth/widgets y restauración productiva mantienen sus gates.",
+      "current_accessibility_reference": "docs/PHASE1-ACCESSIBILITY-20261014.md",
+      "real_acceptance": {
+        "source": "explicit_user_confirmation",
+        "confirmed_at": "2026-10-14T21:49:23Z",
+        "reply": "Funciona todo en ambos",
+        "checks": {
+          "visual_text_keyboard": {
+            "iphone": "user_confirmed",
+            "android": "user_confirmed"
+          },
+          "screen_readers_six_screens": {
+            "iphone": "user_confirmed",
+            "android": "user_confirmed"
+          },
+          "favorite_empty_validation_and_focus": {
+            "iphone": "user_confirmed",
+            "android": "user_confirmed"
+          },
+          "draft_network_recovery": {
+            "iphone": "user_confirmed",
+            "android": "user_confirmed"
+          },
+          "json_download_received": {
+            "iphone": "user_confirmed",
+            "android": "user_confirmed"
+          }
+        },
+        "scope": "Interfaz/PWA actual: confirmación final más revisión visual anterior. No acredita firma, OAuth/widgets nativos ni restauración productiva.",
+        "phone_models_and_os_versions_provided": false
+      }
     },
     {
       "id": "phase-2",
@@ -630,12 +665,13 @@
         "Un emulador no acredita un teléfono."
       ],
       "remaining_software_checks": [
-        "APK configurado y firma de piloto autorizada; actualización/OAuth/widget físicos.",
-        "Firma/distribución e instalación física iOS; cualificación de App Groups/Keychain/OAuth/widgets. Arranque genérico actual del simulador pasa en run38346256969 con píxeles y revisión visual, sin aceptación de dispositivo o servicios reales."
+        "Vía de firma/distribución iOS con capacidades intactas, configuración y pruebas físicas App Groups/Keychain/OAuth/WidgetKit.",
+        "Caducidad real, privacidad/refresco bloqueado y autónomo en Android; actualización/login/widget iniciales ya confirmados por Lucas.",
+        "Renovación de avisos PWA, sesión/push tras reinicio y aceptación restante del roadmap."
       ],
       "local_increment": "Arranque genérico iOS aceptado por XCTest y captura del run38335055825; App/Widget simulador y iPhoneOS, nuevaIPA sin firma auditada.59pruebas/46subcasos fuente/stages y36XCTest Apple. PR11/10 en borrador, heads937833c/1c134d7, CI general/dependencias correcto. Firma/teléfono/OAuth/widgets reales pendientes; no se cierra fase2. Cualificación actual del incremento fase4: run38346256969,37XCTest y guardia de píxeles/captura revisada; APK/IPA actuales sin firma auditados. No cierra los criterios físicos.",
-      "current_local_increment_reference": "docs/EVOLUTION-QUALIFICATION.json",
-      "latest_local_progress": "14Oct: APKunsigned R4 yIPAunsigned801a19b con las4correcciones;App/Widget/startupMacCI y108fuentes exactas. Firma/configuración/entrega física pendientes."
+      "current_local_increment_reference": "docs/PHASE2-DELIVERY-20261014.json",
+      "latest_local_progress": "15Oct: piloto Android0.1.1/code2 entregado con firma anterior; Lucas confirma actualización/preferencias/OAuthretorno/widgettamaños-temas-texto-TalkBack y red/reintento/logout/caché apagada/desvincular tras reabrir.104JUnit/9bridge/Lint0errores17avisos/49assets exactos. iOS876c4515/run38646413599 App/WidgetSimulator+iPhoneOS y arranque XCTest/píxeles/PNG pasan; IPAgenérica auditada73archivos. Sin firma/configuración ni aceptación iPhone. TTL, refresco bloqueado y puertas restantes pendientes. Configurador local original revisado, 32pruebas/45subcasos, IPAconfigurada17425a9d auditada:solo2Info.plist; firma/perfil/AppGroups/teléfono pendientes."
     },
     {
       "id": "phase-3",
@@ -1498,7 +1534,7 @@
         }
       ]
     },
-    "final_receipt": "/home/lucaslg/Documents/Codex/2026-10-11/analiza-el-proyecto-de-01a1161e-cc50/evidence/phase5-native-report-export-20261013/final-receipt.json",
+    "final_receipt": "local-evidence:phase5-native-report-export-20261013/final-receipt.json",
     "final_receipt_sha256": "27284330eb7eb406a8b05a65b3ae01a4edaa233e8639b410694728eb3b9c5320"
   },
   "current_local_increment": {
@@ -1698,17 +1734,17 @@
     "authenticated_ui_checked": true
   },
   "current_phase1_accessibility": {
-    "status": "web_deployed_physical_acceptance_pending",
+    "status": "accepted_by_user_on_both_phones",
     "document": "docs/PHASE1-ACCESSIBILITY-20261014.md",
     "web_unit_tests_passed": 74,
     "e2e_flows_passed": 28,
     "additional_late_save_focus_test_passed": 1,
     "synthetic_focus_checks_passed": 36,
-    "physical_iphone": false,
-    "physical_android": false,
+    "physical_iphone": true,
+    "physical_android": true,
     "both_phones_available_user_confirmed": true,
-    "phase2_may_start": false,
-    "sequential_gate": "No avanzar hasta aceptación completa de fase1.",
+    "phase2_may_start": true,
+    "sequential_gate": "Fase1 aceptada por Lucas; continuar únicamente con fase2 hasta su aceptación completa.",
     "runtime_image": "sha256:f87c326690dfae4586bfb403002f773578e71e78daf12661e1656bd5599ddac4",
     "backend_unchanged": false,
     "compose_files_preserved": 5,
@@ -1736,7 +1772,7 @@
     "physical_ui_iphone_user_confirmed": true,
     "physical_ui_android_user_confirmed": true,
     "phone_models_and_os_versions_provided": false,
-    "physical_screen_reader_check_current_form": "not_run_user_reported",
+    "physical_screen_reader_check_current_form": "user_confirmed_both_phones",
     "network_increment": {
       "status": "web_deployed_physical_acceptance_pending",
       "document": "docs/PHASE1-NETWORK-20261014.md",
@@ -1765,6 +1801,133 @@
       "compose_files_preserved": 5,
       "private_geocoder_installation": "prepared_only_by_user_choice",
       "phase2_may_start": false
+    },
+    "real_acceptance": {
+      "source": "explicit_user_confirmation",
+      "confirmed_at": "2026-10-14T21:49:23Z",
+      "reply": "Funciona todo en ambos",
+      "checks": {
+        "visual_text_keyboard": {
+          "iphone": "user_confirmed",
+          "android": "user_confirmed"
+        },
+        "screen_readers_six_screens": {
+          "iphone": "user_confirmed",
+          "android": "user_confirmed"
+        },
+        "favorite_empty_validation_and_focus": {
+          "iphone": "user_confirmed",
+          "android": "user_confirmed"
+        },
+        "draft_network_recovery": {
+          "iphone": "user_confirmed",
+          "android": "user_confirmed"
+        },
+        "json_download_received": {
+          "iphone": "user_confirmed",
+          "android": "user_confirmed"
+        }
+      },
+      "scope": "Interfaz/PWA actual: confirmación final más revisión visual anterior. No acredita firma, OAuth/widgets nativos ni restauración productiva.",
+      "phone_models_and_os_versions_provided": false
+    },
+    "physical_draft_network_recovery_user_confirmed": true,
+    "physical_json_download_user_confirmed": true
+  },
+  "current_phase2_delivery": {
+    "status": "android_delivered_partial_physical_acceptance_ios_compiled_unsigned",
+    "phase1_accepted": true,
+    "phase3_may_start": false,
+    "document": "docs/PHASE2-DELIVERY-20261014.md",
+    "qualification": "docs/PHASE2-DELIVERY-20261014.json",
+    "android": "pilot_0.1.1_code2_delivered_same_certificate_user_confirmed_initial_checks",
+    "ios": "876c4515_run38646413599_generic_ipa_and_simulator_startup_verified_unsigned",
+    "physical_acceptance": "partial_android_confirmed_ios_pending",
+    "sequential_gate": "No avanzar a fase3 hasta completar firma/distribución y aceptación física aplicable de fase2.",
+    "ios_local_preparation_reference": "docs/PHASE2-DELIVERY-20261014.json:ios.local_configuration_preparation",
+    "ios_local_preparation": "IPA configurada y auditada localmente desde Linux; dos Info.plist modificadas, otros71archivos exactos, 32pruebas/45subcasos. Sin firma, perfiles ni instalación.",
+    "personal_install_reference": "docs/IOS-PERSONAL-INSTALL.md"
+  },
+  "previous_latest_delivery_before_phase2": {
+    "web": {
+      "increment": "mobile-reflow-20261014",
+      "delivered_at": "2026-10-14",
+      "status": "delivered",
+      "scope": "Reflujo con texto200%, rejillas por espacio disponible y foco visible con altura reducida. Backend62 sin cambios/SQLite21/JSON17. HTTPS37assets+26gzip exactos. Aceptación física pendiente.",
+      "evidence": "docs/MOBILE-REFLOW-RELEASE-20261014.json"
+    },
+    "android": {
+      "increment": "brand-continuity-r14-20261011",
+      "delivered_at": "2026-10-11",
+      "status": "delivered",
+      "revision": "r14",
+      "version_name": "0.1.0",
+      "version_code": 1,
+      "evidence": "docs/DELIVERY-EVIDENCE.json: android; resumen histórico y límites en docs/ACCEPTANCE.md."
+    },
+    "ios": {
+      "increment": "mobile-reflow-ios-20261014",
+      "delivered_at": "2026-10-14",
+      "status": "compiled_and_simulator_startup_verified",
+      "app_and_widgetkit_compiled": true,
+      "simulator_startup_verified": true,
+      "signed_distribution": false,
+      "phone_acceptance": false,
+      "evidence": "docs/MOBILE-REFLOW-RELEASE-20261014.json:ios; IPA genérica unsigned no instalada."
     }
+  },
+  "previous_latest_web_before_energy_manual": {
+    "increment": "phase1-network-20261014",
+    "delivered_at": "2026-10-14",
+    "status": "delivered_and_phase1_user_accepted",
+    "runtime_image": "sha256:f87c326690dfae4586bfb403002f773578e71e78daf12661e1656bd5599ddac4",
+    "scope": "Interfaz actual aceptada por Lucas en ambos teléfonos: visual/texto/teclado, lectores, borrador tras recuperación de red y recepción JSON. No acredita distribución o widgets nativos.",
+    "evidence": "docs/PHASE1-NETWORK-20261014.md"
+  },
+  "current_energy_manual_correction": {
+    "release": "phase1-energy-manual-20261015",
+    "status": "web_deployed_source_included_in_this_revision",
+    "image": "sha256:e2e92cf5dbef8e0cd1f83384c2098242ba4621188d517156e8b299253a446cef",
+    "previous_image": "sha256:f87c326690dfae4586bfb403002f773578e71e78daf12661e1656bd5599ddac4",
+    "health": "healthy",
+    "schema": 21,
+    "export_schema": 17,
+    "schema_sha256": "658f0583eafab28aad14623c94b06c65be6ee81d369bfa158c34c635d2bd32d8",
+    "configuration_preserved": true,
+    "compose_files_verified": 5,
+    "only_image_pin_changed": true,
+    "backend_files_verified": 62,
+    "backend_modules_changed": 0,
+    "old_hashed_assets_preserved": 334,
+    "server_only_backup_created": true,
+    "database_rollback": false,
+    "dist_files": 63,
+    "release_tar_sha256": "f686cd78563cee22e681c192bbf43a0f908ea4fbccc820b0352a108a1bcdf6d0",
+    "strict_https_assets_verified": 63,
+    "mismatches": 0,
+    "anonymous_api_rejected": true,
+    "invalid_token_rejected": true,
+    "physical_iphone_tested": false,
+    "native_packages_rebuilt": false,
+    "github_full_access_applied": false,
+    "operational_config_or_database_uploaded": false,
+    "checks": [
+      "svelte-check: 0 errors, 0 warnings",
+      "production build passed",
+      "20 release guard tests passed",
+      "synthetic Chrome UI in light/dark; font200% checked",
+      "remote prepare/build/activate/verify all successful",
+      "strict HTTPS plain37/gzip26 exact hashes"
+    ],
+    "source_publication": "included_in_this_revision",
+    "documentation": "docs/PHASE1-ENERGY-MANUAL-20261015.md"
+  },
+  "github_refresh_20261015": {
+    "source_scope": "reviewed_phase2_sources_energy_css_documentation_and_demo_screenshots",
+    "screenshots": 7,
+    "privacy_review": "docs/PRIVACY-REVIEW-20261015.md",
+    "main_merge_and_ci_evidence": "recorded_after_publication_in_external_receipt",
+    "operator_packages_or_credentials_included": false,
+    "full_access_permission_changed": false
   }
 }

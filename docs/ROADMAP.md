@@ -20,7 +20,7 @@ El registro conserva las siete puertas pendientes del estado histórico: (1) log
 
 | Fase | Alcance de software | Aceptación real |
 |---|---|---|
-| 1. Coherencia/UI | Registro/documentación coherentes, preparación, accesos contextuales, estados bloqueados y errores/reintentos accesibles; tipos/build y QA sintética. | Aceptación física y de accesibilidad sigue abierta. |
+| 1. Coherencia/UI | Registro/documentación coherentes, preparación, accesos contextuales, estados bloqueados y errores/reintentos accesibles; tipos/build y QA sintética. | Aceptada por Lucas en iPhone y Android el14oct; revisión visual, lectores, borradores y recepción JSON. |
 | 2. Clientes móviles | Fuentes compartidas, identidad, APK y App/WidgetKit cualificados. | Firma/distribución y OAuth, actualización, privacidad, caducidad, widgets, PWA y push en ambos teléfonos. |
 | 3. B10 | Configuración autorizada, login/refresh y matriz de señales. | Lectura pasiva contrastada con el vehículo, incluidas unidades, frescura y reposo. |
 | 4. Cargas/energía | Sesiones, curva, pausas, cierres, reconciliación y PVPC sin duplicados. | Cargador y energía reales; estimación separada del gasto real, red y autoconsumo. |
@@ -36,10 +36,12 @@ Las marcas completadas de esta lista describen únicamente trabajo del candidato
 
 ### 1. Coherencia y UI/UX
 
-Incrementos vigentes: [accesibilidad](PHASE1-ACCESSIBILITY-20261014.md), [copias](PHASE1-RECOVERY-20261014.md) y [conexión intermitente](PHASE1-NETWORK-20261014.md). Lucas confirma la revisión visual en ambos teléfonos; lectores y recepción de archivos físicos siguen pendientes.
+Seguimiento15oct: [corrección adicional de Manual en Energía](PHASE1-ENERGY-MANUAL-20261015.md) entregada en web; falta confirmar este ajuste en iPhone y publicarlo en ambos repositorios. La aceptación14oct se conserva como histórica; no se amplía a esta corrección ni a paquetes nativos.
+
+Incrementos vigentes: [accesibilidad](PHASE1-ACCESSIBILITY-20261014.md), [copias](PHASE1-RECOVERY-20261014.md) y [conexión intermitente](PHASE1-NETWORK-20261014.md). Lucas confirma la revisión visual y las pruebas finales en ambos teléfonos: lectores en las seis pantallas, errores/foco de favorito vacío, borradores al recuperar red y recepción JSON. Fase1 aceptada; continuar fase2.
 
 - [x] Implementar la dirección «cuadro de instrumentos y cuaderno de viaje» en las seis pantallas; render1280×720 CSS Claro/Charcoal sin overflow, borrador del simulador y actualización PWA local comprobados. [Dirección y límites](VISUAL-DIRECTION.md).
-- [ ] Cualificar el rediseño en iPhone real: reflujo móvil, escala de texto, VoiceOver, recepción de la PWA y uso habitual.
+- [x] Cualificar la interfaz actual en iPhone y Android: revisión visual, texto/teclado y lectores confirmados por Lucas. No acredita rendimiento/consumo prolongado ni clientes nativos.
 
 - [x] Renovar composición compartida: coche protagonista, navegación responsive, Claro/Charcoal, líneas temporales, filas abiertas y métricas. Candidato local del [incremento13oct](EVOLUTION-20261013.md); aceptación física y lectores de pantalla pendientes.
 
@@ -54,28 +56,32 @@ Incrementos vigentes: [accesibilidad](PHASE1-ACCESSIBILITY-20261014.md), [copias
 - [x] Mantener el error de exportación y el estado de operación en el panel de copias; comprobar HTTP503, foco, borrador externo y reflujo390claro/oscuro. Restauración devuelve resultado estructurado, conserva confirmación y trata el resultado incierto; revisión estática, sin aceptación de ese flujo en navegador.
 - [x] Bloquear acciones Push/nativas durante consultas y conciliar un enlace rechazado con una lectura sin replay. Error de acción separado, código borrado, caché apagada y foco al control o título estable; fixture en memoria sin permisos, grants ni API reales.
 - [x] Corregir ABRP, cambio de demo, eliminación de perfil y revocación de dispositivo: error incierto persistente, controles liberados ante rechazo, guardas tras confirmar y foco que respeta borradores. QA en memoria: false/throw, cancelación, cambios de revisión/modo y eliminación con refresco demorado; encabezado estable cuando desaparece la fila. Reflujo390 claro/oscuro; no consentimientos ni dispositivos reales.
-- [ ] Completar activación y renovación de avisos, enlace real y conexión intermitente. Las denegaciones históricas del navegador productivo se conservan. Descarga/restauración y conexión intermitente se cualifican ahora en el laboratorio aislado; no acreditan archivos ni accesibilidad de los teléfonos reales.
+- [x] Completar los flujos de UI y recuperación de conexión. Lucas confirma borradores y recepción JSON en ambos teléfonos; la renovación de avisos y enlace nativo mantienen sus comprobaciones funcionales de fase2. Restauración productiva pertenece a fase8.
 - [x] Corregir texto/iconos reportados en iPhone y preparar favoritos por nombre/dirección con búsqueda privada cerrada por defecto; 18E2E Chromium y regresiones backend. Servicio privado/aceptación física pendientes.
 - [x] Comprobar descarga JSON, cancelación y restauración en navegador aislado, errores y recuperación sin replay; corregir contexto/foco con26E2E, incluido320×450/200%. [Límites físicos](PHASE1-RECOVERY-20261014.md).
 - [x] Entregar la web corregida y publicar la fuente revisada en ambos repositorios; la entrega se registra separada de su aceptación física.
 - [x] Verificar pérdida/recuperación de red con borrador y descarga, sin repetir guardados; corregir el foco perdido tras recuperar automáticamente un arranque interrumpido.28E2E Chromium. [Evidencia y límites](PHASE1-NETWORK-20261014.md).
-- [ ] Comprobar accesibilidad y recepción de archivos en los teléfonos.
+- [x] Comprobar lectores en seis pantallas, errores/foco de Mapa y recepción JSON en ambos teléfonos: confirmación explícita de Lucas «Funciona todo en ambos».
 
 Ciclo Push sintético comprobado en la continuación: inspección local fallida visible, baja verificada antes del reemplazo, recuperación local sin repetir revocación y guardas tras desmontaje. La recepción de una prueba Push en iPhone fue confirmada en fase8 el14oct; la renovación, accesibilidad completa y restantes gates siguen pendientes. [Evidencia](VALIDATION.md#ciclo-push-y-publicacion-de-fuentes).
 
 ### 2. PWA, aplicaciones y widgets
 
+Estado vigente: Android entregado con aceptación física parcial; App/Widget iOS compilados y arranque genérico del run38646413599 verificado. Firma/distribución y pruebas físicas iOS pendientes. La fase2 sigue abierta y no habilita fase3. [Registro](PHASE2-DELIVERY-20261014.json).
+
 - [x] Incorporar la recuperación compartida del arranque y el incremento Push anterior a un APK Android genérico local con Lint activo. El incremento de avisos de copias ya está incorporado a un nuevo APK genérico cualificado, sin firma o instalación física.
-- [ ] Preparar el APK operativo con configuración y firma autorizadas.
+- [x] Preparar y entregar el APK piloto operativo0.1.1/código2 con la misma firma anterior:47assets+2stubs exactos,104JUnit/9bridge,Lint0errores17avisos. Firma debug piloto; no release de tienda. [Entrega y límites](PHASE2-DELIVERY-20261014.md).
 - [x] Cualificar App/WidgetKit en Xcode: Debug/Release simulador y Release iPhoneOS con IPA arm64 auditada. CI38315636834 y38324253913 conservan revisiones anteriores; la captura vacía de la segunda permanece como evidencia histórica. El head937833c pasa compilación y arranque genérico semántico en CI38335055825. No acredita widget runtime o teléfono.
 - [x] Añadir observador XCTest independiente y diagnóstico protegido: 55pruebas/46subcasos locales y revisión sin P1/P2; compila en Apple. PR pública11/privada10 en borrador, sin cambios de producto o firma.
 - [x] Dar a XCTest la responsabilidad del arranque y etiquetar la PNG inicial como pretest. 59pruebas/46subcasos y revisión4fuentes; Apple run38332785977 fallido por opción CLI; corregido, run38335055825 termina success con método/UI y captura auditados.
 - [x] Cualificar la observación automática del acceso visible en run38335055825: método XCTest, protocolo/PNG internos y revisión visual confirmados. Tres fallos anteriores conservados: comando UI sin causa retenida (run38329155408), timeout de launch antes de XCTest (run38330388042) y opción CLI rechazada (run38332785977), con cleanup correcto. El éxito actual no demuestra retrospectivamente la causa de la captura vacía o del error descartado.
 - [ ] Completar firma, distribución e instalación física iOS, App Groups/Keychain/OAuth/widgets.
-- [ ] Verificar actualización de Android desde r14 con la misma identidad y firma, sin pérdida de datos; conservar una recuperación adecuada a las restricciones de downgrade.
-- [ ] Verificar retorno OAuth, caducidad y revocación en ambos teléfonos.
+- [x] Verificar actualización de Android sobre el piloto anterior con identidad/firma conservadas y preferencias intactas: confirmación de Lucas. La recuperación de servidor conserva APK previo; no acredita downgrade del teléfono ni autoriza desinstalarlo.
+- [x] Comprobar en Android retorno OAuth, logout/relogin y desactivar copia/desvincular tras reabrir y refrescar: confirmación de Lucas.
+- [ ] Verificar caducidad real de sesión/copia y refresco bloqueado/autónomo en Android; completar OAuth/privacidad/caducidad/widgets iOS con firma y teléfono.
 - [ ] Verificar actualización de la PWA instalada, offline, recuperación, avisos con bloqueo y sesión/push tras reiniciar el servidor.
-- [ ] Verificar widgets: campos seleccionados, tamaños, privacidad, caducidad, refresco, bloqueo y accesibilidad.
+- [x] Comprobar widget Android: enlace/launcher, tamaños/tema/texto grande/TalkBack y apertura de Pulse; recuperación de red y retirada de consentimiento confirmadas por Lucas.
+- [ ] Completar campos/datos, privacidad/caducidad/refresco/bloqueo restantes y widget iOS real. Sin B10, ausencia de lectura o demostración no valida telemetría.
 
 ### 3. B10 y telemetría
 

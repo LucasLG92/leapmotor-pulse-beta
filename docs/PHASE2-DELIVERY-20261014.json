@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-10-15",
+  "phase1_status": "accepted_by_user_on_both_phones",
+  "phase2_status": "in_progress",
+  "phase3_may_start": false,
+  "android": {
+    "version_name": "0.1.1",
+    "version_code": 2,
+    "package": "com.lucas.pulse",
+    "apk_sha256": "095e25f0750dc451666cf45b454fe33fcec056914d43ccdaa30fdc738e078e79",
+    "apk_bytes": 9146769,
+    "signed_pilot_debug": true,
+    "stable_store_release_signature": false,
+    "same_certificate_as_previous_pilot": true,
+    "dist_files": 47,
+    "apk_public_entries": 49,
+    "all_assets_exact": true,
+    "mobile_bridge_tests": 9,
+    "junit_tests": 104,
+    "junit_failures": 0,
+    "lint_errors": 0,
+    "lint_warnings": 17,
+    "private_server_download_updated": true,
+    "anonymous_download_rejected": true,
+    "services_configuration_and_data_preserved": true,
+    "rollback_copy_verified": true,
+    "physical_acceptance": {
+      "source": "explicit_user_confirmation",
+      "artifact_sha256": "095e25f0750dc451666cf45b454fe33fcec056914d43ccdaa30fdc738e078e79",
+      "version": "0.1.1",
+      "version_code": 2,
+      "answers": [
+        "Actualización y acceso funcionan",
+        "Funciona en esas comprobaciones"
+      ],
+      "checks": {
+        "authenticated_download": "user_confirmed",
+        "update_over_pilot_no_uninstall": "user_confirmed",
+        "preferences_retained": "user_confirmed",
+        "oauth_browser_return": "user_confirmed",
+        "widget_link_and_launcher": "user_confirmed",
+        "widget_size_theme_large_text": "user_confirmed",
+        "widget_talkback_and_open_app": "user_confirmed"
+      },
+      "limits": [
+        "Two-hour cache expiry, session expiry and autonomous/locked refresh not included",
+        "No iOS native physical acceptance",
+        "No B10 readings validated",
+        "Model/OS/launcher not provided in this reply"
+      ],
+      "recorded_at": "2026-10-14T22:17:05Z",
+      "additional_checks": {
+        "network_retry_recovery": "user_confirmed",
+        "logout_and_relogin": "user_confirmed",
+        "cache_disable_and_unlink_after_reopen_refresh": "user_confirmed"
+      },
+      "additional_reply": "Los tres casos funcionan",
+      "additional_reply_recorded_at": "2026-10-14T22:18:08Z"
+    },
+    "remaining_checks": [
+      "Caducidad real de sesión y copia local de máximo dos horas.",
+      "Refresco autónomo y comportamiento bloqueado con privacidad.",
+      "Rendimiento y consumo habitual siguen como puerta global."
+    ]
+  },
+  "ios": {
+    "source_commit": "876c45158d8abcc7efe33207f26a50bb914dbfb4",
+    "run_id": 38646413599,
+    "ipa_sha256": "31cbe14937738616844c4036760717fb677ba83ba42030f4ba6c63d633d7d88c",
+    "ipa_bytes": 1485428,
+    "files": 73,
+    "public_entries": 49,
+    "all_file_hashes_verified": true,
+    "version": "0.1.1",
+    "build": 2,
+    "configured": false,
+    "signed": false,
+    "physical_installation": false,
+    "widget_runtime": false,
+    "app_widget_simulator_debug_release": true,
+    "app_widget_iphone_release": true,
+    "xctest_startup_semantics_and_pixels": true,
+    "screenshot_visually_reviewed": true,
+    "spm_known_revision_advisories": "no_matched_known_commit_advisories",
+    "prior_failed_run": {
+      "id": 38643875351,
+      "source_commit": "cb117d7661e8caff3315107fe88fca0ce80d7cb9",
+      "stage": "ui-readiness",
+      "type": "timeout",
+      "cause_confirmed": false,
+      "evidence_preserved": true
+    },
+    "remaining_checks": [
+      "Configurar una vía autorizada de firma y distribución con App Groups y Keychain.",
+      "Instalar, iniciar sesión y comprobar WidgetKit, renovación, privacidad y recuperación en iPhone real."
+    ],
+    "local_configuration_preparation": {
+      "helper": "scripts/configure-ios-ipa.py",
+      "documentation": "docs/IOS-LOCAL-PACKAGE.md",
+      "source_ipa_sha256": "31cbe14937738616844c4036760717fb677ba83ba42030f4ba6c63d633d7d88c",
+      "output_sha256": "17425a9dd2d55fccf79d897cd2edac1ce9b907ba9699314e082e9723566d2656",
+      "output_bytes": 1513594,
+      "entries": 73,
+      "changed_info_plists": 2,
+      "other_71_contents_exact": true,
+      "entry_modes_times_compression_preserved": true,
+      "output_and_receipt_permissions": "0600",
+      "new_helper_tests": 7,
+      "configuration_packaging_project_tests": 32,
+      "subcases": 45,
+      "independent_static_review": "no_remaining_p1_p2_at_reviewed_hashes",
+      "configured_locally": true,
+      "signed": false,
+      "installed": false,
+      "operator_artifact_uploaded": false,
+      "profile_and_entitlements_verified": false,
+      "widget_runtime_verified": false
+    },
+    "personal_install_preparation": {
+      "document": "docs/IOS-PERSONAL-INSTALL.md",
+      "iloader_version": "2.3.6",
+      "iloader_commit": "dc396af059fd46982062cd8fc90252d7e27085e9",
+      "isideload_locked_version": "0.4.3",
+      "source_transport_storage_review": true,
+      "distributed_binary_audited": false,
+      "installer_or_apple_access_started": false,
+      "usb_profile_or_signing_qualified": false,
+      "requires_authorized_local_account_and_protected_storage": true,
+      "third_party_source_incorporated": false,
+      "trial_authorized_by_user": true,
+      "execution_deferred_by_user": true,
+      "phone_currently_unavailable": true
+    }
+  },
+  "shared_web": {
+    "physical_ui_accessibility_drafts_and_json_confirmed_both_phones": true,
+    "current_e2e_flows": 28,
+    "e2e_race_fixed": "Esperar Exportar habilitado tras finalizar el refresco del guardado; no cambia producto ni timeout.",
+    "push_renewal_and_post_restart_acceptance": "remaining_gate",
+    "followup_energy_manual_20261015": {
+      "web_delivered": true,
+      "native_packages_rebuilt": false,
+      "physical_iphone_acceptance": false,
+      "documentation": "docs/PHASE1-ENERGY-MANUAL-20261015.md",
+      "previous_physical_acceptance_is_historical": true,
+      "source_publication": "included_in_this_revision"
+    }
+  },
+  "privacy": {
+    "operator_apk_and_signing_material_published": false,
+    "keys_credentials_user_data_published": false,
+    "private_geocoder": "prepared_only_not_installed_by_user_choice"
+  }
+}

@@ -1,5 +1,8 @@
 # Fase 1: recuperación tras cortes de conexión
 
+> Estado vigente: fase1 aceptada por Lucas el14oct en iPhone y Android. Las referencias a pendientes de las secciones inferiores describen la evidencia histórica previa a esta confirmación. Firma, widgets y restauración productiva conservan sus requisitos propios.
+
+
 La revisión visual confirmada por Lucas en iPhone y Android se conserva. Las pruebas físicas de VoiceOver/TalkBack y recepción de archivos siguen pendientes; la fase 1 permanece abierta y no habilita empezar la fase 2. Photon continúa preparado sin instalar por elección de Lucas.
 
 ## Problema y corrección
@@ -23,3 +26,9 @@ La entrega conserva 63 recursos web, los 62 archivos del backend, los cinco arch
 Los ensayos usan SQLite temporal, servidor loopback y contexto sin service workers. El entorno excluye las variables PULSE operacionales. No contienen datos de Lucas ni consultan servicios externos. No exportan ni restauran producción, y no sustituyen la aceptación de PWA, archivos o accesibilidad en teléfonos reales. Las denegaciones históricas del navegador productivo conservan su alcance.
 
 La continuidad observada durante una interrupción externa del servidor no acredita la recuperación integral del host, proxy, autenticación o un desastre de fase 8. Sus criterios originales permanecen pendientes.
+
+## Aceptación final de fase1
+
+Lucas respondió «Funciona todo en ambos» a las comprobaciones de VoiceOver/TalkBack en seis pantallas y errores/foco de Mapa → Añadir lugar → Guardar vacío, conservación del borrador tras cortar/recuperar red y recepción JSON desde Perfil → Datos. Junto con la revisión visual, texto grande y teclado confirmada antes, cierra la aceptación de fase1 en ambos teléfonos. Es evidencia humana; no se presenta como una ejecución automatizada en dispositivos. No se proporcionaron modelos/versiones.
+
+La confirmación permite continuar fase2. No acredita instalación/firma/OAuth/widgets nativos, consumo prolongado, restauración productiva o Photon instalado; esas comprobaciones mantienen su alcance y pendientes.

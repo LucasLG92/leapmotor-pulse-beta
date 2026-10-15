@@ -219,6 +219,7 @@ test('perder la conexión conserva el borrador y permite guardar y descargar exp
 	await eventually(async () => assert.equal((await (await fetch(`${origin}/api/state`)).json()).settings.vehicle_name, 'Borrador sintético durante la desconexión'));
 	assert.equal(writes, failedWrites + 1);
 	await page.getByRole('button', { name: 'Datos', exact: true }).click();
+	await eventually(async () => assert.equal(await exportButton.isEnabled(), true, 'el refresco del guardado debe terminar antes de exportar'));
 	const downloadEvent = page.waitForEvent('download');
 	await keyboardActivate(exportButton);
 	const download = await downloadEvent;

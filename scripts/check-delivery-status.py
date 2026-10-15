@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 STATUS_PATH = ROOT / "docs" / "DELIVERY-STATUS.json"
 EXPECTED_PHASE_IDS = [f"phase-{number}" for number in range(1, 9)] + ["sentinel9final"]
-PHASE_STATES = {"pending", "in_progress", "software_complete", "awaiting_real_acceptance"}
+PHASE_STATES = {"pending", "in_progress", "software_complete", "awaiting_real_acceptance", "accepted"}
 GATE_STATES = {"pending", "in_progress", "accepted"}
 
 
@@ -54,6 +54,12 @@ def main() -> int:
         require(phase_ids == EXPECTED_PHASE_IDS, "IDs u orden de fases inválidos; sentinel9final debe cerrar la lista.")
         for phase in phases:
             require(phase.get("status") in PHASE_STATES, f"Estado inválido en {phase.get('id')}.")
+            if phase.get("status") == "accepted":
+                evidence = phase.get("real_acceptance", {})
+                require(evidence.get("source") == "explicit_user_confirmation"
+                        and isinstance(evidence.get("confirmed_at"), str)
+                        and bool(evidence.get("checks")),
+                        f"Falta evidencia humana explícita en {phase.get('id')}.")
             require(isinstance(phase.get("name"), str) and phase["name"].strip(), f"Falta nombre en {phase.get('id')}.")
             for field in ("software_criteria", "real_criteria"):
                 criteria = phase.get(field)
