@@ -1,33 +1,29 @@
 # Leapmotor Pulse · beta
 
-Aplicación independiente para explorar datos de movilidad y carga desde un servidor propio. Es una beta experimental y no oficial; la conexión a un vehículo, el control físico y la compatibilidad con cada dispositivo requieren comprobaciones separadas.
+Aplicación independiente y experimental para consultar y organizar información de movilidad y carga desde un servidor propio. Pulse no es una aplicación oficial de Leapmotor. La ilustración del vehículo es orientativa; la conexión a un coche y sus controles físicos requieren validación específica.
 
-## Entrega web del 13 de octubre
+![Pantalla Coche de Pulse en tema oscuro y modo de demostración](docs/screenshots/01-coche-oscuro.jpg)
 
-Las fuentes revisadas están publicadas y la nueva PWA está desplegada. Salud, migración y35 archivos públicos se verificaron porHTTPS; la API privada conserva401 anónimo. En una PWA instalada, usa «Actualizar ahora» cuando aparezca. Consulta el [recibo posterior a publicación](docs/COCKPIT-RELEASE-20261013.json). La recepción en teléfonos, accesibilidad móvil, vehículo y distribución nativa permanecen pendientes.
+## Estado actual
 
-## Corte de cualificación previo a publicación
+La web y la PWA están entregadas. Lucas confirmó la primera fase de aceptación en iPhone y Android el 14 de octubre: interfaz, texto grande, teclado, lectores de pantalla, formularios, recuperación de red y recepción de exportaciones JSON. Esa aceptación no acredita distribución nativa ni compatibilidad con un coche.
 
-El incremento de interfaz y herramientas manuales del 13 de octubre es un corte **prepublicación** de software local, todavía no entregado ni desplegado. El objetivo global sigue bloqueado: permanecen nueve fases y siete puertas reales pendientes. Un recibo posterior debe registrar cualquier publicación; este corte no predice ese estado. La aceptación física y el cierre del producto no se infieren de una compilación o de datos sintéticos.
+La corrección de Energía entregada el 15 de octubre mantiene completa la etiqueta «Manual». Se comprobó en Chrome con datos sintéticos y texto al 200 %; falta aceptar este ajuste concreto en Safari físico. Esta revisión incorpora sus fuentes y la documentación de la fase 2; la publicación y la entrega operativa se registran por separado.
 
-La interfaz presenta el coche y sus lecturas con procedencia visible; Energía muestra registros comparables y abre el simulador solo a petición; Actividad organiza trayectos y mantenimiento en un diario; Mapa guarda destinos introducidos manualmente; Estados prioriza la cronología; Ajustes agrupa preferencias por propósito. El simulador es informativo y no programa cargas ni controla el vehículo.
+El piloto Android 0.1.1 (código 2) tiene comprobaciones humanas de retorno OAuth, preferencias, widget, recuperación de red, cierre de sesión y desvinculación. Faltan caducidad de caché y refresco autónomo. App y widget de iOS compilan; firma, instalación, OAuth y pruebas físicas de WidgetKit siguen pendientes. La telemetría B10 no está validada y las órdenes físicas permanecen bloqueadas.
 
-En la cualificación local registrada para este incremento: 1.370 pruebas Python y 131 subcasos pasaron, se omitieron 34 pruebas por un SDK opcional no instalado, pasaron 65 pruebas web y 8 de puente móvil; Svelte informó 0 errores y 0 avisos, y los contratos/builds compartidos finalizaron correctamente. La revisión visual cubrió las seis pantallas a 1280×720 CSS en Claro y Charcoal, sin overflow horizontal ni errores de consola observados. También se comprobó la conservación del borrador del simulador al plegarlo y cancelar la salida, y la actualización desde una PWA local anterior. Estos recibos no acreditan dispositivos físicos, accesibilidad física, firma, distribución o servicios reales.
+## Capacidades y límites
 
-Android e iOS siguen como candidatos locales sin entregar. Las órdenes físicas permanecen bloqueadas; no se atribuyen sensores, GPS, cámaras o recepción de señales que no estén verificados. Consulta [dirección visual](docs/VISUAL-DIRECTION.md), [incremento](docs/EVOLUTION-20261013.md), [cualificación](docs/EVOLUTION-QUALIFICATION.json), [roadmap](docs/ROADMAP.md) y [estado estructurado](docs/DELIVERY-STATUS.json).
-
-## Qué ofrece
-
-| Capacidad | Estado |
+| Área | Estado |
 | --- | --- |
-| Interfaz web y PWA | Candidato de software con Claro/Charcoal, reflujo y estados de borrador/error; compatibilidad y aceptación física siguen pendientes. |
-| Energía y carga | Registros manuales comparables por mes; simulador informativo bajo demanda, con huecos y supuestos explícitos. |
-| Actividad y mantenimiento | Diario de trayectos manuales con notas/etiquetas e historial de planes por fecha/odómetro; no implica ingestión del coche. |
-| Mapa | Favoritos de coordenadas aportadas por la persona y apertura explícita de aplicaciones externas; sin GPS ni ruta automática. |
-| Estados y Ajustes | Historial cronológico y preferencias agrupadas por propósito. |
-| Integraciones y datos del vehículo | Requieren configuración y cualificación específica; sus estados de demo, caducidad, procedencia y errores se mantienen diferenciados. |
-| Apps y widgets | El código compartido no acredita firma, distribución, autenticación ni aceptación nativa. |
-| Órdenes físicas, cámaras y centinela | Permanecen bloqueados o pendientes de demostrar capacidad y acceso autorizados. |
+| Web y PWA | Interfaz entregada; ajuste de Energía comprobado en navegador sintético. Falta su aceptación en Safari físico. |
+| Energía y cargas | Registro manual, historial y herramientas informativas. No programa cargas ni controla el coche. |
+| Diario y mantenimiento | Trayectos y planes introducidos por la persona; no implica captura automática del vehículo. |
+| Mapa | Favoritos manuales y apertura explícita de mapas externos. Sin GPS ni cálculo propio de rutas. El buscador privado está preparado, sin instalar. |
+| Aplicaciones y widgets | Requieren firma, distribución y comprobaciones específicas en los teléfonos. |
+| Vehículo, cámaras y centinela | Conexión B10 y controles físicos pendientes de validación. Cámaras y centinela permanecen como última fase. |
+
+La [galería de capturas](docs/SCREENSHOTS.md) procede de una instancia local con datos de prueba, sin telemetría privada. La ilustración del coche es orientativa y las capturas no demuestran pruebas físicas en teléfonos o vehículos.
 
 ## Instalación local
 
@@ -40,14 +36,15 @@ bash install.sh --check
 bash install.sh --install
 ```
 
-La instalación local escucha en `127.0.0.1:8780` y no configura el vehículo ni publica un puerto en Internet. Consulta [instalación](docs/INSTALL.md), [alojamiento remoto](docs/HOSTING.md) y [despliegue comunitario](deploy/community/README.md) antes de adaptar el acceso a tu entorno.
+La instalación local escucha en `127.0.0.1:8780`. No configura un vehículo ni publica un puerto en Internet. Consulta la [guía de instalación](docs/INSTALL.md), el [alojamiento remoto](docs/HOSTING.md) y el [despliegue comunitario](deploy/community/README.md) antes de adaptar el acceso a tu entorno.
 
 ## Documentación
 
-- [Arquitectura](docs/ARCHITECTURE.md), [desarrollo](docs/DEVELOPMENT.md) y [estado de la beta](docs/BETA.md).
-- [Energía y carga](docs/ENERGY.md), [lecturas del vehículo](docs/VEHICLE.md) e [integraciones](docs/INTEGRATIONS.md).
-- [PWA, apps y widgets](docs/MOBILE.md), [privacidad](docs/PRIVACY.md) y [seguridad](docs/SECURITY-QUALIFICATION.json).
-- [Validación y límites del candidato](docs/VALIDATION.md), [aceptación](docs/ACCEPTANCE.md) y [registro de entrega](docs/DELIVERY-STATUS.json).
+- [Arquitectura](docs/ARCHITECTURE.md), [desarrollo](docs/DEVELOPMENT.md) y [estado beta](docs/BETA.md).
+- [Energía y cargas](docs/ENERGY.md), [lecturas](docs/VEHICLE.md) e [integraciones](docs/INTEGRATIONS.md).
+- [PWA, aplicaciones y widgets](docs/MOBILE.md), [privacidad](docs/PRIVACY.md) y [seguridad](docs/SECURITY-QUALIFICATION.json).
+- [Validación](docs/VALIDATION.md), [aceptación](docs/ACCEPTANCE.md) y [registro de entregas](docs/DELIVERY-STATUS.json).
+- [Revisión de confidencialidad](docs/PRIVACY-REVIEW-20261015.md).
 - [Licencia](LICENSE) y [avisos de terceros](THIRD-PARTY-NOTICES.md).
 
-No publiques credenciales, tokens, VIN, bases de datos personales, certificados ni paquetes configurados para una instalación concreta. Leapmotor y las demás marcas pertenecen a sus titulares; Pulse no es una aplicación oficial.
+No publiques credenciales, tokens, VIN, bases personales, certificados ni paquetes configurados para una instalación concreta. Las marcas pertenecen a sus propietarios; Pulse es una aplicación independiente y no oficial.

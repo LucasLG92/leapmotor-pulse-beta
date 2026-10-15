@@ -4,7 +4,7 @@
   "increment": "mobile-reflow-20261014",
   "web": {
     "status": "delivered",
-    "origin": "https://pulse.srvlucas.duckdns.org",
+    "origin": "https://pulse.example.invalid",
     "image": "sha256:e5298bc1a4c067ddbcd2825576210be478f782cedc3bd05522835cc0d3e9214d",
     "previous_image": "sha256:e088135886ae80f574ec19acc824c4ea638f327ced16c5446d33e5c0beb4eaed",
     "health": "healthy",
@@ -21,7 +21,8 @@
     "unauthenticated_private_api": 401,
     "invalid_synthetic_token": 401,
     "authenticated_production_ui_tested": false,
-    "physical_iphone_tested": false
+    "physical_iphone_tested": false,
+    "origin_redacted_for_publication": true
   },
   "source": {
     "public": {
